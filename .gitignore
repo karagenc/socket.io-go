@@ -1,0 +1,6 @@
+.vscode
+*.exe
+*.out
+__debug_bin
+/engine.io/examples/server/server
+/engine.io/examples/client/client
