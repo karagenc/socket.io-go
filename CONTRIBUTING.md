@@ -9,6 +9,6 @@
 
 And you're good to go.
 
-## Writing a New Transport
+## Developing a Transport
 
 Please make sure to read [transport.go](engine.io/transport.go) carefully.

@@ -243,7 +243,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		n := r.URL.Query().Get("transport")
 
 		if t.Name() != n {
-			s.MaybeUpgrade(w, r, socket, n)
+			s.maybeUpgrade(w, r, socket, n)
 			return
 		}
 
@@ -337,7 +337,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 	t.PostHandshake()
 }
 
-func (s *Server) MaybeUpgrade(w http.ResponseWriter, r *http.Request, socket *serverSocket, upgradeTo string) {
+func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *serverSocket, upgradeTo string) {
 	if upgradeTo != "websocket" {
 		writeError(w, ErrorBadRequest)
 		return

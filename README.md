@@ -4,7 +4,9 @@ This is a [Socket.IO](https://socket.io) library for Go.
 
 # Compatibility
 
-This library supports Socket.IO version 3.0 or later.
+In the near future i plan to support last 2 versions of Go. For now supported Go version is 1.16.  
+
+The least supported Socket.IO version is 3.0. If you have an older version of Socket.IO in your other projects, please consider upgrading your dependencies.
 
 | JavaScript Socket.IO version | Socket.IO protocol revision | Engine.IO protocol revision | socket.io-go version
 | ----------- | ----------- | ---------- | ------------- |
@@ -20,7 +22,7 @@ This library supports Socket.IO version 3.0 or later.
 
 ### I want to send big files.
 
-### Sometimes Socket.IO doesn't notice when the network connection is down
+### Sometimes Socket.IO doesn't notice when the network connection is down.
 
 Try reducing pingInterval and pingTimeout.
 
@@ -28,7 +30,7 @@ Try reducing pingInterval and pingTimeout.
 
 ## Transports
 
-If you are contributing to this library please see: [Writing a New Transport.](CONTRIBUTING.md#writing-a-new-transport)
+If you are a contributor please see: [Developing a Transport](CONTRIBUTING.md#developing-a-transport)
 
 ## JSON
 
