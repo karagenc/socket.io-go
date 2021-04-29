@@ -5,14 +5,19 @@ import (
 	"time"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
+	"github.com/tomruk/socket.io-go/parser"
+	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 )
 
 type ServerConfig struct {
+	ParserCreator parser.Creator
+
 	EIO eio.ServerConfig
 }
 
 type Server struct {
-	eio *eio.Server
+	parserCreator parser.Creator
+	eio           *eio.Server
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -21,7 +26,12 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	s := &Server{
-		eio: eio.NewServer(nil, &config.EIO),
+		parserCreator: config.ParserCreator,
+		eio:           eio.NewServer(nil, &config.EIO),
+	}
+
+	if s.parserCreator == nil {
+		s.parserCreator = new(jsonparser.Creator)
 	}
 
 	return s

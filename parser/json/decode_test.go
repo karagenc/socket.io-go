@@ -1,0 +1,149 @@
+package jsonparser
+
+import (
+	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/tomruk/socket.io-go/parser"
+)
+
+func TestDecode(t *testing.T) {
+	c := new(Creator)
+	p := c.New()
+
+	tests := createDecodeTests(t)
+
+	for _, test := range tests {
+		finishHappened := false
+
+		for _, buf := range test.Buffers {
+			finishHappened = false
+
+			finish := func(header *parser.PacketHeader, eventName string, decode parser.Decode) {
+				values, err := decode(test.ExpectedTypes...)
+				if err != nil {
+					t.Fatalf("decode error: %v", err)
+				}
+
+				printValues(values...)
+
+				values, err = decode(test.ExpectedTypes...)
+				if err != nil {
+					t.Fatalf("decode error: %v", err)
+				}
+
+				printValues(values...)
+
+				finishHappened = true
+			}
+
+			err := p.Add(buf, finish)
+			if err != nil {
+				t.Fatalf("p.Add failed: %v", err)
+			}
+		}
+
+		if !finishHappened {
+			t.Fatalf("finish callback didn't run")
+		}
+	}
+}
+
+func TestMaxAttachmentsDecode(t *testing.T) {
+	c := new(Creator)
+
+	header := &parser.PacketHeader{
+		Type: parser.PacketTypeEvent,
+	}
+
+	v := struct {
+		A1 Binary `json:"a1"`
+		A2 Binary `json:"a2"`
+		A3 Binary `json:"a3"`
+		A4 Binary `json:"a4"`
+	}{
+		A1: Binary("a1"),
+		A2: Binary("a2"),
+		A3: Binary("a3"),
+		A4: Binary("a4"),
+	}
+
+	p := c.New()
+
+	buffers, err := p.Encode(header, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Empty
+	finish := func(header *parser.PacketHeader, eventName string, decode parser.Decode) {}
+
+	c = &Creator{
+		MaxAttachments: 3,
+	}
+	p = c.New()
+
+	err = p.Add(buffers[0], finish)
+	if err == nil {
+		t.Fatal("error expected")
+	}
+}
+
+func printValues(values ...reflect.Value) {
+	for i, rv := range values {
+		k := rv.Kind()
+		if k == reflect.Interface || k == reflect.Ptr {
+			rv = rv.Elem()
+			k = rv.Kind()
+		}
+
+		v := rv.Interface()
+
+		switch val := v.(type) {
+		case Binary, *Binary:
+			fmt.Printf("Data %d: %s\n", i, val)
+		default:
+			fmt.Printf("Data %d: %v\n", i, v)
+		}
+	}
+
+	fmt.Print("\n")
+}
+
+func createDecodeTests(t *testing.T) []*decodeTest {
+	return []*decodeTest{
+		{
+			Buffers:        createBuffers([]byte("0")),
+			ExpectedHeader: mustCreatePacketHeader(t, parser.PacketTypeConnect, "/", 0),
+			ExpectedTypes:  nil,
+		},
+		{
+			Buffers:        createBuffers([]byte(`2["evvvent",{"foo": "bar"}]`)),
+			ExpectedHeader: mustCreatePacketHeader(t, parser.PacketTypeEvent, "/", 0),
+			ExpectedTypes: createTypes(
+				struct {
+					Foo string `json:"foo"`
+				}{},
+			),
+		},
+	}
+}
+
+type decodeTest struct {
+	Buffers        [][]byte
+	ExpectedHeader *parser.PacketHeader
+	ExpectedTypes  []reflect.Type
+}
+
+func createBuffers(payload []byte, attachments ...[]byte) [][]byte {
+	return append([][]byte{payload}, attachments...)
+}
+
+func createTypes(v ...interface{}) (types []reflect.Type) {
+	for _, x := range v {
+		typ := reflect.TypeOf(x)
+		types = append(types, typ)
+	}
+	return
+}
