@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	eio "github.com/tomruk/socket.io-go/engine.io"
+	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
 const addr = "127.0.0.1:3000"
@@ -28,11 +29,17 @@ func onSocket(socket eio.Socket) *eio.Callbacks {
 	fmt.Printf("New socket connected: %s\n", socket.ID())
 	addSocket(socket)
 
-	socket.SendMessage([]byte("Hello from server"), false)
+	err := sendTextMessage(socket, "Hello from server")
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
 
 	return &eio.Callbacks{
-		OnMessage: func(data []byte, isBinary bool) {
-			fmt.Printf("Message received: %s\n", data)
+		OnPacket: func(packet *parser.Packet) {
+			if packet.Type == parser.PacketTypeMessage {
+				fmt.Printf("Message received: %s\n", packet.Data)
+			}
 		},
 		OnError: func(err error) {
 			fmt.Printf("Socket error: %v\n", err)
@@ -135,7 +142,7 @@ func userInput() {
 			break
 		}
 
-		sendMessageToAll(text)
+		sendTextMessageToAll(text)
 	}
 }
 
@@ -145,11 +152,22 @@ func addSocket(socket eio.Socket) {
 	sockets = append(sockets, socket)
 }
 
-func sendMessageToAll(message string) {
+// A little helper function to send a string message to all sockets with no fuss.
+func sendTextMessageToAll(message string) {
 	socketsMu.RLock()
 	defer socketsMu.RUnlock()
 
 	for _, socket := range sockets {
-		go socket.SendMessage([]byte(message), false)
+		go sendTextMessage(socket, message)
 	}
+}
+
+// A little helper function to send a string message with no fuss.
+func sendTextMessage(socket eio.Socket, message string) error {
+	packet, err := parser.NewPacket(parser.PacketTypeMessage, false, []byte(message))
+	if err != nil {
+		return fmt.Errorf("Packet creation error (this shouldn't have happened): %w\n", err)
+	}
+	socket.Send(packet)
+	return nil
 }

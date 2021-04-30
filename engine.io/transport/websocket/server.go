@@ -48,25 +48,27 @@ func (t *ServerTransport) QueuedPackets() []*parser.Packet {
 	return nil
 }
 
-func (t *ServerTransport) SendPacket(p *parser.Packet) {
-	var (
-		mt   int
-		data = p.Build(t.supportsBinary)
-	)
-
-	if p.IsBinary {
-		mt = websocket.BinaryMessage
-	} else {
-		mt = websocket.TextMessage
-	}
-
+func (t *ServerTransport) Send(packets ...*parser.Packet) {
 	// WriteMessage must not be called concurrently.
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
 
-	err := t.conn.WriteMessage(mt, data)
-	if err != nil {
-		t.close(err)
+	for _, p := range packets {
+		var (
+			mt   int
+			data = p.Build(t.supportsBinary)
+		)
+
+		if p.IsBinary {
+			mt = websocket.BinaryMessage
+		} else {
+			mt = websocket.TextMessage
+		}
+
+		err := t.conn.WriteMessage(mt, data)
+		if err != nil {
+			t.close(err)
+		}
 	}
 }
 

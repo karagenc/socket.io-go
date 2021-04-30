@@ -373,14 +373,14 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 			if err != nil {
 				return
 			}
-			t.SendPacket(pong)
+			t.Send(pong)
 
 			// Force a polling cycle to ensure a fast upgrade.
 			noop, err := parser.NewPacket(parser.PacketTypeNoop, false, nil)
 			if err != nil {
 				return
 			}
-			go socket.sendPacket(noop)
+			go socket.Send(noop)
 		case parser.PacketTypeUpgrade:
 			once.Do(func() { close(done) })
 			socket.UpgradeTo(t)

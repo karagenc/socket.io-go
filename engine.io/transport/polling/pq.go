@@ -37,14 +37,14 @@ func (pq *pollQueue) Poll(pollTimeout time.Duration) []*parser.Packet {
 }
 
 // Add a packet to the queue and signal the other goroutine (if any).
-func (pq *pollQueue) Add(p *parser.Packet) {
+func (pq *pollQueue) Add(packets ...*parser.Packet) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
 	if len(pq.packets) == 0 {
-		pq.packets = []*parser.Packet{p}
+		pq.packets = packets
 	} else {
-		pq.packets = append(pq.packets, p)
+		pq.packets = append(pq.packets, packets...)
 	}
 
 	// Send the signal.

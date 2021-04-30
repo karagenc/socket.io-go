@@ -118,25 +118,27 @@ func (t *ClientTransport) nextPacket() (*parser.Packet, error) {
 	return parser.Parse(b, mt == websocket.BinaryMessage)
 }
 
-func (t *ClientTransport) SendPacket(p *parser.Packet) {
-	var (
-		mt   int
-		data = p.Build(true)
-	)
-
-	if p.IsBinary {
-		mt = websocket.BinaryMessage
-	} else {
-		mt = websocket.TextMessage
-	}
-
+func (t *ClientTransport) Send(packets ...*parser.Packet) {
 	// WriteMessage must not be called concurrently.
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
 
-	err := t.conn.WriteMessage(mt, data)
-	if err != nil {
-		t.close(err)
+	for _, p := range packets {
+		var (
+			mt   int
+			data = p.Build(true)
+		)
+
+		if p.IsBinary {
+			mt = websocket.BinaryMessage
+		} else {
+			mt = websocket.TextMessage
+		}
+
+		err := t.conn.WriteMessage(mt, data)
+		if err != nil {
+			t.close(err)
+		}
 	}
 }
 

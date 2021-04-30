@@ -47,8 +47,8 @@ func (t *ServerTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose 
 	t.callbackMu.Unlock()
 }
 
-func (t *ServerTransport) SendPacket(p *parser.Packet) {
-	t.pq.Add(p)
+func (t *ServerTransport) Send(packets ...*parser.Packet) {
+	t.pq.Add(packets...)
 }
 
 func (t *ServerTransport) QueuedPackets() []*parser.Packet {
@@ -57,7 +57,7 @@ func (t *ServerTransport) QueuedPackets() []*parser.Packet {
 
 func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
 	if handshakePacket != nil {
-		t.SendPacket(handshakePacket)
+		t.Send(handshakePacket)
 	}
 	t.ServeHTTP(w, r)
 	return nil
@@ -194,7 +194,7 @@ func (t *ServerTransport) Discard() {
 		// Send a NOOP packet to force a poll cycle.
 		p, err := parser.NewPacket(parser.PacketTypeNoop, false, nil)
 		if err == nil {
-			go t.SendPacket(p)
+			go t.Send(p)
 		}
 	})
 }
@@ -209,7 +209,7 @@ func (t *ServerTransport) close(err error) {
 
 		p, err := parser.NewPacket(parser.PacketTypeClose, false, nil)
 		if err == nil {
-			go t.SendPacket(p)
+			go t.Send(p)
 		}
 	})
 }

@@ -69,7 +69,6 @@ func TestPollingAndWebSocket(t *testing.T) {
 
 func testSendReceive(t *testing.T, transports []string) {
 	tw := newTestWaiter(0)
-
 	test := createTestPackets(t)
 
 	check := func(data []byte, isBinary bool) bool {
@@ -86,7 +85,7 @@ func testSendReceive(t *testing.T, transports []string) {
 	send := func(socket Socket) {
 		for _, p := range test {
 			if p.Type == parser.PacketTypeMessage {
-				socket.SendMessage(p.Data, p.IsBinary)
+				socket.Send(p)
 			}
 		}
 	}
@@ -99,12 +98,14 @@ func testSendReceive(t *testing.T, transports []string) {
 
 	onSocket := func(socket Socket) *Callbacks {
 		callbacks := &Callbacks{
-			OnMessage: func(data []byte, isBinary bool) {
-				defer tw.Done()
+			OnPacket: func(packet *parser.Packet) {
+				if packet.Type == parser.PacketTypeMessage {
+					defer tw.Done()
 
-				ok := check(data, isBinary)
-				if !ok {
-					t.Error("server: invalid message received")
+					ok := check(packet.Data, packet.IsBinary)
+					if !ok {
+						t.Error("server: invalid message received")
+					}
 				}
 			},
 			OnError: func(err error) {
@@ -132,12 +133,14 @@ func testSendReceive(t *testing.T, transports []string) {
 		OnError: func(err error) {
 			t.Errorf("unexpected error: %v", err)
 		},
-		OnMessage: func(data []byte, isBinary bool) {
-			defer tw.Done()
+		OnPacket: func(packet *parser.Packet) {
+			if packet.Type == parser.PacketTypeMessage {
+				defer tw.Done()
 
-			ok := check(data, isBinary)
-			if !ok {
-				t.Error("client: invalid message received")
+				ok := check(packet.Data, packet.IsBinary)
+				if !ok {
+					t.Error("client: invalid message received")
+				}
 			}
 		},
 	}

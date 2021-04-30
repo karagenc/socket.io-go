@@ -187,8 +187,8 @@ func (t *ClientTransport) poll() ([]*parser.Packet, error) {
 	return parser.DecodePayloads(payloads)
 }
 
-func (t *ClientTransport) SendPacket(p *parser.Packet) {
-	body := bytes.NewBuffer(parser.EncodePayloads(p))
+func (t *ClientTransport) Send(packets ...*parser.Packet) {
+	body := bytes.NewBuffer(parser.EncodePayloads(packets...))
 
 	req, err := t.newRequest("POST", body, body.Len())
 	if err != nil {
@@ -243,7 +243,7 @@ func (t *ClientTransport) close(err error) {
 
 		p, err := parser.NewPacket(parser.PacketTypeClose, false, nil)
 		if err == nil {
-			go t.SendPacket(p)
+			go t.Send(p)
 		}
 	})
 }

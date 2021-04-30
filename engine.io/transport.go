@@ -39,7 +39,7 @@ type ServerTransport interface {
 
 	// If you run this method in a transport (see the close method of polling for example), call it on a new goroutine.
 	// Otherwise it can call the close function recursively.
-	SendPacket(p *parser.Packet)
+	Send(packets ...*parser.Packet)
 
 	// This method closes the transport but doesn't call the onClose callback.
 	// This method will be called after an upgrade to discard and remove this transport.
@@ -83,7 +83,7 @@ type ClientTransport interface {
 
 	// If you run this method in a transport (see the close method of polling for example), call it on a new goroutine.
 	// Otherwise it can call the close function recursively.
-	SendPacket(p *parser.Packet)
+	Send(packets ...*parser.Packet)
 
 	// This method closes the transport but doesn't call the onClose callback.
 	// This method will be called after an upgrade to discard and remove this transport.

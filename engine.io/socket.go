@@ -1,6 +1,10 @@
 package eio
 
-import "time"
+import (
+	"time"
+
+	"github.com/tomruk/socket.io-go/engine.io/parser"
+)
 
 type Socket interface {
 	// Session ID (sid)
@@ -15,7 +19,7 @@ type Socket interface {
 	// Name of the current transport
 	TransportName() string
 
-	SendMessage(data []byte, isBinary bool)
+	Send(packets ...*parser.Packet)
 
 	Close()
 }

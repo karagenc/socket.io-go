@@ -86,7 +86,7 @@ func (t *fakeServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 func (t *fakeServerTransport) QueuedPackets() []*parser.Packet { return nil }
 
-func (t *fakeServerTransport) SendPacket(p *parser.Packet) {}
+func (t *fakeServerTransport) Send(packets ...*parser.Packet) {}
 
 func (t *fakeServerTransport) Discard() {}
 func (t *fakeServerTransport) Close()   {}
@@ -308,7 +308,8 @@ func TestMaxBufferSizeWebSocket(t *testing.T) {
 
 	assert.Equal(t, "websocket", socket.TransportName())
 
-	socket.SendMessage([]byte("123456"), false)
+	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
+	socket.Send(packet)
 
 	tw.WaitTimeout(t, 3*time.Second)
 }
@@ -355,7 +356,8 @@ func TestMaxBufferSizePolling(t *testing.T) {
 
 	assert.Equal(t, "polling", socket.TransportName())
 
-	socket.SendMessage([]byte("123456"), false)
+	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
+	socket.Send(packet)
 
 	tw.WaitTimeout(t, 3*time.Second)
 }
@@ -367,11 +369,13 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 
 	onSocket := func(socket Socket) *Callbacks {
 		return &Callbacks{
-			OnMessage: func(data []byte, isBinary bool) {
+			OnPacket: func(packet *parser.Packet) {
 				defer tw.Done()
 
-				if !bytes.Equal(testData, data) {
-					t.Error("data doesn't match")
+				if packet.Type == parser.PacketTypeMessage {
+					if !bytes.Equal(testData, packet.Data) {
+						t.Error("data doesn't match")
+					}
 				}
 			},
 		}
@@ -395,7 +399,8 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 
 	assert.Equal(t, "websocket", socket.TransportName())
 
-	socket.SendMessage(testData, false)
+	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
+	socket.Send(packet)
 
 	tw.WaitTimeout(t, 3*time.Second)
 }
@@ -407,11 +412,13 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 
 	onSocket := func(socket Socket) *Callbacks {
 		return &Callbacks{
-			OnMessage: func(data []byte, isBinary bool) {
+			OnPacket: func(packet *parser.Packet) {
 				defer tw.Done()
 
-				if !bytes.Equal(testData, data) {
-					t.Error("data doesn't match")
+				if packet.Type == parser.PacketTypeMessage {
+					if !bytes.Equal(testData, packet.Data) {
+						t.Error("data doesn't match")
+					}
 				}
 			},
 		}
@@ -435,7 +442,8 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 
 	assert.Equal(t, "polling", socket.TransportName())
 
-	socket.SendMessage(testData, false)
+	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
+	socket.Send(packet)
 
 	tw.WaitTimeout(t, 3*time.Second)
 }
@@ -449,20 +457,23 @@ func TestJSONP(t *testing.T) {
 	)
 
 	var (
-		testMessage1 = []byte("Hello from server")
-		testMessage2 = []byte{0x1, 0x2, 0x3}
+		testPacket1 = mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("Hello from server"))
+		testPacket2 = mustCreatePacket(t, parser.PacketTypeMessage, true, []byte{0x1, 0x2, 0x3})
 	)
 
 	onSocket := func(socket Socket) *Callbacks {
-		socket.SendMessage(testMessage1, false)
-		socket.SendMessage(testMessage2, true)
+		socket.Send(testPacket1, testPacket2)
 
 		return &Callbacks{
-			OnMessage: func(data []byte, isBinary bool) {
+			OnPacket: func(packet *parser.Packet) {
+				if packet.Type != parser.PacketTypeMessage {
+					return
+				}
+
 				switch {
-				case bytes.Equal(data, testMessage1) && isBinary == false:
+				case bytes.Equal(packet.Data, testPacket1.Data) && packet.IsBinary == false:
 					tw.Done()
-				case bytes.Equal(data, testMessage2) && isBinary == true:
+				case bytes.Equal(packet.Data, testPacket2.Data) && packet.IsBinary == true:
 					tw.Done()
 				default:
 					t.Error("invalid message received")
@@ -599,27 +610,17 @@ func TestJSONP(t *testing.T) {
 		t.Fatal("second packet should be a binary packet")
 	}
 
-	if !bytes.Equal(p1.Data, testMessage1) {
+	if !bytes.Equal(p1.Data, testPacket1.Data) {
 		t.Fatal("data doesn't match")
 	}
 
-	if !bytes.Equal(p2.Data, testMessage2) {
+	if !bytes.Equal(p2.Data, testPacket2.Data) {
 		t.Fatal("data doesn't match")
 	}
 
 	// Test sending packets to server
 
-	p1, err = parser.NewPacket(parser.PacketTypeMessage, false, testMessage1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	p2, err = parser.NewPacket(parser.PacketTypeMessage, true, testMessage2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	d := string(parser.EncodePayloads(p1, p2))
+	d := string(parser.EncodePayloads(testPacket1, testPacket2))
 	d = url.QueryEscape(d)
 	d = "d=" + d
 
@@ -663,8 +664,6 @@ func TestServerClose(t *testing.T) {
 	utw := newTestWaiter(0) // For upgrades.
 
 	onSocket := func(socket Socket) *Callbacks {
-		socket.SendMessage(nil, false)
-
 		return &Callbacks{
 			OnClose: func(reason string, err error) {
 				defer tw.Done()
@@ -696,7 +695,7 @@ func TestServerClose(t *testing.T) {
 	}
 
 	for _, transports := range transportsToTest {
-		tw.Add(2)
+		tw.Add(2) // For server and client.
 
 		callbacks := &Callbacks{
 			OnClose: func(reason string, err error) {

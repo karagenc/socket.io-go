@@ -8,12 +8,15 @@ import (
 	"strings"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
+	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
 var exitChan = make(chan struct{})
 
-func onMessage(data []byte, isBinary bool) {
-	fmt.Printf("Message received: %s\n", data)
+func onPacket(packet *parser.Packet) {
+	if packet.Type == parser.PacketTypeMessage {
+		fmt.Printf("Message received: %s\n", packet.Data)
+	}
 }
 
 func onError(err error) {
@@ -41,9 +44,9 @@ func main() {
 	}
 
 	callbacks := &eio.Callbacks{
-		OnMessage: onMessage,
-		OnError:   onError,
-		OnClose:   onClose,
+		OnPacket: onPacket,
+		OnError:  onError,
+		OnClose:  onClose,
 	}
 
 	socket, err := eio.Dial("http://127.0.0.1:3000/engine.io", callbacks, config)
@@ -76,6 +79,12 @@ func userInput(socket eio.Socket) {
 			break
 		}
 
-		socket.SendMessage([]byte(text), false)
+		packet, err := parser.NewPacket(parser.PacketTypeMessage, false, []byte(text))
+		if err != nil {
+			fmt.Printf("Packet creation error (this shouldn't have happened): %v\n", err)
+			break
+		}
+
+		socket.Send(packet)
 	}
 }

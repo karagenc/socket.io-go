@@ -1,8 +1,10 @@
 package eio
 
+import "github.com/tomruk/socket.io-go/engine.io/parser"
+
 type NewSocketCallback func(socket Socket) *Callbacks
 
-type MessageCallback func(data []byte, isBinary bool)
+type PacketCallback func(packet *parser.Packet)
 
 type ErrorCallback func(err error)
 
@@ -10,14 +12,14 @@ type ErrorCallback func(err error)
 type CloseCallback func(reason string, err error)
 
 type Callbacks struct {
-	OnMessage MessageCallback
-	OnError   ErrorCallback
-	OnClose   CloseCallback
+	OnPacket PacketCallback
+	OnError  ErrorCallback
+	OnClose  CloseCallback
 }
 
 func (c *Callbacks) setMissing() {
-	if c.OnMessage == nil {
-		c.OnMessage = func(data []byte, isBinary bool) {}
+	if c.OnPacket == nil {
+		c.OnPacket = func(packet *parser.Packet) {}
 	}
 	if c.OnError == nil {
 		c.OnError = func(err error) {}

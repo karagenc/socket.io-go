@@ -111,7 +111,7 @@ func (s *serverSocket) UpgradeTo(t ServerTransport) {
 	qp := old.QueuedPackets()
 	for _, p := range qp {
 		if p.Type != parser.PacketTypeNoop {
-			t.SendPacket(p)
+			t.Send(p)
 		}
 	}
 }
@@ -131,7 +131,7 @@ func (s *serverSocket) pingPong(pingInterval time.Duration, pingTimeout time.Dur
 			s.onError(err)
 			return
 		}
-		s.sendPacket(ping)
+		s.Send(ping)
 
 		select {
 		case <-s.pongChan:
@@ -145,9 +145,9 @@ func (s *serverSocket) pingPong(pingInterval time.Duration, pingTimeout time.Dur
 }
 
 func (s *serverSocket) onPacket(packet *parser.Packet) {
+	s.getCallbacks().OnPacket(packet)
+
 	switch packet.Type {
-	case parser.PacketTypeMessage:
-		s.getCallbacks().OnMessage(packet.Data, packet.IsBinary)
 	case parser.PacketTypePong:
 		s.onPong()
 	case parser.PacketTypeClose:
@@ -170,23 +170,10 @@ func (s *serverSocket) onError(err error) {
 	}
 }
 
-func (s *serverSocket) SendMessage(data []byte, isBinary bool) {
+func (s *serverSocket) Send(packets ...*parser.Packet) {
 	s.tMu.RLock()
 	defer s.tMu.RUnlock()
-
-	p, err := parser.NewPacket(parser.PacketTypeMessage, isBinary, data)
-	if err != nil {
-		s.onError(err)
-		return
-	}
-
-	s.t.SendPacket(p)
-}
-
-func (s *serverSocket) sendPacket(p *parser.Packet) {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	s.t.SendPacket(p)
+	s.t.Send(packets...)
 }
 
 func (s *serverSocket) onTransportClose(name string, err error) {

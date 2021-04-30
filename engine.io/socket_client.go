@@ -178,7 +178,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		s.onError(fmt.Errorf("upgrade failed: %w", err))
 		return
 	}
-	t.SendPacket(ping)
+	t.Send(ping)
 }
 
 func (s *clientSocket) upgradeTo(t ClientTransport) {
@@ -197,7 +197,7 @@ func (s *clientSocket) upgradeTo(t ClientTransport) {
 	s.t = t
 	old.Discard()
 
-	t.SendPacket(p)
+	t.Send(p)
 
 	go s.upgradeDone(t.Name()) // Don't block
 }
@@ -212,9 +212,9 @@ func findTransport(transports []string, name string) bool {
 }
 
 func (s *clientSocket) onPacket(packet *parser.Packet) {
+	s.callbacks.OnPacket(packet)
+
 	switch packet.Type {
-	case parser.PacketTypeMessage:
-		s.callbacks.OnMessage(packet.Data, packet.IsBinary)
 	case parser.PacketTypePing:
 		select {
 		case s.pingChan <- struct{}{}:
@@ -226,7 +226,7 @@ func (s *clientSocket) onPacket(packet *parser.Packet) {
 			s.onError(err)
 			return
 		}
-		s.sendPacket(pong)
+		s.Send(pong)
 	case parser.PacketTypeClose:
 		s.tMu.RLock()
 		defer s.tMu.RUnlock()
@@ -264,23 +264,10 @@ func (s *clientSocket) TransportName() string {
 	return s.t.Name()
 }
 
-func (s *clientSocket) SendMessage(data []byte, isBinary bool) {
+func (s *clientSocket) Send(packets ...*parser.Packet) {
 	s.tMu.RLock()
 	defer s.tMu.RUnlock()
-
-	p, err := parser.NewPacket(parser.PacketTypeMessage, isBinary, data)
-	if err != nil {
-		s.onError(err)
-		return
-	}
-
-	s.t.SendPacket(p)
-}
-
-func (s *clientSocket) sendPacket(p *parser.Packet) {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	s.t.SendPacket(p)
+	s.t.Send(packets...)
 }
 
 func (s *clientSocket) close(reason string, err error) {
