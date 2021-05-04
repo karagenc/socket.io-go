@@ -111,11 +111,11 @@ func (t *ClientTransport) Run() {
 }
 
 func (t *ClientTransport) nextPacket() (*parser.Packet, error) {
-	mt, b, err := t.conn.ReadMessage()
+	mt, r, err := t.conn.NextReader()
 	if err != nil {
 		return nil, err
 	}
-	return parser.Parse(b, mt == websocket.BinaryMessage)
+	return parser.Decode(r, mt == websocket.BinaryMessage)
 }
 
 func (t *ClientTransport) Send(packets ...*parser.Packet) {
@@ -124,20 +124,23 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 	defer t.writeMu.Unlock()
 
 	for _, p := range packets {
-		var (
-			mt   int
-			data = p.Build(true)
-		)
-
+		var mt int
 		if p.IsBinary {
 			mt = websocket.BinaryMessage
 		} else {
 			mt = websocket.TextMessage
 		}
 
-		err := t.conn.WriteMessage(mt, data)
+		w, err := t.conn.NextWriter(mt)
 		if err != nil {
 			t.close(err)
+			break
+		}
+
+		err = p.Encode(w, true)
+		if err != nil {
+			t.close(err)
+			break
 		}
 	}
 }

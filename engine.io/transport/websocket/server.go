@@ -54,20 +54,23 @@ func (t *ServerTransport) Send(packets ...*parser.Packet) {
 	defer t.writeMu.Unlock()
 
 	for _, p := range packets {
-		var (
-			mt   int
-			data = p.Build(t.supportsBinary)
-		)
-
+		var mt int
 		if p.IsBinary {
 			mt = websocket.BinaryMessage
 		} else {
 			mt = websocket.TextMessage
 		}
 
-		err := t.conn.WriteMessage(mt, data)
+		w, err := t.conn.NextWriter(mt)
 		if err != nil {
 			t.close(err)
+			break
+		}
+
+		err = p.Encode(w, true)
+		if err != nil {
+			t.close(err)
+			break
 		}
 	}
 }
@@ -82,29 +85,38 @@ func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.Respo
 		t.conn.SetReadLimit(t.readLimit)
 	}
 
-	if handshakePacket != nil {
-		built := handshakePacket.Build(t.supportsBinary)
-		err = t.conn.WriteMessage(websocket.TextMessage, built)
+	return t.writeHandshakePacket(handshakePacket)
+}
+
+func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
+	if packet != nil {
+		w, err := t.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
 			t.conn.Close()
-			return
+			return err
+		}
+
+		err = packet.Encode(w, t.supportsBinary)
+		if err != nil {
+			t.conn.Close()
+			return err
 		}
 	}
-	return
+	return nil
 }
 
 func (t *ServerTransport) PostHandshake() {
 	for {
-		mt, data, err := t.conn.ReadMessage()
+		mt, r, err := t.conn.NextReader()
 		if err != nil {
 			t.close(err)
-			return
+			break
 		}
 
-		p, err := parser.Parse(data, mt == websocket.BinaryMessage)
+		p, err := parser.Decode(r, mt == websocket.BinaryMessage)
 		if err != nil {
 			t.close(err)
-			return
+			break
 		}
 
 		t.callbackMu.Lock()

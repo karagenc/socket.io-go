@@ -29,7 +29,6 @@ func onClose(reason string, err error) {
 	} else {
 		fmt.Printf("Socket closed: %s | Error: %v\n", reason, err)
 	}
-
 	close(exitChan)
 }
 

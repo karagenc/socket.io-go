@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 )
 
 type PacketType byte
@@ -61,10 +62,64 @@ func NewPacket(packetType PacketType, isBinary bool, data []byte) (*Packet, erro
 	}, nil
 }
 
-func Parse(data []byte, binaryData bool) (*Packet, error) {
+func (p *Packet) EncodedLen(supportsBinary bool) int {
+	if p.IsBinary {
+		if supportsBinary {
+			return len(p.Data)
+		} else {
+			return 1 + base64.StdEncoding.EncodedLen(len(p.Data))
+		}
+	}
+	return 1 + len(p.Data)
+}
+
+// Note: Writer should either implement io.ByteWriter
+// or it should not have a problem with writing 1 byte at a time.
+func (p *Packet) Encode(w io.Writer, supportsBinary bool) error {
+	bw, ok := w.(io.ByteWriter)
+	if !ok {
+		bw = byteWriter{w: w}
+	}
+
+	if p.IsBinary {
+		if supportsBinary {
+			_, err := w.Write(p.Data)
+			return err
+		} else {
+			err := bw.WriteByte(base64Prefix)
+			if err != nil {
+				return err
+			}
+
+			encoder := base64.NewEncoder(base64.StdEncoding, w)
+			defer encoder.Close()
+
+			_, err = encoder.Write(p.Data)
+			return nil
+		}
+	}
+
+	err := bw.WriteByte(p.Type.ToChar())
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(p.Data)
+	return err
+}
+
+func Decode(r io.Reader, binaryFrame bool) (*Packet, error) {
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return decode(buf, binaryFrame)
+}
+
+func decode(data []byte, binaryFrame bool) (*Packet, error) {
 	packet := new(Packet)
 
-	if binaryData {
+	if binaryFrame {
 		packet.IsBinary = true
 		packet.Type = PacketTypeMessage
 		packet.Data = data
@@ -86,32 +141,16 @@ func Parse(data []byte, binaryData bool) (*Packet, error) {
 		packet.Data = make([]byte, dl)
 
 		n, err := base64.StdEncoding.Decode(packet.Data, data)
+		if err != nil {
+			return nil, err
+		}
+
 		packet.Data = packet.Data[:n]
-		return packet, err
+		return packet, nil
 	}
 
 	packet.IsBinary = false
 	err := packet.Type.FromChar(packetType)
 	packet.Data = data[1:]
 	return packet, err
-}
-
-func (p *Packet) Build(supportsBinary bool) []byte {
-	if p.IsBinary {
-		if supportsBinary {
-			return p.Data
-		} else {
-			el := base64.StdEncoding.EncodedLen(len(p.Data))
-			b := make([]byte, 1+el)
-
-			b[0] = base64Prefix
-			base64.StdEncoding.Encode(b[1:], p.Data)
-			return b
-		}
-	}
-
-	b := make([]byte, 1+len(p.Data))
-	b[0] = p.Type.ToChar()
-	copy(b[1:], p.Data)
-	return b
 }

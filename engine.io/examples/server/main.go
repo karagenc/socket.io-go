@@ -31,7 +31,7 @@ func onSocket(socket eio.Socket) *eio.Callbacks {
 
 	err := sendTextMessage(socket, "Hello from server")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %s\n", err)
 		return nil
 	}
 

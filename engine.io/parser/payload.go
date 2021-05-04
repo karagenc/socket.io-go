@@ -1,44 +1,86 @@
 package parser
 
 import (
-	"bytes"
+	"io"
 )
 
 const payloadDelimiter byte = 30
 
-// Argument must not be nil.
-func EncodePayloads(packets ...*Packet) []byte {
+// packets must not be nil.
+func EncodedPayloadsLen(packets ...*Packet) int {
 	l := 0
 	for i, packet := range packets {
-		// Packet length
-		l += 1 + len(packet.Data)
+		l += packet.EncodedLen(false)
 
-		// Delimiter
 		if i != len(packets)-1 {
 			l += 1
 		}
 	}
+	return l
+}
 
-	b := make([]byte, 0, l)
+// packets must not be nil.
+//
+// Note: Writer should either implement io.ByteWriter
+// or it should not have a problem with writing 1 byte at a time.
+func EncodePayloads(w io.Writer, packets ...*Packet) error {
+	bw, ok := w.(io.ByteWriter)
+	if !ok {
+		bw = byteWriter{w: w}
+	}
 
 	for i, packet := range packets {
-		built := packet.Build(false)
-		b = append(b, built...)
+		err := packet.Encode(w, false)
+		if err != nil {
+			return err
+		}
 
 		if i != len(packets)-1 {
-			b = append(b, []byte{payloadDelimiter}...)
+			err := bw.WriteByte(payloadDelimiter)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	return b
+	return nil
 }
 
-func DecodePayloads(b []byte) ([]*Packet, error) {
+func splitByte(buf []byte, delim byte) [][]byte {
+	buffers := make([][]byte, 0, 1)
+
+	last := 0
+	for i, c := range buf {
+		if c == delim {
+			if i == len(buf) {
+				buffers = append(buffers, []byte{})
+			} else {
+				buffers = append(buffers, buf[last:i])
+			}
+			last = i + 1
+		}
+	}
+
+	if len(buffers) == 0 {
+		buffers = append(buffers, buf)
+	} else if last <= len(buf) {
+		buffers = append(buffers, buf[last:])
+	}
+
+	return buffers
+}
+
+func DecodePayloads(r io.Reader) ([]*Packet, error) {
 	packets := make([]*Packet, 0, 1) // Minimum 1 packet expected
-	splitted := bytes.Split(b, []byte{payloadDelimiter})
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	splitted := splitByte(buf, payloadDelimiter)
 
 	for _, sp := range splitted {
-		packet, err := Parse(sp, false)
+		packet, err := decode(sp, false)
 		if err != nil {
 			return nil, err
 		}

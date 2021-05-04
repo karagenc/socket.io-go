@@ -179,18 +179,20 @@ func (t *ClientTransport) poll() ([]*parser.Packet, error) {
 	}
 	defer r.Close()
 
-	payloads, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
-	return parser.DecodePayloads(payloads)
+	return parser.DecodePayloads(r)
 }
 
 func (t *ClientTransport) Send(packets ...*parser.Packet) {
-	body := bytes.NewBuffer(parser.EncodePayloads(packets...))
+	buf := bytes.Buffer{}
+	buf.Grow(parser.EncodedPayloadsLen(packets...))
 
-	req, err := t.newRequest("POST", body, body.Len())
+	err := parser.EncodePayloads(&buf, packets...)
+	if err != nil {
+		t.close(err)
+		return
+	}
+
+	req, err := t.newRequest("POST", &buf, buf.Len())
 	if err != nil {
 		t.close(err)
 		return

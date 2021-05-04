@@ -535,7 +535,8 @@ func TestJSONP(t *testing.T) {
 
 	body = strings.ReplaceAll(body, "\\\"", "\"")
 
-	p, err := parser.Parse([]byte(body), false)
+	buf := bytes.NewBuffer([]byte(body))
+	p, err := parser.Decode(buf, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,12 +597,16 @@ func TestJSONP(t *testing.T) {
 		t.Fatal("invalid response body")
 	}
 
-	p1, err := parser.Parse([]byte(splitted[0]), false)
+	buf = bytes.NewBuffer([]byte(splitted[0]))
+
+	p1, err := parser.Decode(buf, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	p2, err := parser.Parse([]byte(splitted[1]), false)
+	buf = bytes.NewBuffer([]byte(splitted[1]))
+
+	p2, err := parser.Decode(buf, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -620,7 +625,13 @@ func TestJSONP(t *testing.T) {
 
 	// Test sending packets to server
 
-	d := string(parser.EncodePayloads(testPacket1, testPacket2))
+	buf = bytes.NewBuffer(nil)
+	err = parser.EncodePayloads(buf, testPacket1, testPacket2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := buf.String()
 	d = url.QueryEscape(d)
 	d = "d=" + d
 

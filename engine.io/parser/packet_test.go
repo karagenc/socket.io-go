@@ -19,7 +19,7 @@ func TestPacketCreate(t *testing.T) {
 	assert.Equal(t, errInvalidPacketType, err, "if the packet type is not MESSAGE, packet cannot contain a binary data")
 }
 
-func TestPacketParse(t *testing.T) {
+func TestPacketDecode(t *testing.T) {
 	test := []*Packet{
 		mustCreatePacket(t, PacketTypeOpen, false, nil),
 		mustCreatePacket(t, PacketTypeClose, false, nil),
@@ -35,11 +35,18 @@ func TestPacketParse(t *testing.T) {
 
 		// supportsBinary = true
 
-		built := p1.Build(true)
+		buf := bytes.NewBuffer(nil)
+		l := p1.EncodedLen(true)
+		err := p1.Encode(buf, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.Equal(t, l, buf.Len())
 
 		binaryData := p1.Type == PacketTypeMessage && p1.IsBinary == true
 
-		p2, err := Parse(built, binaryData)
+		p2, err := Decode(buf, binaryData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -53,9 +60,16 @@ func TestPacketParse(t *testing.T) {
 
 		// supportsBinary = false
 
-		built = p1.Build(false)
+		buf = bytes.NewBuffer(nil)
+		l = p1.EncodedLen(false)
+		err = p1.Encode(buf, false)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		p2, err = Parse(built, false)
+		assert.Equal(t, l, buf.Len())
+
+		p2, err = Decode(buf, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -69,27 +83,23 @@ func TestPacketParse(t *testing.T) {
 	}
 }
 
-func TestEmptyPacket(t *testing.T) {
-	data := []byte{}
-	_, err := Parse(data, false)
-	if err != errInvalidPacketSize {
-		t.Fatal("errInvalidPacketSize expected")
-	}
-}
-
 func TestInvalidPacketType(t *testing.T) {
 	p := mustCreatePacket(t, PacketTypePing, false, nil)
-	built := p.Build(false)
+	buf := bytes.NewBuffer(nil)
+	err := p.Encode(buf, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	built[0] = 2 // Lower than 48
+	buf.Bytes()[0] = 2 // Lower than 48
 
-	_, err := Parse(built, false)
+	_, err = Decode(buf, false)
 	if err != errInvalidPacketType {
 		t.Fatal("errInvalidPacketType expected")
 	}
 }
 
-func TestPacketBuild(t *testing.T) {
+func TestPacketWrite(t *testing.T) {
 	test := []*Packet{
 		mustCreatePacket(t, PacketTypeOpen, false, nil),
 		mustCreatePacket(t, PacketTypeClose, false, nil),
@@ -105,42 +115,54 @@ func TestPacketBuild(t *testing.T) {
 
 		// supportsBinary = true
 
-		built := packet.Build(true)
+		buf := bytes.NewBuffer(nil)
+		err := packet.Encode(buf, true)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if packet.Type != PacketTypeMessage || (packet.Type == PacketTypeMessage && packet.IsBinary == false) {
-			assert.GreaterOrEqual(t, len(built), 1, "minimum length for a non-binary packet is 1")
+			if !assert.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a non-binary packet is 1") {
+				return
+			}
 
-			pt := built[0]
+			pt := buf.Bytes()[0]
 			assert.Equal(t, packet.Type.ToChar(), pt, "packet type doesn't match")
 
-			if !bytes.Equal(packet.Data, built[1:]) {
+			if !bytes.Equal(packet.Data, buf.Bytes()[1:]) {
 				t.Fatal("packet data doesn't match")
 			}
 		} else {
-			if !bytes.Equal(packet.Data, built) {
+			if !bytes.Equal(packet.Data, buf.Bytes()) {
 				t.Fatal("packet data doesn't match")
 			}
 		}
 
 		// supportsBinary = false
 
-		built = packet.Build(false)
+		buf = bytes.NewBuffer(nil)
+		err = packet.Encode(buf, false)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if packet.Type != PacketTypeMessage || (packet.Type == PacketTypeMessage && packet.IsBinary == false) {
-			assert.GreaterOrEqual(t, len(built), 1, "minimum length for a non-binary packet is 1")
+			if !assert.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a non-binary packet is 1") {
+				return
+			}
 
-			pt := built[0]
+			pt := buf.Bytes()[0]
 			assert.Equal(t, packet.Type.ToChar(), pt, "packet type doesn't match")
 
-			if !bytes.Equal(packet.Data, built[1:]) {
+			if !bytes.Equal(packet.Data, buf.Bytes()[1:]) {
 				t.Fatal("packet data doesn't match")
 			}
 		} else {
-			assert.GreaterOrEqual(t, len(built), 1, "minimum length for a base64 encoded binary packet is 1")
+			assert.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a base64 encoded binary packet is 1")
 
-			assert.Equal(t, base64Prefix, built[0], "a base64 encoded binary packet should start with base64Prefix: '%s'", base64Prefix)
+			assert.Equal(t, base64Prefix, buf.Bytes()[0], "a base64 encoded binary packet should start with base64Prefix: '%d'", base64Prefix)
 
-			data := built[1:]
+			data := buf.Bytes()[1:]
 			dl := base64.StdEncoding.DecodedLen(len(data))
 			decoded := make([]byte, dl)
 

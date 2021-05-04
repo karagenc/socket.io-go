@@ -20,9 +20,15 @@ type ServerTransport struct {
 	pq          *pollQueue
 	pollTimeout time.Duration
 
-	callbackMu sync.Mutex
+	// This is a special lock to ensure that the onPacket is called in order.
+	// Because of the concurrent nature of Go, HTTP requests can be received concurrently.
+	// This may result in onPacket to be called in an incorrect order.
+	// onPacketMu is to ensure that onPacket is called in a synchronous manner.
+	onPacketMu sync.Mutex
 	onPacket   func(p *parser.Packet)
-	onClose    func(name string, err error)
+
+	onCloseMu sync.Mutex
+	onClose   func(name string, err error)
 
 	once sync.Once
 }
@@ -41,10 +47,12 @@ func (t *ServerTransport) Name() string {
 }
 
 func (t *ServerTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose func(transportName string, err error)) {
-	t.callbackMu.Lock()
+	t.onPacketMu.Lock()
+	t.onCloseMu.Lock()
 	t.onPacket = onPacket
 	t.onClose = onClose
-	t.callbackMu.Unlock()
+	t.onPacketMu.Unlock()
+	t.onCloseMu.Unlock()
 }
 
 func (t *ServerTransport) Send(packets ...*parser.Packet) {
@@ -84,23 +92,31 @@ func (t *ServerTransport) setHeaders(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (t *ServerTransport) createJSONPBody(jsonp string, body []byte) []byte {
-	head := "___eio[" + jsonp + "](\""
-	foot := "\");"
-	js := bytes.Buffer{}
-	js.Grow(len(head) + len(body) + len(foot))
+func (t *ServerTransport) writeJSONPBody(w io.Writer, jsonp string, packets []*parser.Packet) error {
+	head := []byte("___eio[" + jsonp + "](\"")
+	foot := []byte("\");")
 
-	js.WriteString(head)
-	template.JSEscape(&js, body)
-	js.WriteString(foot)
+	_, err := w.Write(head)
+	if err != nil {
+		return err
+	}
 
-	return js.Bytes()
+	buf := bytes.Buffer{}
+	buf.Grow(parser.EncodedPayloadsLen(packets...))
+
+	err = parser.EncodePayloads(&buf, packets...)
+	if err != nil {
+		return err
+	}
+	template.JSEscape(w, buf.Bytes())
+
+	_, err = w.Write(foot)
+	return err
 }
 
 func (t *ServerTransport) handlePollRequest(w http.ResponseWriter, r *http.Request) {
 	packets := t.pq.Poll(t.pollTimeout)
 
-	body := parser.EncodePayloads(packets...)
 	jsonp := r.URL.Query().Get("j")
 	wh := w.Header()
 	t.setHeaders(w, r)
@@ -108,16 +124,32 @@ func (t *ServerTransport) handlePollRequest(w http.ResponseWriter, r *http.Reque
 	// If this is not a JSON-P request
 	if jsonp == "" {
 		wh.Set("Content-Type", "text/plain; charset=UTF-8")
-		wh.Set("Content-Length", strconv.Itoa(len(body)))
+		wh.Set("Content-Length", strconv.Itoa(parser.EncodedPayloadsLen(packets...)))
 		w.WriteHeader(200)
-		w.Write(body)
+
+		err := parser.EncodePayloads(w, packets...)
+		if err != nil {
+			t.close(err)
+			return
+		}
 	} else {
-		body = t.createJSONPBody(jsonp, body)
+		buf := bytes.Buffer{}
+		err := t.writeJSONPBody(&buf, jsonp, packets)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.close(err)
+			return
+		}
 
 		wh.Set("Content-Type", "text/javascript; charset=UTF-8")
-		wh.Set("Content-Length", strconv.Itoa(len(body)))
+		wh.Set("Content-Length", strconv.Itoa(buf.Len()))
 		w.WriteHeader(200)
-		w.Write(body)
+
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			t.close(err)
+			return
+		}
 	}
 }
 
@@ -126,28 +158,26 @@ var (
 	ok            = []byte("ok")
 )
 
-const maxBufferSizeExceeded = "maxHTTPBufferSize (MaxBufferSize) exceeded"
-
 func (t *ServerTransport) handleDataRequest(w http.ResponseWriter, r *http.Request) {
 	if t.maxHTTPBufferSize > 0 && r.ContentLength > t.maxHTTPBufferSize {
-		defer t.close(fmt.Errorf(maxBufferSizeExceeded))
-		http.Error(w, maxBufferSizeExceeded, http.StatusBadRequest)
+		defer t.close(fmt.Errorf("maxHTTPBufferSize (MaxBufferSize) exceeded"))
+		w.WriteHeader(http.StatusBadRequest)
 		r.Close = true
 		r.Body.Close()
 		return
 	}
 
 	var (
-		jsonp = r.URL.Query().Get("j")
-		data  []byte
-		err   error
+		packets []*parser.Packet
+		jsonp   = r.URL.Query().Get("j")
+		err     error
 	)
 
 	// If this is not a JSON-P request
 	if jsonp == "" {
-		data, err = io.ReadAll(r.Body)
+		packets, err = parser.DecodePayloads(r.Body)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusBadRequest)
 			t.close(err)
 			return
 		}
@@ -160,23 +190,18 @@ func (t *ServerTransport) handleDataRequest(w http.ResponseWriter, r *http.Reque
 		}
 
 		d := r.PostForm.Get("d")
-		data = []byte(slashReplacer.Replace(d))
+		d = slashReplacer.Replace(d)
+		buf := bytes.NewBuffer([]byte(d))
+
+		packets, err = parser.DecodePayloads(buf)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			t.close(err)
+			return
+		}
 	}
 
-	packets, err := parser.DecodePayloads(data)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		t.close(err)
-		return
-	}
-
-	t.callbackMu.Lock()
-	onPacket := t.onPacket
-	t.callbackMu.Unlock()
-
-	for _, p := range packets {
-		onPacket(p)
-	}
+	t.onPackets(packets)
 
 	t.setHeaders(w, r)
 	wh := w.Header()
@@ -187,6 +212,16 @@ func (t *ServerTransport) handleDataRequest(w http.ResponseWriter, r *http.Reque
 	wh.Set("Content-Length", "2")
 	w.WriteHeader(200)
 	w.Write(ok)
+}
+
+func (t *ServerTransport) onPackets(packets []*parser.Packet) {
+	t.onPacketMu.Lock()
+	defer t.onPacketMu.Unlock()
+
+	onPacket := t.onPacket
+	for _, p := range packets {
+		onPacket(p)
+	}
 }
 
 func (t *ServerTransport) Discard() {
@@ -201,9 +236,9 @@ func (t *ServerTransport) Discard() {
 
 func (t *ServerTransport) close(err error) {
 	t.once.Do(func() {
-		t.callbackMu.Lock()
+		t.onCloseMu.Lock()
 		onClose := t.onClose
-		t.callbackMu.Unlock()
+		t.onCloseMu.Unlock()
 
 		defer onClose(t.Name(), err)
 
