@@ -28,7 +28,7 @@ func NewClient(url string, config *ClientConfig) (*Client, error) {
 	}
 
 	if client.parserCreator == nil {
-		client.parserCreator = new(jsonparser.Creator)
+		client.parserCreator = jsonparser.NewCreator(0)
 	}
 
 	return client, nil

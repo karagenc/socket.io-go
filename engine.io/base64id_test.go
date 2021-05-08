@@ -7,7 +7,7 @@ import (
 )
 
 func TestBase64IDOutputLength(t *testing.T) {
-	id, err := generateBase64ID(base64IDSize)
+	id, err := GenerateBase64ID(Base64IDSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -16,6 +16,6 @@ func TestBase64IDOutputLength(t *testing.T) {
 }
 
 func TestBase64IDInvalidSize(t *testing.T) {
-	_, err := generateBase64ID(1 /* something smaller than 4 */)
+	_, err := GenerateBase64ID(1 /* something smaller than 4 */)
 	assert.Equal(t, errBase64IDInvalidSize, err)
 }

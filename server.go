@@ -31,7 +31,7 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	if s.parserCreator == nil {
-		s.parserCreator = new(jsonparser.Creator)
+		s.parserCreator = jsonparser.NewCreator(0)
 	}
 
 	return s

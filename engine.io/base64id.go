@@ -9,19 +9,19 @@ import (
 )
 
 const (
-	base64IDSize   = 15
-	base64IDMaxTry = 10
+	Base64IDSize   = 15
+	Base64IDMaxTry = 10
 )
 
 var (
-	errBase64IDMaxTryReached = fmt.Errorf("base64 ID generation failed: base64IDMaxTry reached")
+	ErrBase64IDMaxTryReached = fmt.Errorf("base64 ID generation failed: base64IDMaxTry reached")
 	errBase64IDInvalidSize   = fmt.Errorf("base64 ID generation failed: invalid size")
 
 	base64IDMu  sync.Mutex
 	base64IDSeq uint32 = 0 // Sequence number to prevent sid overlaps.
 )
 
-func generateBase64ID(size int) (string, error) {
+func GenerateBase64ID(size int) (string, error) {
 	if size <= 4 {
 		return "", errBase64IDInvalidSize
 	}
@@ -47,7 +47,7 @@ func generateBase64ID(size int) (string, error) {
 
 func (s *Server) generateSID() (sid string, err error) {
 	for i := 0; ; i++ {
-		sid, err = generateBase64ID(base64IDSize)
+		sid, err = GenerateBase64ID(Base64IDSize)
 		if err != nil {
 			return "", err
 		}
@@ -56,8 +56,8 @@ func (s *Server) generateSID() (sid string, err error) {
 			return
 		}
 
-		if i == base64IDMaxTry {
-			return "", errBase64IDMaxTryReached
+		if i == Base64IDMaxTry {
+			return "", ErrBase64IDMaxTryReached
 		}
 	}
 }

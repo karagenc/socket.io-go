@@ -2,9 +2,7 @@ package parser
 
 import "reflect"
 
-type Creator interface {
-	New() Parser
-}
+type Creator func() Parser
 
 type Finish func(header *PacketHeader, eventName string, decode Decode)
 
