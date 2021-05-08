@@ -92,7 +92,7 @@ func printValues(values ...reflect.Value) {
 		k := rv.Kind()
 		if k == reflect.Interface || k == reflect.Ptr {
 			rv = rv.Elem()
-			k = rv.Kind()
+			//k = rv.Kind()
 		}
 
 		v := rv.Interface()

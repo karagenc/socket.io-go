@@ -95,7 +95,7 @@ func (p *Packet) Encode(w io.Writer, supportsBinary bool) error {
 			defer encoder.Close()
 
 			_, err = encoder.Write(p.Data)
-			return nil
+			return err
 		}
 	}
 

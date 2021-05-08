@@ -171,7 +171,7 @@ func deconstructStruct(rv reflect.Value, numBuffers *int) (buffers [][]byte, err
 		k := fv.Kind()
 		if k == reflect.Interface || k == reflect.Ptr {
 			fv = fv.Elem()
-			k = fv.Kind()
+			//k = fv.Kind()
 		}
 
 		if !fv.IsValid() || !fv.CanInterface() {
@@ -244,10 +244,7 @@ type reconstructor struct {
 func (r *reconstructor) AddBuffer(buf []byte) (ok bool) {
 	r.buffers = append(r.buffers, buf)
 	r.remaining--
-	if r.remaining == 0 {
-		return true
-	}
-	return false
+	return r.remaining == 0
 }
 
 func (r *reconstructor) Reconstruct(types ...reflect.Type) (values []reflect.Value, err error) {
@@ -404,7 +401,7 @@ func (r *reconstructor) reconstructStruct(rv reflect.Value) error {
 		k := fv.Kind()
 		if k == reflect.Interface || k == reflect.Ptr {
 			fv = fv.Elem()
-			k = fv.Kind()
+			//k = fv.Kind()
 		}
 
 		if !fv.IsValid() || !fv.CanInterface() {

@@ -280,7 +280,7 @@ func convertTypesToValues(types ...reflect.Type) (values []reflect.Value) {
 		k := typ.Kind()
 		if k == reflect.Ptr {
 			typ = typ.Elem()
-			k = typ.Kind()
+			//k = typ.Kind()
 		}
 
 		values[i] = reflect.New(typ)
