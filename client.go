@@ -46,7 +46,13 @@ type ClientConfig struct {
 type Client struct {
 	url       string
 	eioConfig eio.ClientConfig
-	parser    parser.Parser
+
+	// This mutex is used for protecting parser from concurrent calls.
+	// Due to the modular and concurrent nature of Engine.IO,
+	// we should use a mutex to ensure the Engine.IO doesn't access
+	// the parser's Add method from multiple goroutines.
+	parserMu sync.Mutex
+	parser   parser.Parser
 
 	preventAutoConnect   bool
 	noReconnection       bool
@@ -173,11 +179,11 @@ func (c *Client) connect() (err error) {
 }
 
 func (c *Client) onEIOPacket(packet *eioparser.Packet) {
-	fmt.Printf("packet: type: %d, data: %s\n", packet.Type, packet.Data)
-
+	c.parserMu.Lock()
+	defer c.parserMu.Unlock()
 	err := c.parser.Add(packet.Data, c.onFinishPacket)
 	if err != nil {
-		c.onError(err)
+		go c.onError(err)
 		return
 	}
 }
