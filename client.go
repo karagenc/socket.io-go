@@ -12,8 +12,15 @@ import (
 )
 
 type ClientConfig struct {
+	// A creator function for the Socket.IO parser.
+	// This function is used for creating a parser.Parser object.
+	// You can use a custom parser by changing this variable.
+	//
+	// By default this function is nil and default JSON parser is used.
 	ParserCreator parser.Creator
-	EIO           eio.ClientConfig
+
+	// Configuration for the Engine.IO.
+	EIO eio.ClientConfig
 
 	// Prevent the initial connection.
 	PreventAutoConnect bool
@@ -23,7 +30,7 @@ type ClientConfig struct {
 	NoReconnection bool
 
 	// How many reconnection attempts should we try?
-	// Default: 0 (Infinity)
+	// Default: 0 (Infinite)
 	ReconnectionAttempts int
 
 	// The time delay between reconnection attempts.
@@ -37,10 +44,6 @@ type ClientConfig struct {
 	// Used in the exponential backoff jitter when reconnecting.
 	// Default: 0.5
 	RandomizationFactor *float32
-
-	// The timeout for our connection attempt.
-	// Default: 1 second
-	Timeout *time.Duration
 }
 
 type Client struct {
@@ -60,7 +63,6 @@ type Client struct {
 	reconnectionDelay    time.Duration
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
-	timeout              time.Duration
 
 	sockets *clientSocketStore
 
@@ -74,9 +76,10 @@ const (
 	DefaultReconnectionDelay            = 1 * time.Second
 	DefaultReconnectionDelayMax         = 5 * time.Second
 	DefaultRandomizationFactor  float32 = 0.5
-	DefaultTimeout                      = 1 * time.Second
 )
 
+// Create a new client and add it to the client cache.
+// You can later use LookupClient function with the same URL to retrieve the created client from client cache.
 func NewClient(url string, config *ClientConfig) *Client {
 	if config == nil {
 		config = new(ClientConfig)
@@ -111,12 +114,6 @@ func NewClient(url string, config *ClientConfig) *Client {
 		client.randomizationFactor = DefaultRandomizationFactor
 	}
 
-	if config.Timeout != nil {
-		client.timeout = *config.Timeout
-	} else {
-		client.timeout = DefaultTimeout
-	}
-
 	client.backoff = newBackoff(client.reconnectionDelay, client.reconnectionDelayMax, client.randomizationFactor)
 
 	parserCreator := config.ParserCreator
@@ -129,6 +126,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 	client.Socket("/")
 
 	if !client.preventAutoConnect {
+		// TODO: Handle error returned by client.connect
 		go client.connect()
 	}
 
@@ -137,8 +135,14 @@ func NewClient(url string, config *ClientConfig) *Client {
 	return client
 }
 
+// Look up a client from client cache. If the client is not found or not created with NewClient, ok will be false.
 func LookupClient(url string) (client *Client, ok bool) {
 	return ccache.Get(url)
+}
+
+// Remove a client from client cache.
+func RemoveClient(url string) {
+	ccache.Remove(url)
 }
 
 func (c *Client) Socket(namespace string) Socket {
@@ -304,20 +308,20 @@ func (s *clientSocketStore) Delete(namespace string) {
 var ccache = newClientCache()
 
 type clientCache struct {
-	managers map[string]*Client
-	mu       sync.Mutex
+	clients map[string]*Client
+	mu      sync.Mutex
 }
 
 func newClientCache() *clientCache {
 	return &clientCache{
-		managers: make(map[string]*Client),
+		clients: make(map[string]*Client),
 	}
 }
 
 func (c *clientCache) Get(url string) (cl *Client, ok bool) {
 	c.mu.Lock()
 	url = stripBackslash(url)
-	cl, ok = c.managers[url]
+	cl, ok = c.clients[url]
 	c.mu.Unlock()
 	return
 }
@@ -325,7 +329,14 @@ func (c *clientCache) Get(url string) (cl *Client, ok bool) {
 func (c *clientCache) Add(cl *Client) {
 	c.mu.Lock()
 	url := stripBackslash(cl.url)
-	c.managers[url] = cl
+	c.clients[url] = cl
+	c.mu.Unlock()
+}
+
+func (c *clientCache) Remove(url string) {
+	c.mu.Lock()
+	url = stripBackslash(url)
+	delete(c.clients, url)
 	c.mu.Unlock()
 }
 
