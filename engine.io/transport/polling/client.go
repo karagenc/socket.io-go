@@ -217,7 +217,7 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 	}
 	defer r.Close()
 
-	// Rapidly read the response body without an heap allocation.
+	// Rapidly read the response body without heap allocation.
 	var respBody [2]byte
 	r.Read(respBody[:])
 

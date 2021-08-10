@@ -18,22 +18,28 @@ type ServerConfig struct {
 type Server struct {
 	parserCreator parser.Creator
 	eio           *eio.Server
-	socketStore   *socketStore
+	sockets       *serverSocketStore
 }
 
-type socketStore struct {
+type serverSocketStore struct {
 	sockets map[string]*serverSocket
 	mu      sync.Mutex
 }
 
-func (s *socketStore) Get(sid string) (ss *serverSocket, ok bool) {
+func newServerSocketStore() *serverSocketStore {
+	return &serverSocketStore{
+		sockets: make(map[string]*serverSocket),
+	}
+}
+
+func (s *serverSocketStore) Get(sid string) (ss *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ss, ok = s.sockets[sid]
 	return
 }
 
-func (s *socketStore) GetAll() (sockets []*serverSocket) {
+func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -46,13 +52,13 @@ func (s *socketStore) GetAll() (sockets []*serverSocket) {
 	return
 }
 
-func (s *socketStore) Add(ss *serverSocket) {
+func (s *serverSocketStore) Add(ss *serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sockets[ss.ID()] = ss
 }
 
-func (s *socketStore) Delete(sid string) {
+func (s *serverSocketStore) Delete(sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)
@@ -65,7 +71,7 @@ func NewServer(config *ServerConfig) *Server {
 
 	s := &Server{
 		parserCreator: config.ParserCreator,
-		socketStore:   new(socketStore),
+		sockets:       newServerSocketStore(),
 	}
 
 	s.eio = eio.NewServer(s.onSocket, &config.EIO)
@@ -82,7 +88,7 @@ func (s *Server) onSocket(eioSocket eio.Socket) *eio.Callbacks {
 	if err != nil {
 		panic(err)
 	}
-	s.socketStore.Add(ss)
+	s.sockets.Add(ss)
 
 	return callbacks
 }
