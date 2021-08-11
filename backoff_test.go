@@ -8,6 +8,22 @@ import (
 func TestBackoff(t *testing.T) {
 	b := newBackoff(1*time.Second, 50*time.Second, 0)
 
+	testBackoffDuration(t, b)
+
+	b.Reset()
+	if b.attempts != 0 {
+		t.Fatalf("attempts variable should be zero")
+	}
+
+	d := b.Duration()
+	if d != 1*time.Second {
+		t.Fatalf("d should be equal to 1 but it is equal to %d", d)
+	}
+
+	testBackoffDuration(t, b)
+}
+
+func testBackoffDuration(t *testing.T, b *backoff) {
 	var last time.Duration
 	for i := 0; i < 1000; i++ {
 		d := b.Duration()
