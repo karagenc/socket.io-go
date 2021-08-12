@@ -121,7 +121,7 @@ func (p *Parser) parseHeader(data []byte) (header *parser.PacketHeader, buf []by
 		for ; ; i++ {
 			if i == len(data) {
 				break
-			} else if data[0] < '0' && data[0] > '9' {
+			} else if data[i] < '0' || data[i] > '9' {
 				break
 			}
 		}
@@ -131,7 +131,7 @@ func (p *Parser) parseHeader(data []byte) (header *parser.PacketHeader, buf []by
 			return nil, nil, "", err
 		}
 		header.ID = &num
-		data = data[:i]
+		data = data[i:]
 	}
 
 	if header.IsEvent() {
