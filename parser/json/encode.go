@@ -2,7 +2,6 @@ package jsonparser
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"

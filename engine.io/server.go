@@ -7,14 +7,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tomruk/socket.io-go/internal/json"
-
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
 
 	"github.com/gorilla/websocket"
+
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type AuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
 

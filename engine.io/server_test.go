@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/internal/json"
 )
 
 // This is a sync.WaitGroup with a WaitTimeout function. Use this for testing purposes.

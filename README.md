@@ -34,13 +34,7 @@ If you are a contributor please see: [Developing a Transport](CONTRIBUTING.md#de
 
 ## JSON
 
-You can use [jsoniter](https://github.com/json-iterator/go) for JSON encoding instead of encoding/json.
-
-```shell
-go build -tags=jsoniter .
-```
-
-This is adopted from [gin](https://github.com/gin-gonic/gin).
+By default [jsoniter](https://github.com/json-iterator/go) for JSON encoding instead of encoding/json.
 
 # Contributing
 

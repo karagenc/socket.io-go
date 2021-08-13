@@ -5,7 +5,7 @@
 ## Pre-commit Checklist
 
 - Run all tests.
-- Make sure you use github.com/tomruk/socket.io-go/internal/json instead of encoding/json
+- Make sure you use [jsoniter](github.com/json-iterator/go) instead of encoding/json
 
 And you're good to go.
 

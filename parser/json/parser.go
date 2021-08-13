@@ -1,6 +1,11 @@
 package jsonparser
 
-import "github.com/tomruk/socket.io-go/parser"
+import (
+	jsoniter "github.com/json-iterator/go"
+	"github.com/tomruk/socket.io-go/parser"
+)
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // maxAttachments is the maximum number of the binary attachments to parse/send.
 // If maxAttachments is 0, there will be no limit set for binary attachments.

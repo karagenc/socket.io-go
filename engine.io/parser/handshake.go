@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tomruk/socket.io-go/internal/json"
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type HandshakeResponse struct {
 	SID          string   `json:"sid"`

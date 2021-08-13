@@ -1,7 +1,6 @@
 package jsonparser
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"

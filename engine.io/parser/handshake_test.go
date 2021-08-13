@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tomruk/socket.io-go/internal/json"
 )
 
 func TestHandshakeResponse(t *testing.T) {
