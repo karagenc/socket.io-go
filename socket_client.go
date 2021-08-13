@@ -16,6 +16,9 @@ type clientSocket struct {
 	client    *Client
 	parser    parser.Parser
 
+	authData   interface{}
+	authDataMu sync.Mutex
+
 	connected   bool
 	connectedMu sync.Mutex
 
@@ -29,11 +32,12 @@ type clientSocket struct {
 	acksMu sync.Mutex
 }
 
-func newClientSocket(client *Client, namespace string, parser parser.Parser) *clientSocket {
+func newClientSocket(client *Client, namespace string, parser parser.Parser, authData interface{}) *clientSocket {
 	s := &clientSocket{
 		namespace: namespace,
 		client:    client,
 		parser:    parser,
+		authData:  authData,
 		emitter:   newEventEmitter(),
 		acks:      make(map[uint64]*ackHandler),
 	}
@@ -49,10 +53,16 @@ func (s *clientSocket) setID(id string) {
 	s.id.Store(id)
 }
 
-func (s *clientSocket) Connect() {
+func (s *clientSocket) Connect(authData interface{}) {
 	s.connectedMu.Lock()
 	connected := s.connected
 	s.connectedMu.Unlock()
+
+	if authData != nil {
+		s.authDataMu.Lock()
+		s.authData = authData
+		s.authDataMu.Unlock()
+	}
 
 	if connected {
 		return
@@ -64,13 +74,21 @@ func (s *clientSocket) Connect() {
 	}
 }
 
+type authWrapper struct {
+	AuthData interface{}
+}
+
 func (s *clientSocket) onEIOConnect() {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.namespace,
 	}
 
-	buffers, err := s.parser.Encode(&header, nil)
+	s.authDataMu.Lock()
+	authData := s.authData
+	s.authDataMu.Unlock()
+
+	buffers, err := s.parser.Encode(&header, &authData)
 	if err != nil {
 		s.onError(err)
 		return
@@ -78,6 +96,8 @@ func (s *clientSocket) onEIOConnect() {
 		s.onError(fmt.Errorf("onEIOConnect: len(buffers) != 1"))
 		return
 	}
+
+	fmt.Printf("b0: %s\n", buffers[0])
 
 	packets := []*eioparser.Packet{nil}
 	buf := buffers[0]

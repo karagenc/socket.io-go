@@ -5,7 +5,10 @@ type Socket interface {
 	ID() string
 
 	// Client only.
-	Connect()
+	//
+	// authData is optional and if used, it must be a JSON object (struct or map).
+	// Non-JSON-object authentication data is not accepted by Socket.IO.
+	Connect(authData interface{})
 
 	// Register an event handler.
 	On(eventName string, handler interface{})

@@ -42,8 +42,17 @@ type ClientConfig struct {
 	ReconnectionDelayMax *time.Duration
 
 	// Used in the exponential backoff jitter when reconnecting.
+	// This value is required to be between 0 and 1.
 	// Default: 0.5
 	RandomizationFactor *float32
+
+	// Authentication data to use with sockets. This value must be a struct or a map.
+	// Socket.IO doesn't accept non-JSON-object value for authentication data.
+	//
+	// When a new socket is created with 'Socket' method,
+	// this variable will be set initially.
+	// Unless you provide an authData with the 'Connect' method of Socket, this variable will be used.
+	AuthData interface{}
 }
 
 type Client struct {
@@ -63,6 +72,8 @@ type Client struct {
 	reconnectionDelay    time.Duration
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
+
+	authData interface{}
 
 	sockets *clientSocketStore
 
@@ -92,6 +103,8 @@ func NewClient(url string, config *ClientConfig) *Client {
 		preventAutoConnect:   config.PreventAutoConnect,
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
+
+		authData: config.AuthData,
 
 		sockets: newClientSocketStore(),
 	}
@@ -156,7 +169,7 @@ func (c *Client) Socket(namespace string) Socket {
 
 	socket, ok := c.sockets.Get(namespace)
 	if !ok {
-		socket = newClientSocket(c, namespace, c.parser)
+		socket = newClientSocket(c, namespace, c.parser, c.authData)
 		c.sockets.Add(socket)
 	}
 	return socket

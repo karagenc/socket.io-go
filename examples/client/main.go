@@ -10,10 +10,17 @@ import (
 var (
 	client = sio.NewClient("http://127.0.0.1:3000/socket.io", &sio.ClientConfig{
 		PreventAutoConnect: true,
+		AuthData: &authData{
+			Token: "12345",
+		},
 	})
 
 	socket = client.Socket("/")
 )
+
+type authData struct {
+	Token string `json:"token"`
+}
 
 func main() {
 	socket.On("echo", func(message string) (string, string) {
@@ -30,7 +37,7 @@ func main() {
 		fmt.Println("Connected!")
 	})
 
-	socket.Connect()
+	socket.Connect(nil)
 
 	socket.Emit("withack", "Hello! Send me an ack", func(message string) {
 		fmt.Printf("ACK: %s\n", message)
