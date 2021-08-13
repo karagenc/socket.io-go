@@ -22,8 +22,11 @@ type clientSocket struct {
 	sendBuffer   []*eioparser.Packet
 	sendBufferMu sync.Mutex
 
-	receiveBuffer   []*eioparser.Packet
-	receiveBufferMu sync.Mutex
+	emitter *eventEmitter
+
+	acks   map[uint64]*ackHandler
+	ackID  uint64
+	acksMu sync.Mutex
 }
 
 func newClientSocket(client *Client, namespace string, parser parser.Parser) *clientSocket {
@@ -31,6 +34,8 @@ func newClientSocket(client *Client, namespace string, parser parser.Parser) *cl
 		namespace: namespace,
 		client:    client,
 		parser:    parser,
+		emitter:   newEventEmitter(),
+		acks:      make(map[uint64]*ackHandler),
 	}
 	return s
 }
@@ -44,15 +49,18 @@ func (s *clientSocket) setID(id string) {
 	s.id.Store(id)
 }
 
-func (s *clientSocket) Connect() error {
+func (s *clientSocket) Connect() {
 	s.connectedMu.Lock()
 	connected := s.connected
 	s.connectedMu.Unlock()
 
 	if connected {
-		return nil
+		return
 	} else {
-		return s.client.connect()
+		err := s.client.connect()
+		if err != nil && s.client.noReconnection == false {
+			go s.client.reconnect()
+		}
 	}
 }
 
@@ -85,44 +93,69 @@ func (s *clientSocket) onEIOConnect() {
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	switch header.Type {
 	case parser.PacketTypeConnect:
-		var v map[string]interface{}
-		vt := reflect.TypeOf(v)
-		values, err := decode(vt)
-		if err != nil {
-			s.onError(err)
-			return
-		} else if len(values) != 1 {
-			s.onError(fmt.Errorf("invalid CONNECT packet"))
-			return
+		s.onConnect(header, decode)
+
+	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
+		handlers := s.emitter.GetHandlers(eventName)
+
+		for _, handler := range handlers {
+			s.onEvent(handler, header, decode)
 		}
 
-		m, ok := values[0].Interface().(*map[string]interface{})
-		if !ok {
-			s.onError(fmt.Errorf("invalid CONNECT packet: cast failed"))
-			return
-		}
+	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
+		s.onAck(header, decode)
 
-		idiface, ok := (*m)["sid"]
-		if !ok {
-			s.onError(fmt.Errorf("invalid CONNECT packet: sid expected"))
-			return
-		}
+	case parser.PacketTypeConnectError:
+		s.onConnectError(header, decode)
 
-		id, ok := idiface.(string)
-		if !ok {
-			s.onError(fmt.Errorf("invalid CONNECT packet: sid must be string"))
-			return
-		}
-
-		s.setID(id)
-		s.onConnect()
+	case parser.PacketTypeDisconnect:
+		s.onDisconnect()
 	}
 }
 
-func (s *clientSocket) onConnect() {
+func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
+	var v map[string]interface{}
+	vt := reflect.TypeOf(v)
+	values, err := decode(vt)
+	if err != nil {
+		s.onError(err)
+		return
+	} else if len(values) != 1 {
+		s.onError(fmt.Errorf("invalid CONNECT packet"))
+		return
+	}
+
+	m, ok := values[0].Interface().(*map[string]interface{})
+	if !ok {
+		s.onError(fmt.Errorf("invalid CONNECT packet: cast failed"))
+		return
+	}
+
+	idIface, ok := (*m)["sid"]
+	if !ok {
+		s.onError(fmt.Errorf("invalid CONNECT packet: sid expected"))
+		return
+	}
+
+	id, ok := idIface.(string)
+	if !ok {
+		s.onError(fmt.Errorf("invalid CONNECT packet: sid must be string"))
+		return
+	}
+
+	s.setID(id)
+
 	s.connectedMu.Lock()
 	s.connected = true
 	s.connectedMu.Unlock()
+
+	handlers := s.emitter.GetHandlers("connect")
+	for _, handler := range handlers {
+		_, err := handler.Call()
+		if err != nil {
+			go s.onError(err)
+		}
+	}
 
 	// TODO: emitReserved("connect")
 
@@ -132,12 +165,166 @@ func (s *clientSocket) onConnect() {
 		s.client.packet(s.sendBuffer...)
 		s.sendBuffer = nil
 	}
+}
 
-	// TODO: receiveBuffer
+func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
+	var v map[string]interface{}
+	vt := reflect.TypeOf(v)
+	values, err := decode(vt)
+	if err != nil {
+		s.onError(err)
+		return
+	} else if len(values) != 1 {
+		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet"))
+		return
+	}
+
+	m, ok := values[0].Interface().(*map[string]interface{})
+	if !ok {
+		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed"))
+		return
+	}
+
+	messageIface, ok := (*m)["message"]
+	if !ok {
+		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: message expected"))
+		return
+	}
+
+	message, ok := messageIface.(string)
+	if !ok {
+		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: message must be string"))
+		return
+	}
+
+	connectError := fmt.Errorf("%s", message)
+	handlers := s.emitter.GetHandlers("connect_error")
+
+	for _, handler := range handlers {
+		rv := reflect.ValueOf(connectError)
+		_, err := handler.Call(rv)
+		if err != nil {
+			go s.onError(err)
+		}
+	}
+}
+
+func (s *clientSocket) onDisconnect() {
+	// TODO: onDisconnect
+}
+
+func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
+	values, err := decode(handler.inputArgs...)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	if len(values) == len(handler.inputArgs) {
+		for i, v := range values {
+			if handler.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+				values[i] = v.Elem()
+			}
+		}
+	} else {
+		// TODO: Handle error?
+		//return
+	}
+
+	go func() {
+		ret, err := handler.Call(values...)
+		if err != nil {
+			s.onError(err)
+			return
+		}
+
+		if header.ID != nil {
+			s.sendAck(*header.ID, ret)
+		}
+	}()
+}
+
+func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
+	s.acksMu.Lock()
+	handler, ok := s.acks[*header.ID]
+	if ok {
+		delete(s.acks, *header.ID)
+	}
+	s.acksMu.Unlock()
+
+	if !ok {
+		return
+	}
+
+	values, err := decode(handler.inputArgs...)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	if len(values) == len(handler.inputArgs) {
+		for i, v := range values {
+			if handler.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+				values[i] = v.Elem()
+			}
+		}
+	} else {
+		// TODO: Handle error?
+		//return
+	}
+
+	go func(handler *ackHandler) {
+		err := handler.Call(values...)
+		if err != nil {
+			s.onError(err)
+			return
+		}
+	}(handler)
+}
+
+func (s *clientSocket) sendAck(id uint64, values []reflect.Value) {
+	header := parser.PacketHeader{
+		Type:      parser.PacketTypeAck,
+		Namespace: s.namespace,
+		ID:        &id,
+	}
+
+	v := make([]interface{}, len(values))
+
+	for i := range values {
+		if values[i].CanInterface() {
+			v[i] = values[i].Interface()
+		} else {
+			// TODO: Handle error?
+		}
+	}
+
+	buffers, err := s.parser.Encode(&header, &v)
+	if err != nil {
+		s.onError(err)
+	}
+
+	s.send(buffers...)
 }
 
 func (s *clientSocket) onError(err error) {
 	s.client.onError(err)
+}
+
+func (s *clientSocket) On(eventName string, handler interface{}) {
+	s.emitter.On(eventName, handler)
+}
+
+func (s *clientSocket) Once(eventName string, handler interface{}) {
+	s.emitter.Once(eventName, handler)
+}
+
+func (s *clientSocket) Off(eventName string, handler interface{}) {
+	s.emitter.Off(eventName, handler)
+}
+
+func (s *clientSocket) OffAll() {
+	s.emitter.OffAll()
 }
 
 func (s *clientSocket) Emit(v ...interface{}) {
@@ -146,17 +333,56 @@ func (s *clientSocket) Emit(v ...interface{}) {
 		Namespace: s.namespace,
 	}
 
+	if len(v) == 0 {
+		// TODO: Handle error
+		return
+	}
+
+	eventName := reflect.ValueOf(v)
+	if eventName.Kind() != reflect.String {
+		// TODO: Handle error (string expected)
+		return
+	}
+
+	isReserved, ok := reservedEvents[eventName.String()]
+	if ok && isReserved {
+		// TODO: Handle error (string expected)
+		return
+	}
+
+	f := v[len(v)-1]
+	rt := reflect.TypeOf(f)
+
+	if rt.Kind() == reflect.Func {
+		ackHandler := newAckHandler(f)
+
+		s.acksMu.Lock()
+		id := s.ackID
+		s.acks[id] = ackHandler
+		s.ackID++
+		s.acksMu.Unlock()
+
+		header.ID = &id
+
+		v = v[:len(v)-1]
+	}
+
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
 		s.onError(err)
 		return
 	}
 
+	s.send(buffers...)
+}
+
+func (s *clientSocket) send(buffers ...[]byte) {
 	if len(buffers) > 0 {
 		packets := make([]*eioparser.Packet, len(buffers))
 		buf := buffers[0]
 		buffers = buffers[1:]
 
+		var err error
 		packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
 		if err != nil {
 			s.onError(err)

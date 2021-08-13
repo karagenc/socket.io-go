@@ -126,8 +126,12 @@ func NewClient(url string, config *ClientConfig) *Client {
 	client.Socket("/")
 
 	if !client.preventAutoConnect {
-		// TODO: Handle error returned by client.connect
-		go client.connect()
+		go func() {
+			err := client.connect()
+			if err != nil && client.noReconnection == false {
+				go client.reconnect()
+			}
+		}()
 	}
 
 	ccache.Add(client)

@@ -5,7 +5,7 @@ type Socket interface {
 	ID() string
 
 	// Client only.
-	Connect() error
+	Connect()
 
 	// Register an event handler.
 	On(eventName string, handler interface{})

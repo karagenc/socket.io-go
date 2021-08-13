@@ -49,3 +49,7 @@ func (p *PacketHeader) IsBinary() bool {
 func (p *PacketHeader) IsEvent() bool {
 	return p.Type == PacketTypeEvent || p.Type == PacketTypeBinaryEvent
 }
+
+func (p *PacketHeader) IsAck() bool {
+	return p.Type == PacketTypeAck || p.Type == PacketTypeBinaryAck
+}

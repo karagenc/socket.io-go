@@ -231,7 +231,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 			return
 		}
 
-		if len(values) == 1 {
+		if len(values) == 1 && !p.r.header.IsAck() {
 			rv := values[0]
 			if !rv.CanInterface() {
 				return nil, &ValueError{err: errNonInterfaceableValue, Value: rv}
@@ -241,7 +241,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 			if err != nil {
 				return nil, err
 			}
-		} else if len(values) > 1 {
+		} else {
 			ifaces := make([]interface{}, len(values))
 
 			for i, rv := range values {

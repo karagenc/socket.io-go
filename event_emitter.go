@@ -74,11 +74,11 @@ func (e *eventEmitter) OffAll() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	for k, _ := range e.events {
+	for k := range e.events {
 		delete(e.events, k)
 	}
 
-	for k, _ := range e.eventsOnce {
+	for k := range e.eventsOnce {
 		delete(e.eventsOnce, k)
 	}
 }
