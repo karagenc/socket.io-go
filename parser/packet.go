@@ -10,13 +10,13 @@ const (
 	PacketTypeConnect PacketType = iota
 	PacketTypeDisconnect
 	PacketTypeEvent
-	PacketTypeACK
+	PacketTypeAck
 	PacketTypeConnectError
 	PacketTypeBinaryEvent
-	PacketTypeBinaryACK
+	PacketTypeBinaryAck
 
 	packetTypeMin = PacketTypeConnect
-	packetTypeMax = PacketTypeBinaryACK
+	packetTypeMax = PacketTypeBinaryAck
 )
 
 func (p PacketType) ToChar() byte {
@@ -43,7 +43,7 @@ type PacketHeader struct {
 }
 
 func (p *PacketHeader) IsBinary() bool {
-	return p.Type == PacketTypeBinaryEvent || p.Type == PacketTypeBinaryACK
+	return p.Type == PacketTypeBinaryEvent || p.Type == PacketTypeBinaryAck
 }
 
 func (p *PacketHeader) IsEvent() bool {

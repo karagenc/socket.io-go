@@ -98,7 +98,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 			Expected: createBuffers([]byte("2")),
 		},
 		{
-			Header:   mustCreatePacketHeader(t, parser.PacketTypeACK, "/", 0),
+			Header:   mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			Expected: createBuffers([]byte("3")),
 		},
 		{
@@ -166,7 +166,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 			Expected: createBuffers([]byte(`51-["EVENT_NAME",{"name":"Abdurrezak","age":25,"bin":{"_placeholder":true,"num":0}}]`), []byte("This is binary")),
 		},
 		{
-			Header: mustCreatePacketHeader(t, parser.PacketTypeACK, "/", 0),
+			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
 				gin.H{ // This is map[string]interface{}
 					"lorem": "ipsum",
@@ -177,7 +177,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 			Expected: createBuffers([]byte(`61-[{"amet":{"_placeholder":true,"num":0},"dolor":12345,"lorem":"ipsum"}]`), []byte("This is binary")),
 		},
 		{
-			Header: mustCreatePacketHeader(t, parser.PacketTypeACK, "/", 0),
+			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
 				gin.H{ // This is map[string]interface{}
 					"lorem": "ipsum",
@@ -193,7 +193,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 			Expected: createBuffers([]byte(`62-[{"amet":{"_placeholder":true,"num":0},"consectetur":{"name":"Abdurrezak","age":25,"bin":{"_placeholder":true,"num":1}},"dolor":12345,"lorem":"ipsum"}]`), []byte("One"), []byte("Two")),
 		},
 		{
-			Header: mustCreatePacketHeader(t, parser.PacketTypeACK, "/", 0),
+			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
 				&person{
 					Name: "Abdurrezak",

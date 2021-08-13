@@ -44,12 +44,12 @@ func (p *Parser) Encode(header *parser.PacketHeader, v interface{}) ([][]byte, e
 		return nil, fmt.Errorf("parser/json: invalid argument: %w", errNilArgument)
 	}
 
-	if header.Type == parser.PacketTypeEvent || header.Type == parser.PacketTypeACK {
+	if header.Type == parser.PacketTypeEvent || header.Type == parser.PacketTypeAck {
 		if hasBinary(rv) {
 			if header.Type == parser.PacketTypeEvent {
 				header.Type = parser.PacketTypeBinaryEvent
-			} else if header.Type == parser.PacketTypeACK {
-				header.Type = parser.PacketTypeBinaryACK
+			} else if header.Type == parser.PacketTypeAck {
+				header.Type = parser.PacketTypeBinaryAck
 			}
 
 			return p.encodeBinary(header, v)
@@ -70,12 +70,12 @@ func (p *Parser) encodeString(header *parser.PacketHeader, v interface{}) ([]byt
 	grow += 1  // Packet type
 	grow += 2  // Attachments
 	grow += 20 // Namespace (Approximate length)
-	grow += 20 // ACK ID (Max length)
+	grow += 20 // Ack ID (Max length)
 	buf.Grow(grow)
 
 	buf.WriteByte(header.Type.ToChar())
 
-	if header.Type == parser.PacketTypeBinaryEvent || header.Type == parser.PacketTypeBinaryACK {
+	if header.Type == parser.PacketTypeBinaryEvent || header.Type == parser.PacketTypeBinaryAck {
 		buf.WriteString(strconv.Itoa(header.Attachments) + "-")
 	}
 
