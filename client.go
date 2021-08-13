@@ -42,7 +42,8 @@ type ClientConfig struct {
 	ReconnectionDelayMax *time.Duration
 
 	// Used in the exponential backoff jitter when reconnecting.
-	// This value is required to be between 0 and 1.
+	// This value is required to be between 0 and 1
+	//
 	// Default: 0.5
 	RandomizationFactor *float32
 

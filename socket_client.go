@@ -97,8 +97,6 @@ func (s *clientSocket) onEIOConnect() {
 		return
 	}
 
-	fmt.Printf("b0: %s\n", buffers[0])
-
 	packets := []*eioparser.Packet{nil}
 	buf := buffers[0]
 
@@ -134,7 +132,11 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 }
 
 func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
-	var v map[string]interface{}
+	type sidInfo struct {
+		SID string `json:"sid"`
+	}
+
+	var v *sidInfo
 	vt := reflect.TypeOf(v)
 	values, err := decode(vt)
 	if err != nil {
@@ -145,25 +147,18 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 		return
 	}
 
-	m, ok := values[0].Interface().(*map[string]interface{})
+	v, ok := values[0].Interface().(*sidInfo)
 	if !ok {
 		s.onError(fmt.Errorf("invalid CONNECT packet: cast failed"))
 		return
 	}
 
-	idIface, ok := (*m)["sid"]
-	if !ok {
-		s.onError(fmt.Errorf("invalid CONNECT packet: sid expected"))
+	if v.SID == "" {
+		s.onError(fmt.Errorf("invalid CONNECT packet: sid is empty"))
 		return
 	}
 
-	id, ok := idIface.(string)
-	if !ok {
-		s.onError(fmt.Errorf("invalid CONNECT packet: sid must be string"))
-		return
-	}
-
-	s.setID(id)
+	s.setID(v.SID)
 
 	s.connectedMu.Lock()
 	s.connected = true
@@ -188,7 +183,11 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 }
 
 func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
-	var v map[string]interface{}
+	type connectError struct {
+		Message string `json:"message"`
+	}
+
+	var v *connectError
 	vt := reflect.TypeOf(v)
 	values, err := decode(vt)
 	if err != nil {
@@ -199,29 +198,17 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		return
 	}
 
-	m, ok := values[0].Interface().(*map[string]interface{})
+	v, ok := values[0].Interface().(*connectError)
 	if !ok {
 		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed"))
 		return
 	}
 
-	messageIface, ok := (*m)["message"]
-	if !ok {
-		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: message expected"))
-		return
-	}
-
-	message, ok := messageIface.(string)
-	if !ok {
-		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: message must be string"))
-		return
-	}
-
-	connectError := fmt.Errorf("%s", message)
+	connErr := fmt.Errorf("%s", v.Message)
 	handlers := s.emitter.GetHandlers("connect_error")
 
 	for _, handler := range handlers {
-		rv := reflect.ValueOf(connectError)
+		rv := reflect.ValueOf(connErr)
 		_, err := handler.Call(rv)
 		if err != nil {
 			go s.onError(err)
