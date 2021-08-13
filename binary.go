@@ -11,3 +11,7 @@ func (b Binary) MarshalJSON() ([]byte, error) {
 func (b *Binary) UnmarshalJSON(data []byte) error {
 	return (*jsonparser.Binary)(b).UnmarshalJSON(data)
 }
+
+func (b Binary) SocketIOBinary() bool {
+	return true
+}

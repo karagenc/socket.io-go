@@ -14,9 +14,15 @@ var (
 	errBinaryCannotBeAPtr = fmt.Errorf("parser/json: sio.Binary cannot be a pointer")
 )
 
+type socketIOBinary interface {
+	SocketIOBinary() bool
+}
+
 type Binary []byte
 
-var binaryType = reflect.TypeOf(Binary{})
+func (b Binary) SocketIOBinary() bool {
+	return true
+}
 
 func (b Binary) MarshalJSON() ([]byte, error) {
 	if b == nil {
@@ -118,44 +124,45 @@ func deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err 
 }
 
 func deconstructBinaryValue(rv reflect.Value, original reflect.Value, numBuffers *int, customSetter func([]byte) error) (buf []byte, err error) {
-	typ := rv.Type()
+	if rv.CanInterface() {
+		sb, ok := rv.Interface().(socketIOBinary)
+		if ok && sb.SocketIOBinary() == true {
+			buf = rv.Bytes()
 
-	if typ == binaryType {
-		buf = rv.Bytes()
+			p := placeholder{
+				Placeholder: true,
+				Num:         *numBuffers,
+			}
+			*numBuffers++
 
-		p := placeholder{
-			Placeholder: true,
-			Num:         *numBuffers,
-		}
-		*numBuffers++
-
-		pBuf, err := json.Marshal(&p)
-		if err != nil {
-			return nil, err
-		}
-
-		if customSetter != nil {
-			err = customSetter([]byte(pBuf))
+			pBuf, err := json.Marshal(&p)
 			if err != nil {
 				return nil, err
 			}
-		} else if rv.CanSet() {
-			rv.SetBytes([]byte(pBuf))
-		} else {
-			if !original.CanSet() {
-				return nil, &ValueError{err: errNonSettableValue, Value: rv}
+
+			if customSetter != nil {
+				err = customSetter([]byte(pBuf))
+				if err != nil {
+					return nil, err
+				}
+			} else if rv.CanSet() {
+				rv.SetBytes([]byte(pBuf))
+			} else {
+				if !original.CanSet() {
+					return nil, &ValueError{err: errNonSettableValue, Value: rv}
+				}
+
+				n := reflect.MakeSlice(rv.Type(), len(pBuf), len(pBuf))
+				b := n.Bytes()
+
+				for i := 0; i < len(b); i++ {
+					b[i] = pBuf[i]
+				}
+
+				x := reflect.New(rv.Type())
+				x.Elem().Set(n)
+				original.Set(x)
 			}
-
-			n := reflect.MakeSlice(rv.Type(), len(pBuf), len(pBuf))
-			b := n.Bytes()
-
-			for i := 0; i < len(b); i++ {
-				b[i] = pBuf[i]
-			}
-
-			x := reflect.New(rv.Type())
-			x.Elem().Set(n)
-			original.Set(x)
 		}
 	}
 
@@ -255,6 +262,9 @@ func (r *reconstructor) Reconstruct(types ...reflect.Type) (values []reflect.Val
 	payload := r.buffers[0]
 	values = convertTypesToValues(types...)
 
+	eventName := reflect.New(stringType)
+	values = append([]reflect.Value{eventName}, values...)
+
 	if r.header.IsEvent() && len(values) == 0 {
 		return nil, errInvalidNumberOfValues
 	}
@@ -345,47 +355,48 @@ func (r *reconstructor) reconstructValue(rv reflect.Value) error {
 }
 
 func (r *reconstructor) reconstructBinaryValue(rv reflect.Value, original reflect.Value, customSetter func([]byte) error) error {
-	typ := rv.Type()
+	if rv.CanInterface() {
+		sb, ok := rv.Interface().(socketIOBinary)
+		if ok && sb.SocketIOBinary() == true {
+			pBuf := rv.Bytes()
 
-	if typ == binaryType {
-		pBuf := rv.Bytes()
-
-		var p placeholder
-		err := json.Unmarshal(pBuf, &p)
-		if err != nil {
-			return err
-		}
-
-		num := p.Num + 1
-
-		if num >= len(r.buffers) {
-			return errInvalidPlaceholderNumValue
-		}
-
-		buf := r.buffers[num]
-
-		if customSetter != nil {
-			err = customSetter(buf)
+			var p placeholder
+			err := json.Unmarshal(pBuf, &p)
 			if err != nil {
 				return err
 			}
-		} else if rv.CanSet() {
-			rv.SetBytes(buf)
-		} else {
-			if !original.CanSet() {
-				return &ValueError{err: errNonSettableValue, Value: rv}
+
+			num := p.Num + 1
+
+			if num >= len(r.buffers) {
+				return errInvalidPlaceholderNumValue
 			}
 
-			n := reflect.MakeSlice(rv.Type(), len(buf), len(buf))
-			b := n.Bytes()
+			buf := r.buffers[num]
 
-			for i := 0; i < len(b); i++ {
-				b[i] = buf[i]
+			if customSetter != nil {
+				err = customSetter(buf)
+				if err != nil {
+					return err
+				}
+			} else if rv.CanSet() {
+				rv.SetBytes(buf)
+			} else {
+				if !original.CanSet() {
+					return &ValueError{err: errNonSettableValue, Value: rv}
+				}
+
+				n := reflect.MakeSlice(rv.Type(), len(buf), len(buf))
+				b := n.Bytes()
+
+				for i := 0; i < len(b); i++ {
+					b[i] = buf[i]
+				}
+
+				x := reflect.New(rv.Type())
+				x.Elem().Set(n)
+				original.Set(x)
 			}
-
-			x := reflect.New(rv.Type())
-			x.Elem().Set(n)
-			original.Set(x)
 		}
 	}
 
@@ -552,9 +563,11 @@ func hasBinary(values ...reflect.Value) bool {
 					}
 				}
 			case reflect.Uint8:
-				typ := rv.Type()
-				if typ == binaryType {
-					return true
+				if rv.CanInterface() {
+					sb, ok := rv.Interface().(socketIOBinary)
+					if ok && sb.SocketIOBinary() == true {
+						return true
+					}
 				}
 			}
 
