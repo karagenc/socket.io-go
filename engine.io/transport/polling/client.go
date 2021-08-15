@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ClientTransport struct {
@@ -19,7 +20,7 @@ type ClientTransport struct {
 
 	protocolVersion int
 	url             *url.URL
-	requestHeader   http.Header
+	requestHeader   *transport.RequestHeader
 
 	httpContext context.Context
 	httpCancel  context.CancelFunc
@@ -34,7 +35,7 @@ type ClientTransport struct {
 	once sync.Once
 }
 
-func NewClientTransport(protocolVersion int, url url.URL, requestHeader http.Header, httpClient *http.Client) *ClientTransport {
+func NewClientTransport(protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, httpClient *http.Client) *ClientTransport {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &ClientTransport{
@@ -139,7 +140,8 @@ func (t *ClientTransport) newRequest(method string, body io.Reader, contentLengt
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	for k, v := range t.requestHeader {
+	h := t.requestHeader.Header()
+	for k, v := range h {
 		for _, s := range v {
 			req.Header.Set(k, s)
 		}

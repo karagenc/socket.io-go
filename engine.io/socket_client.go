@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
 )
@@ -27,7 +28,7 @@ type clientSocket struct {
 	httpClient *http.Client
 
 	// HTTP headers to use on transports.
-	requestHeader http.Header
+	requestHeader *transport.RequestHeader
 
 	// WebSocket dialer to use on transports.
 	wsDialer *websocket.Dialer

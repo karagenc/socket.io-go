@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ClientConfig struct {
@@ -21,9 +22,11 @@ type ClientConfig struct {
 	// Additional callback to get notified about the transport upgrade.
 	UpgradeDone func(transportName string)
 
-	// Additional HTTP headers to use.
-	// Can be used for authentication.
-	RequestHeader http.Header
+	// This is a special data type to concurrently
+	// store the additional HTTP request headers to use.
+	// Values can be retrieved and changed any time with Get, Set, Del methods.
+	// Create this with transport.NewRequestHeader function.
+	RequestHeader *transport.RequestHeader
 
 	// Custom HTTP transport to use.
 	//
@@ -46,9 +49,8 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (Socket, er
 	}
 
 	socket := &clientSocket{
-		httpClient:    newHTTPClient(config.HTTPTransport),
-		requestHeader: config.RequestHeader,
-		wsDialer:      websocket.DefaultDialer,
+		httpClient: newHTTPClient(config.HTTPTransport),
+		wsDialer:   websocket.DefaultDialer,
 
 		upgradeTimeout: defaultUpgradeTimeout,
 		upgradeDone:    config.UpgradeDone,
@@ -58,6 +60,12 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (Socket, er
 		pingChan: make(chan struct{}, 1),
 
 		closeChan: make(chan struct{}),
+	}
+
+	if config.RequestHeader != nil {
+		socket.requestHeader = config.RequestHeader
+	} else {
+		socket.requestHeader = transport.NewRequestHeader(nil)
 	}
 
 	var transports []string

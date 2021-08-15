@@ -1,13 +1,13 @@
 package websocket
 
 import (
-	"net/http"
 	"net/url"
 	"strconv"
 	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ClientTransport struct {
@@ -15,7 +15,7 @@ type ClientTransport struct {
 
 	protocolVersion int
 	url             *url.URL
-	requestHeader   http.Header
+	requestHeader   *transport.RequestHeader
 
 	dialer  *websocket.Dialer
 	conn    *websocket.Conn
@@ -28,7 +28,7 @@ type ClientTransport struct {
 	once sync.Once
 }
 
-func NewClientTransport(sid string, protocolVersion int, url url.URL, requestHeader http.Header, dialer *websocket.Dialer) *ClientTransport {
+func NewClientTransport(sid string, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, dialer *websocket.Dialer) *ClientTransport {
 	return &ClientTransport{
 		sid: sid,
 
@@ -69,7 +69,7 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 		t.url.Scheme = "ws"
 	}
 
-	t.conn, _, err = t.dialer.Dial(t.url.String(), t.requestHeader)
+	t.conn, _, err = t.dialer.Dial(t.url.String(), t.requestHeader.Header())
 	if err != nil {
 		return
 	}

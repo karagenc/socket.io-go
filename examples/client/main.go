@@ -37,7 +37,7 @@ func main() {
 		fmt.Println("Connected!")
 	})
 
-	socket.Connect(nil)
+	socket.Connect()
 
 	socket.Emit("withack", "Hello! Send me an ack", func(message string) {
 		fmt.Printf("ACK: %s\n", message)
