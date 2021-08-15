@@ -16,8 +16,7 @@ type clientSocket struct {
 	client    *Client
 	parser    parser.Parser
 
-	authData   interface{}
-	authDataMu sync.Mutex
+	auth *Auth
 
 	connected   bool
 	connectedMu sync.Mutex
@@ -37,10 +36,11 @@ func newClientSocket(client *Client, namespace string, parser parser.Parser, aut
 		namespace: namespace,
 		client:    client,
 		parser:    parser,
-		authData:  authData,
+		auth:      newAuth(),
 		emitter:   newEventEmitter(),
 		acks:      make(map[uint64]*ackHandler),
 	}
+	s.auth.Set(authData)
 	return s
 }
 
@@ -53,16 +53,10 @@ func (s *clientSocket) setID(id string) {
 	s.id.Store(id)
 }
 
-func (s *clientSocket) Connect(authData interface{}) {
+func (s *clientSocket) Connect() {
 	s.connectedMu.Lock()
 	connected := s.connected
 	s.connectedMu.Unlock()
-
-	if authData != nil {
-		s.authDataMu.Lock()
-		s.authData = authData
-		s.authDataMu.Unlock()
-	}
 
 	if connected {
 		return
@@ -74,8 +68,8 @@ func (s *clientSocket) Connect(authData interface{}) {
 	}
 }
 
-type authWrapper struct {
-	AuthData interface{}
+func (s *clientSocket) Auth() *Auth {
+	return s.auth
 }
 
 func (s *clientSocket) onEIOConnect() {
@@ -84,9 +78,7 @@ func (s *clientSocket) onEIOConnect() {
 		Namespace: s.namespace,
 	}
 
-	s.authDataMu.Lock()
-	authData := s.authData
-	s.authDataMu.Unlock()
+	authData := s.auth.Get()
 
 	buffers, err := s.parser.Encode(&header, &authData)
 	if err != nil {
@@ -97,15 +89,14 @@ func (s *clientSocket) onEIOConnect() {
 		return
 	}
 
-	packets := []*eioparser.Packet{nil}
 	buf := buffers[0]
 
-	packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
+	packet, err := eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
 	if err != nil {
 		s.onError(err)
 		return
 	}
-	s.client.packet(packets...)
+	s.client.packet(packet)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -353,7 +344,7 @@ func (s *clientSocket) Emit(v ...interface{}) {
 
 	isReserved, ok := reservedEvents[eventName.String()]
 	if ok && isReserved {
-		// TODO: Handle error (string expected)
+		// TODO: Handle error
 		return
 	}
 

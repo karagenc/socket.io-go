@@ -50,9 +50,10 @@ type ClientConfig struct {
 	// Authentication data to use with sockets. This value must be a struct or a map.
 	// Socket.IO doesn't accept non-JSON-object value for authentication data.
 	//
-	// When a new socket is created with 'Socket' method,
-	// this variable will be set initially.
-	// Unless you provide an authData with the 'Connect' method of Socket, this variable will be used.
+	// When a new socket is created this variable will be set initially.
+	// Unless you set the authentication data of a Socket, this variable will be used.
+	//
+	// This value can be changed any time with Auth method of the Client struct.
 	AuthData interface{}
 }
 
@@ -74,7 +75,7 @@ type Client struct {
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
 
-	authData interface{}
+	auth *Auth
 
 	sockets *clientSocketStore
 
@@ -105,7 +106,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
-		authData: config.AuthData,
+		auth: newAuth(),
 
 		sockets: newClientSocketStore(),
 	}
@@ -170,10 +171,14 @@ func (c *Client) Socket(namespace string) Socket {
 
 	socket, ok := c.sockets.Get(namespace)
 	if !ok {
-		socket = newClientSocket(c, namespace, c.parser, c.authData)
+		socket = newClientSocket(c, namespace, c.parser, c.auth.Get())
 		c.sockets.Add(socket)
 	}
 	return socket
+}
+
+func (c *Client) Auth() *Auth {
+	return c.auth
 }
 
 func (c *Client) connect() (err error) {

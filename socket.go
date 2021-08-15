@@ -6,9 +6,16 @@ type Socket interface {
 
 	// Client only.
 	//
-	// authData is optional and if used, it must be a JSON object (struct or map).
+
+	Connect()
+
+	// Client only.
+	//
+	// This is a concurrenct storage that stores the authentication data.
+	//
+	// Setting the authentication data is optional and if used, it must be a JSON object (struct or map).
 	// Non-JSON-object authentication data is not accepted by Socket.IO.
-	Connect(authData interface{})
+	Auth() *Auth
 
 	// Register an event handler.
 	On(eventName string, handler interface{})
