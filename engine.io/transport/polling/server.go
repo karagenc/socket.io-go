@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ServerTransport struct {
@@ -20,25 +21,19 @@ type ServerTransport struct {
 	pq          *pollQueue
 	pollTimeout time.Duration
 
-	// This is a special lock to ensure that the onPacket is called in order.
-	// Because of the concurrent nature of Go, HTTP requests can be received concurrently.
-	// This may result in onPacket to be called in an incorrect order.
-	// onPacketMu is to ensure that onPacket is called in a synchronous manner.
-	onPacketMu sync.Mutex
-	onPacket   func(p *parser.Packet)
-
-	onCloseMu sync.Mutex
-	onClose   func(name string, err error)
+	callbacks *transport.Callbacks
 
 	once sync.Once
 }
 
-func NewServer(maxBufferSize int, pollTimeout time.Duration) *ServerTransport {
+func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, pollTimeout time.Duration) *ServerTransport {
 	return &ServerTransport{
 		maxHTTPBufferSize: int64(maxBufferSize),
 
 		pq:          newPollQueue(),
 		pollTimeout: pollTimeout,
+
+		callbacks: callbacks,
 	}
 }
 
@@ -46,13 +41,8 @@ func (t *ServerTransport) Name() string {
 	return "polling"
 }
 
-func (t *ServerTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose func(transportName string, err error)) {
-	t.onPacketMu.Lock()
-	t.onCloseMu.Lock()
-	t.onPacket = onPacket
-	t.onClose = onClose
-	t.onPacketMu.Unlock()
-	t.onCloseMu.Unlock()
+func (t *ServerTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
 }
 
 func (t *ServerTransport) Send(packets ...*parser.Packet) {
@@ -201,7 +191,7 @@ func (t *ServerTransport) handleDataRequest(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	t.onPackets(packets)
+	t.callbacks.OnPacket(packets...)
 
 	t.setHeaders(w, r)
 	wh := w.Header()
@@ -212,16 +202,6 @@ func (t *ServerTransport) handleDataRequest(w http.ResponseWriter, r *http.Reque
 	wh.Set("Content-Length", "2")
 	w.WriteHeader(200)
 	w.Write(ok)
-}
-
-func (t *ServerTransport) onPackets(packets []*parser.Packet) {
-	t.onPacketMu.Lock()
-	defer t.onPacketMu.Unlock()
-
-	onPacket := t.onPacket
-	for _, p := range packets {
-		onPacket(p)
-	}
 }
 
 func (t *ServerTransport) Discard() {
@@ -236,11 +216,7 @@ func (t *ServerTransport) Discard() {
 
 func (t *ServerTransport) close(err error) {
 	t.once.Do(func() {
-		t.onCloseMu.Lock()
-		onClose := t.onClose
-		t.onCloseMu.Unlock()
-
-		defer onClose(t.Name(), err)
+		defer t.callbacks.OnClose(t.Name(), err)
 
 		p, err := parser.NewPacket(parser.PacketTypeClose, false, nil)
 		if err == nil {

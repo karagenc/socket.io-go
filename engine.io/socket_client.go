@@ -54,17 +54,19 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 	for _, name := range transports {
 		transports = transports[1:]
 
+		c := transport.NewCallbacks()
+
 		switch name {
 		case "websocket":
-			s.t = _websocket.NewClientTransport("", ProtocolVersion, *s.url, s.requestHeader, s.wsDialer)
+			s.t = _websocket.NewClientTransport(c, "", ProtocolVersion, *s.url, s.requestHeader, s.wsDialer)
 		case "polling":
-			s.t = polling.NewClientTransport(ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
+			s.t = polling.NewClientTransport(c, ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
 		default:
 			err = fmt.Errorf("invalid transport name: %s", name)
 			return
 		}
 
-		s.t.SetCallbacks(s.onPacket, s.onTransportClose)
+		c.Set(s.onPacket, s.onTransportClose)
 
 		var hr *parser.HandshakeResponse
 		hr, err = s.t.Handshake()
@@ -128,7 +130,9 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		return
 	}
 
-	t := _websocket.NewClientTransport(s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialer)
+	c := transport.NewCallbacks()
+
+	t := _websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialer)
 	done := make(chan struct{})
 	once := new(sync.Once)
 
@@ -150,9 +154,11 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		}
 	}
 
-	onClose := func(string, error) {}
-
-	t.SetCallbacks(onPacket, onClose)
+	c.Set(func(packets ...*parser.Packet) {
+		for _, packet := range packets {
+			onPacket(packet)
+		}
+	}, nil)
 
 	_, err := t.Handshake()
 	if err != nil {
@@ -189,7 +195,7 @@ func (s *clientSocket) upgradeTo(t ClientTransport) {
 		return
 	}
 
-	t.SetCallbacks(s.onPacket, s.onTransportClose)
+	t.Callbacks().Set(s.onPacket, s.onTransportClose)
 
 	s.tMu.Lock()
 	defer s.tMu.Unlock()
@@ -212,9 +218,15 @@ func findTransport(transports []string, name string) bool {
 	return false
 }
 
-func (s *clientSocket) onPacket(packet *parser.Packet) {
-	s.callbacks.OnPacket(packet)
+func (s *clientSocket) onPacket(packets ...*parser.Packet) {
+	s.callbacks.OnPacket(packets...)
 
+	for _, packet := range packets {
+		s.handlePacket(packet)
+	}
+}
+
+func (s *clientSocket) handlePacket(packet *parser.Packet) {
 	switch packet.Type {
 	case parser.PacketTypePing:
 		select {

@@ -72,7 +72,7 @@ func (s *clientSocket) Auth() *Auth {
 	return s.auth
 }
 
-func (s *clientSocket) onEIOConnect() {
+func (s *clientSocket) sendConnectPacket() {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.namespace,
@@ -80,7 +80,17 @@ func (s *clientSocket) onEIOConnect() {
 
 	authData := s.auth.Get()
 
-	buffers, err := s.parser.Encode(&header, &authData)
+	var (
+		buffers [][]byte
+		err     error
+	)
+
+	if authData == nil {
+		buffers, err = s.parser.Encode(&header, nil)
+	} else {
+		buffers, err = s.parser.Encode(&header, &authData)
+	}
+
 	if err != nil {
 		s.onError(err)
 		return

@@ -47,7 +47,7 @@ func newServerSocket(id string, upgrades []string, t ServerTransport, pingInterv
 	}
 
 	s.setCallbacks(nil)
-	t.SetCallbacks(s.onPacket, s.onTransportClose)
+	t.Callbacks().Set(s.onPacket, s.onTransportClose)
 	go s.pingPong(pingInterval, pingTimeout)
 
 	return s
@@ -98,7 +98,7 @@ func (s *serverSocket) PingTimeout() time.Duration {
 }
 
 func (s *serverSocket) UpgradeTo(t ServerTransport) {
-	t.SetCallbacks(s.onPacket, s.onTransportClose)
+	t.Callbacks().Set(s.onPacket, s.onTransportClose)
 
 	s.tMu.Lock()
 	defer s.tMu.Unlock()
@@ -144,9 +144,15 @@ func (s *serverSocket) pingPong(pingInterval time.Duration, pingTimeout time.Dur
 	}
 }
 
-func (s *serverSocket) onPacket(packet *parser.Packet) {
-	s.getCallbacks().OnPacket(packet)
+func (s *serverSocket) onPacket(packets ...*parser.Packet) {
+	s.getCallbacks().OnPacket(packets...)
 
+	for _, packet := range packets {
+		s.handlePacket(packet)
+	}
+}
+
+func (s *serverSocket) handlePacket(packet *parser.Packet) {
 	switch packet.Type {
 	case parser.PacketTypePong:
 		s.onPong()

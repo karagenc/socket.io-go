@@ -4,23 +4,12 @@ import (
 	"net/http"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ServerTransport interface {
 	// Name of the transport in lowercase.
 	Name() string
-
-	// For the caller:
-	//
-	// Do not call this method with a nil argument. Always provide non-nil arguments.
-	//
-	// For the transport developer:
-	//
-	// This method can be called at any time concurrently.
-	// Make sure you either use a locking mechanism (Mutex or RWMutex) or use the atomic package to access the callbacks.
-	//
-	// Initially, this method will be called right after the transport is created. This is to ensure that the callbacks are not nil.
-	SetCallbacks(onPacket func(packet *parser.Packet), onClose func(transportName string, err error))
 
 	// handshakePacket can be nil. Do a nil check.
 	// onPacket callback must not be called in this method.
@@ -41,6 +30,8 @@ type ServerTransport interface {
 	// Otherwise it can call the close function recursively.
 	Send(packets ...*parser.Packet)
 
+	Callbacks() *transport.Callbacks
+
 	// This method closes the transport but doesn't call the onClose callback.
 	// This method will be called after an upgrade to discard and remove this transport.
 	//
@@ -57,18 +48,6 @@ type ClientTransport interface {
 	// Name of the transport in lowercase.
 	Name() string
 
-	// For the caller:
-	//
-	// Do not call this method with a nil argument. Always provide non-nil arguments.
-	//
-	// For the transport developer:
-	//
-	// This method can be called at any time concurrently.
-	// Make sure you either use a locking mechanism (Mutex or RWMutex) or use the atomic package to access the callbacks.
-	//
-	// Initially, this method will be called right after the transport is created. This is to ensure that the callbacks are not nil.
-	SetCallbacks(onPacket func(packet *parser.Packet), onClose func(transportName string, err error))
-
 	// This method is used for connecting to the server.
 	//
 	// You should receive the OPEN packet unless the transport is used for upgrade purposes.
@@ -84,6 +63,8 @@ type ClientTransport interface {
 	// If you run this method in a transport (see the close method of polling for example), call it on a new goroutine.
 	// Otherwise it can call the close function recursively.
 	Send(packets ...*parser.Packet)
+
+	Callbacks() *transport.Callbacks
 
 	// This method closes the transport but doesn't call the onClose callback.
 	// This method will be called after an upgrade to discard and remove this transport.

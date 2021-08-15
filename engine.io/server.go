@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
 
@@ -295,20 +296,18 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		upgrades []string
 	)
 
+	c := transport.NewCallbacks()
+
 	switch n {
 	case "polling":
-		t = polling.NewServer(s.maxBufferSize, s.PollTimeout())
+		t = polling.NewServerTransport(c, s.maxBufferSize, s.PollTimeout())
 		upgrades = []string{"websocket"}
 	case "websocket":
-		t = _websocket.NewServerTransport(s.maxBufferSize, supportsBinary, s.wsUpgrader)
+		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsUpgrader)
 	default:
 		writeError(w, ErrorUnknownTransport)
 		return
 	}
-
-	onPacket := func(packet *parser.Packet) {}
-	onClose := func(transportName string, err error) {}
-	t.SetCallbacks(onPacket, onClose)
 
 	handshakePacket, err := newHandshakePacket(upgrades)
 	if err != nil {
@@ -345,13 +344,11 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 		return
 	}
 
-	t := _websocket.NewServerTransport(s.maxBufferSize, true, s.wsUpgrader)
+	c := transport.NewCallbacks()
+
+	t := _websocket.NewServerTransport(c, s.maxBufferSize, true, s.wsUpgrader)
 	done := make(chan struct{})
 	once := new(sync.Once)
-
-	onPacket := func(packet *parser.Packet) {}
-	onClose := func(transportName string, err error) {}
-	t.SetCallbacks(onPacket, onClose)
 
 	err := t.Handshake(nil, w, r)
 	if err != nil {
@@ -368,7 +365,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 		}
 	}()
 
-	onPacket = func(packet *parser.Packet) {
+	onPacket := func(packet *parser.Packet) {
 		switch packet.Type {
 		case parser.PacketTypePing:
 			pong, err := parser.NewPacket(parser.PacketTypePong, false, []byte("probe"))
@@ -393,9 +390,11 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 		}
 	}
 
-	onClose = func(string, error) {}
-
-	t.SetCallbacks(onPacket, onClose)
+	c.Set(func(packets ...*parser.Packet) {
+		for _, p := range packets {
+			onPacket(p)
+		}
+	}, nil)
 
 	t.PostHandshake()
 }

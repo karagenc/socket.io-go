@@ -28,14 +28,12 @@ type ClientTransport struct {
 
 	initialPacket *parser.Packet
 
-	callbackMu sync.Mutex
-	onPacket   func(p *parser.Packet)
-	onClose    func(name string, err error)
+	callbacks *transport.Callbacks
 
 	once sync.Once
 }
 
-func NewClientTransport(protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, httpClient *http.Client) *ClientTransport {
+func NewClientTransport(callbacks *transport.Callbacks, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, httpClient *http.Client) *ClientTransport {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &ClientTransport{
@@ -46,6 +44,8 @@ func NewClientTransport(protocolVersion int, url url.URL, requestHeader *transpo
 		httpContext: ctx,
 		httpCancel:  cancel,
 		httpClient:  httpClient,
+
+		callbacks: callbacks,
 	}
 }
 
@@ -53,11 +53,8 @@ func (t *ClientTransport) Name() string {
 	return "polling"
 }
 
-func (t *ClientTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose func(transportName string, err error)) {
-	t.callbackMu.Lock()
-	t.onPacket = onPacket
-	t.onClose = onClose
-	t.callbackMu.Unlock()
+func (t *ClientTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
 }
 
 func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) {
@@ -99,12 +96,8 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 }
 
 func (t *ClientTransport) Run() {
-	t.callbackMu.Lock()
-	onPacket := t.onPacket
-	t.callbackMu.Unlock()
-
 	if t.initialPacket != nil {
-		onPacket(t.initialPacket)
+		t.callbacks.OnPacket(t.initialPacket)
 		// Set to nil for garbage collection.
 		t.initialPacket = nil
 	}
@@ -116,13 +109,7 @@ func (t *ClientTransport) Run() {
 			break
 		}
 
-		t.callbackMu.Lock()
-		onPacket := t.onPacket
-		t.callbackMu.Unlock()
-
-		for _, p := range packets {
-			onPacket(p)
-		}
+		t.callbacks.OnPacket(packets...)
 	}
 }
 
@@ -238,11 +225,7 @@ func (t *ClientTransport) Discard() {
 
 func (t *ClientTransport) close(err error) {
 	t.once.Do(func() {
-		t.callbackMu.Lock()
-		onClose := t.onClose
-		t.callbackMu.Unlock()
-
-		defer onClose(t.Name(), err)
+		defer t.callbacks.OnClose(t.Name(), err)
 		defer t.httpCancel()
 
 		p, err := parser.NewPacket(parser.PacketTypeClose, false, nil)

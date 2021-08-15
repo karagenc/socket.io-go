@@ -21,6 +21,12 @@ func (a *Auth) Set(data interface{}) error {
 	if data != nil {
 		rt := reflect.TypeOf(data)
 		k := rt.Kind()
+
+		if k == reflect.Ptr {
+			rt = rt.Elem()
+			k = rt.Kind()
+		}
+
 		if k != reflect.Struct && k != reflect.Map {
 			return errAuthInvalidValue
 		}

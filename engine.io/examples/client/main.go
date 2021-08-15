@@ -13,9 +13,11 @@ import (
 
 var exitChan = make(chan struct{})
 
-func onPacket(packet *parser.Packet) {
-	if packet.Type == parser.PacketTypeMessage {
-		fmt.Printf("Message received: %s\n", packet.Data)
+func onPacket(packets ...*parser.Packet) {
+	for _, packet := range packets {
+		if packet.Type == parser.PacketTypeMessage {
+			fmt.Printf("Message received: %s\n", packet.Data)
+		}
 	}
 }
 

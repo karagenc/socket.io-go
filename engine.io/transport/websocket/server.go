@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ServerTransport struct {
@@ -16,17 +17,17 @@ type ServerTransport struct {
 	conn     *websocket.Conn
 	writeMu  sync.Mutex
 
-	callbackMu sync.Mutex
-	onPacket   func(p *parser.Packet)
-	onClose    func(name string, err error)
+	callbacks *transport.Callbacks
 
 	once sync.Once
 }
 
-func NewServerTransport(maxBufferSize int, supportsBinary bool, upgrader *websocket.Upgrader) *ServerTransport {
+func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, supportsBinary bool, upgrader *websocket.Upgrader) *ServerTransport {
 	return &ServerTransport{
 		readLimit:      int64(maxBufferSize),
 		supportsBinary: supportsBinary,
+
+		callbacks: callbacks,
 
 		upgrader: upgrader,
 	}
@@ -36,11 +37,8 @@ func (t *ServerTransport) Name() string {
 	return "websocket"
 }
 
-func (t *ServerTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose func(transportName string, err error)) {
-	t.callbackMu.Lock()
-	t.onPacket = onPacket
-	t.onClose = onClose
-	t.callbackMu.Unlock()
+func (t *ServerTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
 }
 
 func (t *ServerTransport) QueuedPackets() []*parser.Packet {
@@ -119,10 +117,7 @@ func (t *ServerTransport) PostHandshake() {
 			break
 		}
 
-		t.callbackMu.Lock()
-		onPacket := t.onPacket
-		t.callbackMu.Unlock()
-		onPacket(p)
+		t.callbacks.OnPacket(p)
 	}
 }
 
@@ -151,11 +146,7 @@ func (t *ServerTransport) close(err error) {
 			err = nil
 		}
 
-		t.callbackMu.Lock()
-		onClose := t.onClose
-		t.callbackMu.Unlock()
-
-		defer onClose(t.Name(), err)
+		defer t.callbacks.OnClose(t.Name(), err)
 
 		if t.conn != nil {
 			t.conn.Close()

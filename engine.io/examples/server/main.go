@@ -29,16 +29,14 @@ func onSocket(socket eio.Socket) *eio.Callbacks {
 	fmt.Printf("New socket connected: %s\n", socket.ID())
 	addSocket(socket)
 
-	err := sendTextMessage(socket, "Hello from server")
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return nil
-	}
+	sendTextMessage(socket, "Hello from server")
 
 	return &eio.Callbacks{
-		OnPacket: func(packet *parser.Packet) {
-			if packet.Type == parser.PacketTypeMessage {
-				fmt.Printf("Message received: %s\n", packet.Data)
+		OnPacket: func(packets ...*parser.Packet) {
+			for _, packet := range packets {
+				if packet.Type == parser.PacketTypeMessage {
+					fmt.Printf("Message received: %s\n", packet.Data)
+				}
 			}
 		},
 		OnError: func(err error) {
@@ -163,11 +161,10 @@ func sendTextMessageToAll(message string) {
 }
 
 // A little helper function to send a string message with no fuss.
-func sendTextMessage(socket eio.Socket, message string) error {
+func sendTextMessage(socket eio.Socket, message string) {
 	packet, err := parser.NewPacket(parser.PacketTypeMessage, false, []byte(message))
 	if err != nil {
-		return fmt.Errorf("Packet creation error (this shouldn't have happened): %w\n", err)
+		panic(fmt.Errorf("Packet creation error (this shouldn't have happened): %w\n", err))
 	}
 	socket.Send(packet)
-	return nil
 }

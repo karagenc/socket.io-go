@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 // This is a sync.WaitGroup with a WaitTimeout function. Use this for testing purposes.
@@ -59,12 +60,16 @@ func (w *testWaiter) WaitTimeout(t *testing.T, timeout time.Duration) (timedout 
 	}
 }
 
-type fakeServerTransport struct{}
+type fakeServerTransport struct {
+	callbacks *transport.Callbacks
+}
 
 var _ ServerTransport = newFakeServerTransport()
 
 func newFakeServerTransport() *fakeServerTransport {
-	return new(fakeServerTransport)
+	return &fakeServerTransport{
+		callbacks: transport.NewCallbacks(),
+	}
 }
 
 func (t *fakeServerTransport) Name() string {
@@ -75,8 +80,8 @@ func (t *fakeServerTransport) Handshake(handshakePacket *parser.Packet, w http.R
 	return nil
 }
 
-func (t *fakeServerTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose func(transportName string, err error)) {
-
+func (t *fakeServerTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
 }
 
 func (t *fakeServerTransport) PostHandshake() {}
@@ -368,12 +373,15 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 
 	onSocket := func(socket Socket) *Callbacks {
 		return &Callbacks{
-			OnPacket: func(packet *parser.Packet) {
+			OnPacket: func(packets ...*parser.Packet) {
 				defer tw.Done()
 
-				if packet.Type == parser.PacketTypeMessage {
-					if !bytes.Equal(testData, packet.Data) {
-						t.Error("data doesn't match")
+				for _, packet := range packets {
+
+					if packet.Type == parser.PacketTypeMessage {
+						if !bytes.Equal(testData, packet.Data) {
+							t.Error("data doesn't match")
+						}
 					}
 				}
 			},
@@ -411,12 +419,14 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 
 	onSocket := func(socket Socket) *Callbacks {
 		return &Callbacks{
-			OnPacket: func(packet *parser.Packet) {
+			OnPacket: func(packets ...*parser.Packet) {
 				defer tw.Done()
 
-				if packet.Type == parser.PacketTypeMessage {
-					if !bytes.Equal(testData, packet.Data) {
-						t.Error("data doesn't match")
+				for _, packet := range packets {
+					if packet.Type == parser.PacketTypeMessage {
+						if !bytes.Equal(testData, packet.Data) {
+							t.Error("data doesn't match")
+						}
 					}
 				}
 			},
@@ -464,18 +474,20 @@ func TestJSONP(t *testing.T) {
 		socket.Send(testPacket1, testPacket2)
 
 		return &Callbacks{
-			OnPacket: func(packet *parser.Packet) {
-				if packet.Type != parser.PacketTypeMessage {
-					return
-				}
+			OnPacket: func(packets ...*parser.Packet) {
+				for _, packet := range packets {
+					if packet.Type != parser.PacketTypeMessage {
+						return
+					}
 
-				switch {
-				case bytes.Equal(packet.Data, testPacket1.Data) && packet.IsBinary == false:
-					tw.Done()
-				case bytes.Equal(packet.Data, testPacket2.Data) && packet.IsBinary == true:
-					tw.Done()
-				default:
-					t.Error("invalid message received")
+					switch {
+					case bytes.Equal(packet.Data, testPacket1.Data) && packet.IsBinary == false:
+						tw.Done()
+					case bytes.Equal(packet.Data, testPacket2.Data) && packet.IsBinary == true:
+						tw.Done()
+					default:
+						t.Error("invalid message received")
+					}
 				}
 			},
 		}

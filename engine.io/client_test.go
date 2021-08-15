@@ -98,13 +98,15 @@ func testSendReceive(t *testing.T, transports []string) {
 
 	onSocket := func(socket Socket) *Callbacks {
 		callbacks := &Callbacks{
-			OnPacket: func(packet *parser.Packet) {
-				if packet.Type == parser.PacketTypeMessage {
-					defer tw.Done()
+			OnPacket: func(packets ...*parser.Packet) {
+				for _, packet := range packets {
+					if packet.Type == parser.PacketTypeMessage {
+						defer tw.Done()
 
-					ok := check(packet.Data, packet.IsBinary)
-					if !ok {
-						t.Error("server: invalid message received")
+						ok := check(packet.Data, packet.IsBinary)
+						if !ok {
+							t.Error("server: invalid message received")
+						}
 					}
 				}
 			},
@@ -133,13 +135,15 @@ func testSendReceive(t *testing.T, transports []string) {
 		OnError: func(err error) {
 			t.Errorf("unexpected error: %v", err)
 		},
-		OnPacket: func(packet *parser.Packet) {
-			if packet.Type == parser.PacketTypeMessage {
-				defer tw.Done()
+		OnPacket: func(packets ...*parser.Packet) {
+			for _, packet := range packets {
+				if packet.Type == parser.PacketTypeMessage {
+					defer tw.Done()
 
-				ok := check(packet.Data, packet.IsBinary)
-				if !ok {
-					t.Error("client: invalid message received")
+					ok := check(packet.Data, packet.IsBinary)
+					if !ok {
+						t.Error("client: invalid message received")
+					}
 				}
 			}
 		},

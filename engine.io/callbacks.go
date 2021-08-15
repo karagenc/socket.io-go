@@ -4,7 +4,7 @@ import "github.com/tomruk/socket.io-go/engine.io/parser"
 
 type NewSocketCallback func(socket Socket) *Callbacks
 
-type PacketCallback func(packet *parser.Packet)
+type PacketCallback func(packets ...*parser.Packet)
 
 type ErrorCallback func(err error)
 
@@ -19,7 +19,7 @@ type Callbacks struct {
 
 func (c *Callbacks) setMissing() {
 	if c.OnPacket == nil {
-		c.OnPacket = func(packet *parser.Packet) {}
+		c.OnPacket = func(packet ...*parser.Packet) {}
 	}
 	if c.OnError == nil {
 		c.OnError = func(err error) {}

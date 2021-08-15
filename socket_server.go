@@ -1,15 +1,23 @@
 package sio
 
 import (
+	"sync"
+
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
 type serverSocket struct {
-	id     string
-	eio    eio.Socket
-	parser parser.Parser
+	id  string
+	eio eio.Socket
+
+	// This mutex is used for protecting parser from concurrent calls.
+	// Due to the modular and concurrent nature of Engine.IO,
+	// we should use a mutex to ensure the Engine.IO doesn't access
+	// the parser's Add method from multiple goroutines.
+	parserMu sync.Mutex
+	parser   parser.Parser
 }
 
 func newServerSocket(_eio eio.Socket, creator parser.Creator) (*serverSocket, *eio.Callbacks, error) {
@@ -33,11 +41,16 @@ func newServerSocket(_eio eio.Socket, creator parser.Creator) (*serverSocket, *e
 	return s, callbacks, nil
 }
 
-func (s *serverSocket) onEIOPacket(packet *eioparser.Packet) {
-	if packet.Type != eioparser.PacketTypeMessage {
-		return
+func (s *serverSocket) onEIOPacket(packets ...*eioparser.Packet) {
+	s.parserMu.Lock()
+	defer s.parserMu.Unlock()
+
+	for _, packet := range packets {
+		if packet.Type != eioparser.PacketTypeMessage {
+			return
+		}
+		s.parser.Add(packet.Data, s.onFinish)
 	}
-	s.parser.Add(packet.Data, s.onFinish)
 }
 
 func (s *serverSocket) onFinish(header *parser.PacketHeader, eventName string, decode parser.Decode) {

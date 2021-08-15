@@ -21,20 +21,20 @@ type ClientTransport struct {
 	conn    *websocket.Conn
 	writeMu sync.Mutex
 
-	callbackMu sync.Mutex
-	onPacket   func(p *parser.Packet)
-	onClose    func(name string, err error)
+	callbacks *transport.Callbacks
 
 	once sync.Once
 }
 
-func NewClientTransport(sid string, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, dialer *websocket.Dialer) *ClientTransport {
+func NewClientTransport(callbacks *transport.Callbacks, sid string, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, dialer *websocket.Dialer) *ClientTransport {
 	return &ClientTransport{
 		sid: sid,
 
 		protocolVersion: protocolVersion,
 		url:             &url,
 		requestHeader:   requestHeader,
+
+		callbacks: callbacks,
 
 		dialer: dialer,
 	}
@@ -44,11 +44,8 @@ func (t *ClientTransport) Name() string {
 	return "websocket"
 }
 
-func (t *ClientTransport) SetCallbacks(onPacket func(p *parser.Packet), onClose func(transportName string, err error)) {
-	t.callbackMu.Lock()
-	t.onPacket = onPacket
-	t.onClose = onClose
-	t.callbackMu.Unlock()
+func (t *ClientTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
 }
 
 func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) {
@@ -103,10 +100,7 @@ func (t *ClientTransport) Run() {
 			return
 		}
 
-		t.callbackMu.Lock()
-		onPacket := t.onPacket
-		t.callbackMu.Unlock()
-		onPacket(p)
+		t.callbacks.OnPacket(p)
 	}
 }
 
@@ -159,11 +153,7 @@ func (t *ClientTransport) close(err error) {
 			err = nil
 		}
 
-		t.callbackMu.Lock()
-		onClose := t.onClose
-		t.callbackMu.Unlock()
-
-		defer onClose(t.Name(), err)
+		defer t.callbacks.OnClose(t.Name(), err)
 
 		if t.conn != nil {
 			t.conn.Close()

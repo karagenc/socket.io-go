@@ -137,7 +137,9 @@ func NewClient(url string, config *ClientConfig) *Client {
 	}
 	client.parser = parserCreator()
 
-	// Create the default socket
+	client.auth.Set(config.AuthData)
+
+	// Create the default socket.
 	client.Socket("/")
 
 	if !client.preventAutoConnect {
@@ -172,6 +174,17 @@ func (c *Client) Socket(namespace string) Socket {
 	socket, ok := c.sockets.Get(namespace)
 	if !ok {
 		socket = newClientSocket(c, namespace, c.parser, c.auth.Get())
+
+		if c.preventAutoConnect == false {
+			c.eioMu.RLock()
+			defer c.eioMu.RUnlock()
+			connected := c.eio != nil
+
+			if connected {
+				socket.sendConnectPacket()
+			}
+		}
+
 		c.sockets.Add(socket)
 	}
 	return socket
@@ -199,19 +212,22 @@ func (c *Client) connect() (err error) {
 
 	sockets := c.sockets.GetAll()
 	for _, socket := range sockets {
-		go socket.onEIOConnect()
+		go socket.sendConnectPacket()
 	}
 
 	return
 }
 
-func (c *Client) onEIOPacket(packet *eioparser.Packet) {
+func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 	c.parserMu.Lock()
 	defer c.parserMu.Unlock()
-	err := c.parser.Add(packet.Data, c.onFinishPacket)
-	if err != nil {
-		go c.onError(err)
-		return
+
+	for _, packet := range packets {
+		err := c.parser.Add(packet.Data, c.onFinishPacket)
+		if err != nil {
+			go c.onError(err)
+			return
+		}
 	}
 }
 
