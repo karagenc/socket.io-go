@@ -3,6 +3,7 @@ package sio
 import (
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
@@ -16,9 +17,10 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	parserCreator parser.Creator
-	eio           *eio.Server
-	sockets       *serverSocketStore
+	parserCreator   parser.Creator
+	eio             *eio.Server
+	sockets         *serverSocketStore
+	onSocketHandler atomic.Value
 }
 
 type serverSocketStore struct {
@@ -69,18 +71,27 @@ func NewServer(config *ServerConfig) *Server {
 		config = new(ServerConfig)
 	}
 
-	s := &Server{
+	server := &Server{
 		parserCreator: config.ParserCreator,
 		sockets:       newServerSocketStore(),
 	}
 
-	s.eio = eio.NewServer(s.onSocket, &config.EIO)
+	var f OnSocketCallback = func(socket Socket) {}
+	server.onSocketHandler.Store(f)
 
-	if s.parserCreator == nil {
-		s.parserCreator = jsonparser.NewCreator(0)
+	server.eio = eio.NewServer(server.onSocket, &config.EIO)
+
+	if server.parserCreator == nil {
+		server.parserCreator = jsonparser.NewCreator(0)
 	}
 
-	return s
+	return server
+}
+
+func (s *Server) OnSocket(handler OnSocketCallback) {
+	if handler != nil {
+		s.onSocketHandler.Store(handler)
+	}
 }
 
 func (s *Server) onSocket(eioSocket eio.Socket) *eio.Callbacks {
@@ -89,6 +100,9 @@ func (s *Server) onSocket(eioSocket eio.Socket) *eio.Callbacks {
 		panic(err)
 	}
 	s.sockets.Add(ss)
+
+	//onSocket := s.onSocketHandler.Load().(OnSocketCallback)
+	//go onSocket(ss)
 
 	return callbacks
 }
