@@ -5,9 +5,14 @@ type Socket interface {
 	ID() string
 
 	// Client only.
-	//
-
 	Connect()
+
+	// Client only.
+	//
+	// Retrieves the underlying Client.
+	//
+	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
+	IO() *Client
 
 	// Client only.
 	//

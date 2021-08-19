@@ -13,7 +13,7 @@ import (
 type clientSocket struct {
 	id        atomic.Value
 	namespace string
-	client    *Client
+	io        *Client
 	parser    parser.Parser
 
 	auth *Auth
@@ -31,17 +31,15 @@ type clientSocket struct {
 	acksMu sync.Mutex
 }
 
-func newClientSocket(client *Client, namespace string, parser parser.Parser, authData interface{}) *clientSocket {
-	s := &clientSocket{
+func newClientSocket(io *Client, namespace string, parser parser.Parser) *clientSocket {
+	return &clientSocket{
 		namespace: namespace,
-		client:    client,
+		io:        io,
 		parser:    parser,
 		auth:      newAuth(),
 		emitter:   newEventEmitter(),
 		acks:      make(map[uint64]*ackHandler),
 	}
-	s.auth.Set(authData)
-	return s
 }
 
 func (s *clientSocket) ID() string {
@@ -61,11 +59,15 @@ func (s *clientSocket) Connect() {
 	if connected {
 		return
 	} else {
-		err := s.client.connect()
-		if err != nil && s.client.noReconnection == false {
-			go s.client.reconnect()
+		err := s.io.connect()
+		if err != nil && s.io.noReconnection == false {
+			go s.io.reconnect()
 		}
 	}
+}
+
+func (s *clientSocket) IO() *Client {
+	return s.io
 }
 
 func (s *clientSocket) Auth() *Auth {
@@ -106,7 +108,7 @@ func (s *clientSocket) sendConnectPacket() {
 		s.onError(err)
 		return
 	}
-	s.client.packet(packet)
+	s.io.packet(packet)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -178,7 +180,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
 	if len(s.sendBuffer) != 0 {
-		s.client.packet(s.sendBuffer...)
+		s.io.packet(s.sendBuffer...)
 		s.sendBuffer = nil
 	}
 }
@@ -316,7 +318,7 @@ func (s *clientSocket) sendAck(id uint64, values []reflect.Value) {
 }
 
 func (s *clientSocket) onError(err error) {
-	s.client.onError(err)
+	s.io.onError(err)
 }
 
 func (s *clientSocket) On(eventName string, handler interface{}) {
@@ -407,7 +409,7 @@ func (s *clientSocket) send(buffers ...[]byte) {
 
 		s.connectedMu.Lock()
 		if s.connected {
-			s.client.packet(packets...)
+			s.io.packet(packets...)
 		} else {
 			s.sendBufferMu.Lock()
 			s.sendBuffer = append(s.sendBuffer, packets...)

@@ -7,14 +7,14 @@ import (
 	sio "github.com/tomruk/socket.io-go"
 )
 
-var (
-	client = sio.NewClient("http://127.0.0.1:3000/socket.io", &sio.ClientConfig{
-		PreventAutoConnect: true,
-		AuthData: &authData{
-			Token: "12345",
-		},
-	})
+const url = "http://127.0.0.1:3000/socket.io"
 
+var (
+	config = &sio.ClientConfig{
+		PreventAutoConnect: true,
+	}
+
+	client = sio.NewClient(url, config)
 	socket = client.Socket("/")
 )
 
@@ -35,6 +35,10 @@ func main() {
 
 	socket.On("connect", func() {
 		fmt.Println("Connected!")
+	})
+
+	socket.Auth().Set(&authData{
+		Token: "12345",
 	})
 
 	socket.Connect()

@@ -46,15 +46,6 @@ type ClientConfig struct {
 	//
 	// Default: 0.5
 	RandomizationFactor *float32
-
-	// Authentication data to use with sockets. This value must be a struct or a map.
-	// Socket.IO doesn't accept non-JSON-object value for authentication data.
-	//
-	// When a new socket is created this variable will be set initially.
-	// Unless you set the authentication data of a Socket, this variable will be used.
-	//
-	// This value can be changed any time with Auth method of the Client struct.
-	AuthData interface{}
 }
 
 type Client struct {
@@ -75,10 +66,8 @@ type Client struct {
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
 
-	auth *Auth
-
 	sockets *clientSocketStore
-
+	emitter *eventEmitter
 	backoff *backoff
 
 	eio   eio.Socket
@@ -91,14 +80,19 @@ const (
 	DefaultRandomizationFactor  float32 = 0.5
 )
 
-// Create a new client and add it to the client cache.
-// You can later use LookupClient function with the same URL to retrieve the created client from client cache.
+// This function creates a new Client.
+//
+// You should create a new Socket using the Socket
+// method of the Client returned by this function.
+// If you don't do that, server will terminate your connection. See: https://socket.io/docs/v4/server-initialization/#connectTimeout
+//
+// The Client is called "Manager" in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
 func NewClient(url string, config *ClientConfig) *Client {
 	if config == nil {
 		config = new(ClientConfig)
 	}
 
-	client := &Client{
+	io := &Client{
 		url:       url,
 		eioConfig: config.EIO,
 
@@ -106,64 +100,46 @@ func NewClient(url string, config *ClientConfig) *Client {
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
-		auth: newAuth(),
-
 		sockets: newClientSocketStore(),
+		emitter: newEventEmitter(),
 	}
 
 	if config.ReconnectionDelay != nil {
-		client.reconnectionDelay = *config.ReconnectionDelay
+		io.reconnectionDelay = *config.ReconnectionDelay
 	} else {
-		client.reconnectionDelay = DefaultReconnectionDelay
+		io.reconnectionDelay = DefaultReconnectionDelay
 	}
 
 	if config.ReconnectionDelayMax != nil {
-		client.reconnectionDelayMax = *config.ReconnectionDelayMax
+		io.reconnectionDelayMax = *config.ReconnectionDelayMax
 	} else {
-		client.reconnectionDelayMax = DefaultReconnectionDelayMax
+		io.reconnectionDelayMax = DefaultReconnectionDelayMax
 	}
 
 	if config.RandomizationFactor != nil {
-		client.randomizationFactor = *config.RandomizationFactor
+		io.randomizationFactor = *config.RandomizationFactor
 	} else {
-		client.randomizationFactor = DefaultRandomizationFactor
+		io.randomizationFactor = DefaultRandomizationFactor
 	}
 
-	client.backoff = newBackoff(client.reconnectionDelay, client.reconnectionDelayMax, client.randomizationFactor)
+	io.backoff = newBackoff(io.reconnectionDelay, io.reconnectionDelayMax, io.randomizationFactor)
 
 	parserCreator := config.ParserCreator
 	if parserCreator == nil {
 		parserCreator = jsonparser.NewCreator(0)
 	}
-	client.parser = parserCreator()
+	io.parser = parserCreator()
 
-	client.auth.Set(config.AuthData)
-
-	// Create the default socket.
-	client.Socket("/")
-
-	if !client.preventAutoConnect {
+	if !io.preventAutoConnect {
 		go func() {
-			err := client.connect()
-			if err != nil && client.noReconnection == false {
-				go client.reconnect()
+			err := io.connect()
+			if err != nil && io.noReconnection == false {
+				go io.reconnect()
 			}
 		}()
 	}
 
-	ccache.Add(client)
-
-	return client
-}
-
-// Look up a client from client cache. If the client is not found or not created with NewClient, ok will be false.
-func LookupClient(url string) (client *Client, ok bool) {
-	return ccache.Get(url)
-}
-
-// Remove a client from client cache.
-func RemoveClient(url string) {
-	ccache.Remove(url)
+	return io
 }
 
 func (c *Client) Socket(namespace string) Socket {
@@ -173,9 +149,9 @@ func (c *Client) Socket(namespace string) Socket {
 
 	socket, ok := c.sockets.Get(namespace)
 	if !ok {
-		socket = newClientSocket(c, namespace, c.parser, c.auth.Get())
+		socket = newClientSocket(c, namespace, c.parser)
 
-		if c.preventAutoConnect == false {
+		if !c.preventAutoConnect {
 			c.eioMu.RLock()
 			defer c.eioMu.RUnlock()
 			connected := c.eio != nil
@@ -187,11 +163,8 @@ func (c *Client) Socket(namespace string) Socket {
 
 		c.sockets.Add(socket)
 	}
-	return socket
-}
 
-func (c *Client) Auth() *Auth {
-	return c.auth
+	return socket
 }
 
 func (c *Client) connect() (err error) {
@@ -342,46 +315,4 @@ func (s *clientSocketStore) Delete(namespace string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, namespace)
-}
-
-var ccache = newClientCache()
-
-type clientCache struct {
-	clients map[string]*Client
-	mu      sync.Mutex
-}
-
-func newClientCache() *clientCache {
-	return &clientCache{
-		clients: make(map[string]*Client),
-	}
-}
-
-func (c *clientCache) Get(url string) (cl *Client, ok bool) {
-	c.mu.Lock()
-	url = stripBackslash(url)
-	cl, ok = c.clients[url]
-	c.mu.Unlock()
-	return
-}
-
-func (c *clientCache) Add(cl *Client) {
-	c.mu.Lock()
-	url := stripBackslash(cl.url)
-	c.clients[url] = cl
-	c.mu.Unlock()
-}
-
-func (c *clientCache) Remove(url string) {
-	c.mu.Lock()
-	url = stripBackslash(url)
-	delete(c.clients, url)
-	c.mu.Unlock()
-}
-
-func stripBackslash(url string) string {
-	if url != "" && url[len(url)-1] == '/' {
-		url = url[:len(url)-1]
-	}
-	return url
 }
