@@ -167,6 +167,78 @@ func (c *Client) Socket(namespace string) Socket {
 	return socket
 }
 
+func (c *Client) OnOpen(handler OpenCallback) {
+	c.emitter.On("open", handler)
+}
+
+func (c *Client) OnceOpen(handler OpenCallback) {
+	c.emitter.Once("open", handler)
+}
+
+func (c *Client) OffOpen(handler OpenCallback) {
+	c.emitter.Off("open", handler)
+}
+
+func (c *Client) OnClose(handler CloseCallback) {
+	c.emitter.On("close", handler)
+}
+
+func (c *Client) OnceClose(handler CloseCallback) {
+	c.emitter.Once("close", handler)
+}
+
+func (c *Client) OffClose(handler CloseCallback) {
+	c.emitter.Off("close", handler)
+}
+
+func (c *Client) OnReconnect(handler ReconnectCallback) {
+	c.emitter.On("reconnect", handler)
+}
+
+func (c *Client) OnceReconnect(handler ReconnectCallback) {
+	c.emitter.Once("reconnect", handler)
+}
+
+func (c *Client) OffReconnect(handler ReconnectCallback) {
+	c.emitter.Off("reconnect", handler)
+}
+
+func (c *Client) OnReconnectAttempt(handler ReconnectAttemptCallback) {
+	c.emitter.On("reconnect_attempt", handler)
+}
+
+func (c *Client) OnceReconnectAttempt(handler ReconnectAttemptCallback) {
+	c.emitter.Once("reconnect_attempt", handler)
+}
+
+func (c *Client) OffReconnectAttempt(handler ReconnectAttemptCallback) {
+	c.emitter.Off("reconnect_attempt", handler)
+}
+
+func (c *Client) OnReconnectError(handler ReconnectErrorCallback) {
+	c.emitter.On("reconnect_error", handler)
+}
+
+func (c *Client) OnceReconnectError(handler ReconnectErrorCallback) {
+	c.emitter.Once("reconnect_error", handler)
+}
+
+func (c *Client) OffReconnectError(handler ReconnectErrorCallback) {
+	c.emitter.Off("reconnect_error", handler)
+}
+
+func (c *Client) OnReconnectFailed(handler ReconnectFailedCallback) {
+	c.emitter.On("reconnect_failed", handler)
+}
+
+func (c *Client) OnceReconnectFailed(handler ReconnectFailedCallback) {
+	c.emitter.Once("reconnect_failed", handler)
+}
+
+func (c *Client) OffReconnectFailed(handler ReconnectFailedCallback) {
+	c.emitter.Off("reconnect_failed", handler)
+}
+
 func (c *Client) connect() (err error) {
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()

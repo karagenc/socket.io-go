@@ -15,6 +15,21 @@ type DisconnectCallback func()
 
 type DisconnectingCallback func()
 
+// Client callbacks.
+
+type OpenCallback func()
+
+// err can be nil. Always do a nil check.
+type CloseCallback func(reason string, err error)
+
+type ReconnectCallback func()
+
+type ReconnectAttemptCallback func(attempt int)
+
+type ReconnectErrorCallback func(err error)
+
+type ReconnectFailedCallback func()
+
 // Server callbacks.
 
 type OnSocketCallback func(socket Socket)
