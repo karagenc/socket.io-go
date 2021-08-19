@@ -16,6 +16,10 @@ func newEventEmitter() *eventEmitter {
 }
 
 func (e *eventEmitter) On(eventName string, handler interface{}) {
+	if handler == nil {
+		return
+	}
+
 	e.mu.Lock()
 	handlers, _ := e.events[eventName]
 	handlers = append(handlers, newEventHandler(handler))
@@ -24,6 +28,10 @@ func (e *eventEmitter) On(eventName string, handler interface{}) {
 }
 
 func (e *eventEmitter) Once(eventName string, handler interface{}) {
+	if handler == nil {
+		return
+	}
+
 	e.mu.Lock()
 	handlers, _ := e.eventsOnce[eventName]
 	handlers = append(handlers, newEventHandler(handler))
