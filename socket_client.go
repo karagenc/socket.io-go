@@ -321,15 +321,75 @@ func (s *clientSocket) onError(err error) {
 	s.io.onError(err)
 }
 
-func (s *clientSocket) On(eventName string, handler interface{}) {
+func (s *clientSocket) OnConnect(handler ConnectCallback) {
+	s.emitter.On("connect", handler)
+}
+
+func (s *clientSocket) OnceConnect(handler ConnectCallback) {
+	s.emitter.Once("connect", handler)
+}
+
+func (s *clientSocket) OffConnect(handler ConnectCallback) {
+	s.emitter.Off("connect", handler)
+}
+
+func (s *clientSocket) OnConnectError(handler ConnectErrorCallback) {
+	s.emitter.On("connect_error", handler)
+}
+
+func (s *clientSocket) OnceConnectError(handler ConnectErrorCallback) {
+	s.emitter.Once("connect_error", handler)
+}
+
+func (s *clientSocket) OffConnectError(handler ConnectErrorCallback) {
+	s.emitter.Off("connect_error", handler)
+}
+
+func (s *clientSocket) OnDisconnect(handler DisconnectCallback) {
+	s.emitter.On("disconnect", handler)
+}
+
+func (s *clientSocket) OnceDisconnect(handler DisconnectCallback) {
+	s.emitter.Once("disconnect", handler)
+}
+
+func (s *clientSocket) OffDisconnect(handler DisconnectCallback) {
+	s.emitter.Off("disconnect", handler)
+}
+
+// This is server only. Do nothing.
+func (s *clientSocket) OnDisconnecting(handler DisconnectingCallback) {}
+
+// This is server only. Do nothing.
+func (s *clientSocket) OnceDisconnecting(handler DisconnectingCallback) {}
+
+// This is server only. Do nothing.
+func (s *clientSocket) OffDisconnecting(handler DisconnectingCallback) {}
+
+func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
+	if IsEventReserved(eventName) {
+		// TODO: Handle error.
+		return
+	}
+
 	s.emitter.On(eventName, handler)
 }
 
-func (s *clientSocket) Once(eventName string, handler interface{}) {
+func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
+	if IsEventReserved(eventName) {
+		// TODO: Handle error.
+		return
+	}
+
 	s.emitter.Once(eventName, handler)
 }
 
-func (s *clientSocket) Off(eventName string, handler interface{}) {
+func (s *clientSocket) OffEvent(eventName string, handler interface{}) {
+	if IsEventReserved(eventName) {
+		// TODO: Handle error.
+		return
+	}
+
 	s.emitter.Off(eventName, handler)
 }
 
@@ -354,8 +414,7 @@ func (s *clientSocket) Emit(v ...interface{}) {
 		return
 	}
 
-	isReserved, ok := reservedEvents[eventName.String()]
-	if ok && isReserved {
+	if IsEventReserved(eventName.String()) {
 		// TODO: Handle error
 		return
 	}

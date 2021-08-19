@@ -5,6 +5,20 @@ import (
 	"reflect"
 )
 
+// Socket callbacks.
+
+type ConnectCallback func()
+
+type ConnectErrorCallback func(err error)
+
+type DisconnectCallback func()
+
+type DisconnectingCallback func()
+
+// Server callbacks.
+
+type OnSocketCallback func(socket Socket)
+
 type eventHandler struct {
 	rv         reflect.Value
 	inputArgs  []reflect.Type

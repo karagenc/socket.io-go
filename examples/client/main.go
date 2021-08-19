@@ -23,17 +23,17 @@ type authData struct {
 }
 
 func main() {
-	socket.On("echo", func(message string) (string, string) {
+	socket.OnEvent("echo", func(message string) (string, string) {
 		fmt.Printf("Echo received: %s\n", message)
 		return "Heyyo!", "Yaay!"
 	})
 
-	socket.On("binecho", func(message sio.Binary) (string, string) {
+	socket.OnEvent("binecho", func(message sio.Binary) (string, string) {
 		fmt.Printf("Binary echo received: %d %d\n", message[0], message[1])
 		return "Heyyo!", "Yaay!"
 	})
 
-	socket.On("connect", func() {
+	socket.OnEvent("connect", func() {
 		fmt.Println("Connected!")
 	})
 
