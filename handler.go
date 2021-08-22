@@ -24,7 +24,7 @@ type ErrorCallback func(err error)
 // err can be nil. Always do a nil check.
 type CloseCallback func(reason string, err error)
 
-type ReconnectCallback func()
+type ReconnectCallback func(attempt int)
 
 type ReconnectAttemptCallback func(attempt int)
 
