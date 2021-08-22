@@ -19,6 +19,8 @@ type DisconnectingCallback func()
 
 type OpenCallback func()
 
+type ErrorCallback func(err error)
+
 // err can be nil. Always do a nil check.
 type CloseCallback func(reason string, err error)
 

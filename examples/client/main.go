@@ -33,7 +33,7 @@ func main() {
 		return "Heyyo!", "Yaay!"
 	})
 
-	socket.OnEvent("connect", func() {
+	socket.OnConnect(func() {
 		fmt.Println("Connected!")
 	})
 

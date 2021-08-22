@@ -2,6 +2,7 @@ package sio
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -179,6 +180,18 @@ func (c *Client) OffOpen(handler OpenCallback) {
 	c.emitter.Off("open", handler)
 }
 
+func (c *Client) OnError(handler ErrorCallback) {
+	c.emitter.On("error", handler)
+}
+
+func (c *Client) OnceError(handler ErrorCallback) {
+	c.emitter.Once("error", handler)
+}
+
+func (c *Client) OffError(handler ErrorCallback) {
+	c.emitter.Off("error", handler)
+}
+
 func (c *Client) OnClose(handler CloseCallback) {
 	c.emitter.On("close", handler)
 }
@@ -251,6 +264,15 @@ func (c *Client) connect() (err error) {
 
 	eio, err := eio.Dial(c.url, callbacks, &c.eioConfig)
 	if err != nil {
+		errValue := reflect.ValueOf(err)
+
+		handlers := c.emitter.GetHandlers("error")
+		for _, handler := range handlers {
+			go func(handler *eventHandler) {
+				handler.Call(errValue)
+			}(handler)
+		}
+
 		return err
 	}
 	c.eio = eio
@@ -258,6 +280,13 @@ func (c *Client) connect() (err error) {
 	sockets := c.sockets.GetAll()
 	for _, socket := range sockets {
 		go socket.sendConnectPacket()
+	}
+
+	handlers := c.emitter.GetHandlers("open")
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			handler.Call()
+		}(handler)
 	}
 
 	return
@@ -270,7 +299,7 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 	for _, packet := range packets {
 		err := c.parser.Add(packet.Data, c.onFinishPacket)
 		if err != nil {
-			go c.onError(err)
+			c.onError(err)
 			return
 		}
 	}
@@ -295,20 +324,49 @@ func (c *Client) reconnect() {
 
 	if c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts {
 		c.backoff.Reset()
-		// TODO: Reconnect failed
+		handlers := c.emitter.GetHandlers("reconnect_failed")
+		for _, handler := range handlers {
+			go func(handler *eventHandler) {
+				handler.Call()
+			}(handler)
+		}
 		return
 	}
 
 	backoffDuration := c.backoff.Duration()
 	time.Sleep(backoffDuration)
 
+	attemptsValue := reflect.ValueOf(c.backoff.Attempts())
+	handlers := c.emitter.GetHandlers("reconnect_attempt")
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			handler.Call(attemptsValue)
+		}(handler)
+	}
+
 	err := c.connect()
 	if err != nil {
+		errValue := reflect.ValueOf(err)
+		handlers := c.emitter.GetHandlers("reconnect_error")
+		for _, handler := range handlers {
+			go func(handler *eventHandler) {
+				handler.Call(errValue)
+			}(handler)
+		}
+
 		c.reconnect()
 		return
 	}
 
+	attemptsValue = reflect.ValueOf(c.backoff.Attempts())
 	c.backoff.Reset()
+
+	handlers = c.emitter.GetHandlers("reconnect")
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			handler.Call(attemptsValue)
+		}(handler)
+	}
 }
 
 func (c *Client) onEIOError(err error) {
@@ -328,13 +386,28 @@ func (c *Client) onEIOClose(reason string, err error) {
 }
 
 func (c *Client) onError(err error) {
-	// TODO: Handle error
-	fmt.Printf("sio onError: %s\n", err)
+	errValue := reflect.ValueOf(err)
+
+	handlers := c.emitter.GetHandlers("error")
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			handler.Call(errValue)
+		}(handler)
+	}
 }
 
 func (c *Client) onClose(reason string, err error) {
-	// TODO: Handle close
-	fmt.Printf("sio onClose: reason: %s, err: %s\n", reason, err)
+	reasonValue := reflect.ValueOf(reason)
+	errValue := reflect.ValueOf(err)
+
+	handlers := c.emitter.GetHandlers("close")
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			handler.Call(reasonValue, errValue)
+		}(handler)
+	}
+
+	// TODO: Reconnect.
 }
 
 func (c *Client) packet(packets ...*eioparser.Packet) {
