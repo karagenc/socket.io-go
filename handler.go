@@ -21,6 +21,8 @@ type OpenCallback func()
 
 type ErrorCallback func(err error)
 
+type PingCallback func()
+
 // err can be nil. Always do a nil check.
 type CloseCallback func(reason string, err error)
 

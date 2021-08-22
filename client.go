@@ -192,6 +192,18 @@ func (c *Client) OffError(handler ErrorCallback) {
 	c.emitter.Off("error", handler)
 }
 
+func (c *Client) OnPing(handler PingCallback) {
+	c.emitter.On("ping", handler)
+}
+
+func (c *Client) OncePing(handler PingCallback) {
+	c.emitter.Once("ping", handler)
+}
+
+func (c *Client) OffPing(handler PingCallback) {
+	c.emitter.Off("ping", handler)
+}
+
 func (c *Client) OnClose(handler CloseCallback) {
 	c.emitter.On("close", handler)
 }
@@ -297,10 +309,21 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 	defer c.parserMu.Unlock()
 
 	for _, packet := range packets {
-		err := c.parser.Add(packet.Data, c.onFinishPacket)
-		if err != nil {
-			c.onError(err)
-			return
+		switch packet.Type {
+		case eioparser.PacketTypeMessage:
+			err := c.parser.Add(packet.Data, c.onFinishPacket)
+			if err != nil {
+				c.onError(err)
+				return
+			}
+
+		case eioparser.PacketTypePing:
+			handlers := c.emitter.GetHandlers("ping")
+			for _, handler := range handlers {
+				go func(handler *eventHandler) {
+					handler.Call()
+				}(handler)
+			}
 		}
 	}
 }
