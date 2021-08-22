@@ -398,9 +398,6 @@ func (c *Client) onEIOError(err error) {
 }
 
 func (c *Client) onEIOClose(reason string, err error) {
-	// TODO: Handle close
-	fmt.Printf("eio onClose: reason: %s, err: %s\n", reason, err)
-
 	go c.onClose(reason, err)
 
 	if err != nil && c.noReconnection == false {

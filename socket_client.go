@@ -139,25 +139,35 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 		SID string `json:"sid"`
 	}
 
+	connectError := func(err error) {
+		errValue := reflect.ValueOf(fmt.Errorf("invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
+		handlers := s.emitter.GetHandlers("connect_error")
+		for _, handler := range handlers {
+			go func(handler *eventHandler) {
+				handler.Call(errValue)
+			}(handler)
+		}
+	}
+
 	var v *sidInfo
 	vt := reflect.TypeOf(v)
 	values, err := decode(vt)
 	if err != nil {
-		s.onError(err)
+		connectError(err)
 		return
 	} else if len(values) != 1 {
-		s.onError(fmt.Errorf("invalid CONNECT packet"))
+		connectError(fmt.Errorf("len(values) != 1"))
 		return
 	}
 
 	v, ok := values[0].Interface().(*sidInfo)
 	if !ok {
-		s.onError(fmt.Errorf("invalid CONNECT packet: cast failed"))
+		connectError(fmt.Errorf("cast failed"))
 		return
 	}
 
 	if v.SID == "" {
-		s.onError(fmt.Errorf("invalid CONNECT packet: sid is empty"))
+		connectError(fmt.Errorf("sid is empty"))
 		return
 	}
 
@@ -169,13 +179,10 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 
 	handlers := s.emitter.GetHandlers("connect")
 	for _, handler := range handlers {
-		_, err := handler.Call()
-		if err != nil {
-			go s.onError(err)
-		}
+		go func(handler *eventHandler) {
+			handler.Call()
+		}(handler)
 	}
-
-	// TODO: emitReserved("connect")
 
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
@@ -207,15 +214,13 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		return
 	}
 
-	connErr := fmt.Errorf("%s", v.Message)
-	handlers := s.emitter.GetHandlers("connect_error")
+	errValue := reflect.ValueOf(fmt.Errorf("%s", v.Message))
 
+	handlers := s.emitter.GetHandlers("connect_error")
 	for _, handler := range handlers {
-		rv := reflect.ValueOf(connErr)
-		_, err := handler.Call(rv)
-		if err != nil {
-			go s.onError(err)
-		}
+		go func(handler *eventHandler) {
+			handler.Call(errValue)
+		}(handler)
 	}
 }
 
