@@ -383,7 +383,6 @@ func (s *clientSocket) OffDisconnecting(handler DisconnectingCallback) {}
 func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
 		panic(fmt.Errorf("OnEvent: attempted to attach a handler to a reserved event"))
-		return
 	}
 
 	s.emitter.On(eventName, handler)
@@ -392,7 +391,6 @@ func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
 func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
 		panic(fmt.Errorf("OnceEvent: attempted to attach a handler to a reserved event"))
-		return
 	}
 
 	s.emitter.Once(eventName, handler)
@@ -401,7 +399,6 @@ func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
 func (s *clientSocket) OffEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
 		panic(fmt.Errorf("OffEvent: attempted to remove a handler from a reserved event"))
-		return
 	}
 
 	s.emitter.Off(eventName, handler)
@@ -419,18 +416,15 @@ func (s *clientSocket) Emit(v ...interface{}) {
 
 	if len(v) == 0 {
 		panic(fmt.Errorf("Emit: at least 1 argument expected"))
-		return
 	}
 
 	eventName := reflect.ValueOf(v)
 	if eventName.Kind() != reflect.String {
 		panic(fmt.Errorf("Emit: string expected"))
-		return
 	}
 
 	if IsEventReserved(eventName.String()) {
 		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
-		return
 	}
 
 	f := v[len(v)-1]
