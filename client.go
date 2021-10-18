@@ -433,8 +433,13 @@ func (c *Client) Close() {
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
 	c.eio.Close()
+
 	c.backoff.Reset()
 	c.sockets.CloseAll()
+
+	c.parserMu.Lock()
+	defer c.parserMu.Unlock()
+	c.parser.Reset()
 }
 
 func (c *Client) packet(packets ...*eioparser.Packet) {

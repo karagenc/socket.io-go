@@ -21,3 +21,7 @@ type Parser struct {
 	r              *reconstructor
 	maxAttachments int
 }
+
+func (p *Parser) Reset() {
+	p.r = nil
+}
