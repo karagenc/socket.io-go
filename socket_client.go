@@ -225,7 +225,13 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 }
 
 func (s *clientSocket) onDisconnect() {
-	// TODO: onDisconnect
+	handlers := s.emitter.GetHandlers("disconnect")
+
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			handler.Call()
+		}(handler)
+	}
 }
 
 func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
@@ -242,8 +248,8 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 			}
 		}
 	} else {
-		// TODO: Handle error?
-		//return
+		s.onError(fmt.Errorf("onEvent: invalid number of arguments"))
+		return
 	}
 
 	go func() {
@@ -284,8 +290,8 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 			}
 		}
 	} else {
-		// TODO: Handle error?
-		//return
+		s.onError(fmt.Errorf("onAck: invalid number of arguments"))
+		return
 	}
 
 	go func(handler *ackHandler) {
@@ -310,7 +316,8 @@ func (s *clientSocket) sendAck(id uint64, values []reflect.Value) {
 		if values[i].CanInterface() {
 			v[i] = values[i].Interface()
 		} else {
-			// TODO: Handle error?
+			s.onError(fmt.Errorf("sendAck: CanInterface must be true"))
+			return
 		}
 	}
 
@@ -373,7 +380,7 @@ func (s *clientSocket) OffDisconnecting(handler DisconnectingCallback) {}
 
 func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
-		// TODO: Handle error.
+		panic(fmt.Errorf("OnEvent: attempted to attach a handler to a reserved event"))
 		return
 	}
 
@@ -382,7 +389,7 @@ func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
 
 func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
-		// TODO: Handle error.
+		panic(fmt.Errorf("OnceEvent: attempted to attach a handler to a reserved event"))
 		return
 	}
 
@@ -391,7 +398,7 @@ func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
 
 func (s *clientSocket) OffEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
-		// TODO: Handle error.
+		panic(fmt.Errorf("OffEvent: attempted to remove a handler from a reserved event"))
 		return
 	}
 
@@ -409,18 +416,18 @@ func (s *clientSocket) Emit(v ...interface{}) {
 	}
 
 	if len(v) == 0 {
-		// TODO: Handle error
+		panic(fmt.Errorf("Emit: at least 1 argument expected"))
 		return
 	}
 
 	eventName := reflect.ValueOf(v)
 	if eventName.Kind() != reflect.String {
-		// TODO: Handle error (string expected)
+		panic(fmt.Errorf("Emit: string expected"))
 		return
 	}
 
 	if IsEventReserved(eventName.String()) {
-		// TODO: Handle error
+		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
 		return
 	}
 
