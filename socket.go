@@ -74,4 +74,7 @@ type Socket interface {
 	// Emit a message.
 	// If you want to emit a binary data, use sio.Binary instead of []byte.
 	Emit(v ...interface{})
+
+	// Close the Socket and the underlying Engine.IO connection.
+	Close()
 }

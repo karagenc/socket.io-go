@@ -393,8 +393,7 @@ func (c *Client) reconnect() {
 }
 
 func (c *Client) onEIOError(err error) {
-	// TODO: Handle error
-	fmt.Printf("eio onError: %s\n", err)
+	c.onError(fmt.Errorf("engine.io error: %w", err))
 }
 
 func (c *Client) onEIOClose(reason string, err error) {
@@ -428,6 +427,14 @@ func (c *Client) onClose(reason string, err error) {
 	}
 
 	// TODO: Reconnect.
+}
+
+func (c *Client) Close() {
+	c.eioMu.Lock()
+	defer c.eioMu.Unlock()
+	c.eio.Close()
+	c.backoff.Reset()
+	c.sockets.CloseAll()
 }
 
 func (c *Client) packet(packets ...*eioparser.Packet) {
@@ -480,4 +487,12 @@ func (s *clientSocketStore) Delete(namespace string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, namespace)
+}
+
+func (s *clientSocketStore) CloseAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, socket := range s.sockets {
+		socket.Close()
+	}
 }

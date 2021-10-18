@@ -74,6 +74,8 @@ func (s *clientSocket) Auth() *Auth {
 	return s.auth
 }
 
+func (s *clientSocket) Close() {}
+
 func (s *clientSocket) sendConnectPacket() {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
