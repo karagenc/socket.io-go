@@ -4,7 +4,7 @@ This is a [Socket.IO](https://socket.io) library for Go.
 
 # Compatibility
 
-In the near future i plan to support last 2 versions of Go. For now supported Go version is 1.16.  
+In the near future I plan to support last 2 versions of Go. For now supported Go version is 1.16.  
 
 The least supported Socket.IO version is 3.0. If you have an older version of Socket.IO in your other projects, please consider upgrading your dependencies.
 
