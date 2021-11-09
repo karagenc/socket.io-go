@@ -2,9 +2,10 @@ package sio
 
 import "sync"
 
+type AdapterCreator func(namespace *Namespace) Adapter
+
 type Adapter interface {
-	Setup() error
-	Close() error
+	Close()
 
 	AddAll(sid string, rooms []string)
 	Delete(sid string, room string)
@@ -12,7 +13,7 @@ type Adapter interface {
 
 	Broadcast()
 
-	Sockets()
+	Sockets(rooms []string) (sids []string)
 	SocketRooms()
 	FetchSockets()
 	AddSockets()
@@ -25,9 +26,10 @@ type Adapter interface {
 // This is the default in-memory adapter of Socket.IO.
 // Have a look at: https://github.com/socketio/socket.io-adapter
 type inMemoryAdapter struct {
-	mu    sync.Mutex
-	rooms stringMapStringSlice
-	sids  stringMapStringSlice
+	mu        sync.Mutex
+	namespace *Namespace
+	rooms     stringMapStringSlice
+	sids      stringMapStringSlice
 }
 
 // This is the equivalent of the container type as defined in socket.io-adapter:
@@ -87,20 +89,15 @@ func (m stringMapStringSlice) DeleteItem(key, value string) (deleted bool) {
 	return
 }
 
-func newInMemoryAdapter() *inMemoryAdapter {
+func newInMemoryAdapter(namespace *Namespace) Adapter {
 	return &inMemoryAdapter{
-		rooms: make(stringMapStringSlice),
-		sids:  make(stringMapStringSlice),
+		namespace: namespace,
+		rooms:     make(stringMapStringSlice),
+		sids:      make(stringMapStringSlice),
 	}
 }
 
-func (a *inMemoryAdapter) Setup() error {
-	return nil
-}
-
-func (a *inMemoryAdapter) Close() error {
-	return nil
-}
+func (a *inMemoryAdapter) Close() {}
 
 func (a *inMemoryAdapter) AddAll(sid string, rooms []string) {
 	a.mu.Lock()
@@ -166,12 +163,12 @@ func (a *inMemoryAdapter) Sockets(rooms []string) (sids []string) {
 				continue
 			}
 
-			/*
-				sids := a.rooms.Get(room)
-				for _, sid := range sids {
-					TODO: if (this.nsp.sockets.has(id)) { sids.add(id); }
+			sids := a.rooms.Get(room)
+			for _, sid := range sids {
+				if a.namespace.sockets.has(id) {
+					sids.add(id)
 				}
-			*/
+			}
 		}
 	} else {
 

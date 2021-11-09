@@ -12,58 +12,29 @@ import (
 )
 
 type ServerConfig struct {
-	ParserCreator parser.Creator
-	EIO           eio.ServerConfig
+	ParserCreator  parser.Creator
+	AdapterCreator AdapterCreator
+
+	EIO eio.ServerConfig
 }
 
 type Server struct {
-	parserCreator   parser.Creator
-	eio             *eio.Server
-	sockets         *serverSocketStore
+	parserCreator  parser.Creator
+	adapterCreator AdapterCreator
+
+	eio *eio.Server
+
+	connections *serverConnStore
+
+	namespaces   map[string]*Namespace
+	namespacesMu sync.Mutex
+
 	onSocketHandler atomic.Value
 }
 
-type serverSocketStore struct {
-	sockets map[string]*serverSocket
-	mu      sync.Mutex
-}
-
-func newServerSocketStore() *serverSocketStore {
-	return &serverSocketStore{
-		sockets: make(map[string]*serverSocket),
-	}
-}
-
-func (s *serverSocketStore) Get(sid string) (ss *serverSocket, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ss, ok = s.sockets[sid]
-	return
-}
-
-func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sockets = make([]*serverSocket, len(s.sockets))
-	i := 0
-	for _, ss := range s.sockets {
-		sockets[i] = ss
-		i++
-	}
-	return
-}
-
-func (s *serverSocketStore) Add(ss *serverSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sockets[ss.ID()] = ss
-}
-
-func (s *serverSocketStore) Delete(sid string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.sockets, sid)
+type serverConnStore struct {
+	conns map[string]*serverConn
+	mu    sync.Mutex
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -72,17 +43,21 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	server := &Server{
-		parserCreator: config.ParserCreator,
-		sockets:       newServerSocketStore(),
+		parserCreator:  config.ParserCreator,
+		adapterCreator: config.AdapterCreator,
 	}
 
 	var f OnSocketCallback = func(socket Socket) {}
 	server.onSocketHandler.Store(f)
 
-	server.eio = eio.NewServer(server.onSocket, &config.EIO)
+	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 
 	if server.parserCreator == nil {
 		server.parserCreator = jsonparser.NewCreator(0)
+	}
+
+	if server.adapterCreator == nil {
+		server.adapterCreator = newInMemoryAdapter
 	}
 
 	return server
@@ -94,17 +69,28 @@ func (s *Server) OnSocket(handler OnSocketCallback) {
 	}
 }
 
-func (s *Server) onSocket(eioSocket eio.Socket) *eio.Callbacks {
-	ss, callbacks, err := newServerSocket(eioSocket, s.parserCreator)
-	if err != nil {
-		panic(err)
-	}
-	s.sockets.Add(ss)
-
-	//onSocket := s.onSocketHandler.Load().(OnSocketCallback)
-	//go onSocket(ss)
-
+func (s *Server) onEIOSocket(eioSocket eio.Socket) *eio.Callbacks {
+	_, callbacks := newServerConn(eioSocket, s.parserCreator)
 	return callbacks
+}
+
+func (s *Server) Of(namespace string) *Namespace {
+	if len(namespace) != 0 && namespace[0] != '/' {
+		namespace = "/" + namespace
+	}
+
+	s.namespacesMu.Lock()
+	n, ok := s.namespaces[namespace]
+	s.namespacesMu.Unlock()
+
+	if !ok {
+		n = newNamespace(namespace, s.adapterCreator)
+		s.namespacesMu.Lock()
+		s.namespaces[namespace] = n
+		s.namespacesMu.Unlock()
+	}
+
+	return n
 }
 
 func (s *Server) Run() error {
