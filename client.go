@@ -162,7 +162,7 @@ func (c *Client) Socket(namespace string) Socket {
 			}
 		}
 
-		c.sockets.Add(socket)
+		c.sockets.Set(socket)
 	}
 
 	return socket
@@ -311,7 +311,7 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 	for _, packet := range packets {
 		switch packet.Type {
 		case eioparser.PacketTypeMessage:
-			err := c.parser.Add(packet.Data, c.onFinishPacket)
+			err := c.parser.Add(packet.Data, c.onFinishEIOPacket)
 			if err != nil {
 				c.onError(err)
 				return
@@ -328,7 +328,7 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 	}
 }
 
-func (c *Client) onFinishPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
+func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	if header.Namespace == "" {
 		header.Namespace = "/"
 	}
@@ -482,13 +482,13 @@ func (s *clientSocketStore) GetAll() (sockets []*clientSocket) {
 	return
 }
 
-func (s *clientSocketStore) Add(ss *clientSocket) {
+func (s *clientSocketStore) Set(ss *clientSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sockets[ss.namespace] = ss
 }
 
-func (s *clientSocketStore) Delete(namespace string) {
+func (s *clientSocketStore) Remove(namespace string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, namespace)

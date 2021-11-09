@@ -39,13 +39,13 @@ func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
 	return
 }
 
-func (s *serverSocketStore) Add(ss *serverSocket) {
+func (s *serverSocketStore) Set(ss *serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sockets[ss.ID()] = ss
 }
 
-func (s *serverSocketStore) Delete(sid string) {
+func (s *serverSocketStore) Remove(sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)
