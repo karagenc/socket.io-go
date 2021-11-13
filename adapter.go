@@ -1,6 +1,10 @@
 package sio
 
-import "sync"
+import (
+	"sync"
+
+	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
+)
 
 type AdapterCreator func(namespace *Namespace) Adapter
 
@@ -11,28 +15,22 @@ type Adapter interface {
 	Delete(sid string, room string)
 	DeleteAll(sid string)
 
-	Broadcast()
+	Broadcast(packet []*eioparser.Packet, opts *BroadcastOptions)
 
 	Sockets(rooms []string) (sids []string)
-	SocketRooms()
-	FetchSockets()
-	AddSockets()
-	DelSockets()
-
-	DisconnectSockets()
-	ComputeExceptSIDs()
+	SocketRooms(sid string) []string
 }
 
 // This is the default in-memory adapter of Socket.IO.
 // Have a look at: https://github.com/socketio/socket.io-adapter
 type inMemoryAdapter struct {
-	mu        sync.Mutex
-	namespace *Namespace
-	rooms     stringMapStringSlice
-	sids      stringMapStringSlice
+	mu    sync.Mutex
+	nsp   *Namespace
+	rooms stringMapStringSlice
+	sids  stringMapStringSlice
 }
 
-// This is the equivalent of the container type as defined in socket.io-adapter:
+// This is the equivalent of the container types as defined in socket.io-adapter:
 //
 // public rooms: Map<Room, Set<SocketId>> = new Map();
 //
@@ -89,11 +87,11 @@ func (m stringMapStringSlice) DeleteItem(key, value string) (deleted bool) {
 	return
 }
 
-func newInMemoryAdapter(namespace *Namespace) Adapter {
+func newInMemoryAdapter(nsp *Namespace) Adapter {
 	return &inMemoryAdapter{
-		namespace: namespace,
-		rooms:     make(stringMapStringSlice),
-		sids:      make(stringMapStringSlice),
+		nsp:   nsp,
+		rooms: make(stringMapStringSlice),
+		sids:  make(stringMapStringSlice),
 	}
 }
 
@@ -108,12 +106,6 @@ func (a *inMemoryAdapter) AddAll(sid string, rooms []string) {
 
 		if !a.rooms.Has(room) {
 			a.rooms.Set(room, nil)
-			// TODO: this.emit("create-room", room);
-		}
-
-		alreadyExists := a.rooms.Add(room, sid)
-		if !alreadyExists {
-			// TODO: this.emit("join-room", room);
 		}
 	}
 }
@@ -131,14 +123,11 @@ func (a *inMemoryAdapter) Delete(sid string, room string) {
 
 func (a *inMemoryAdapter) delete(sid string, room string) {
 	if a.rooms.Has(room) {
-		deleted := a.rooms.DeleteItem(room, sid)
-		if deleted {
-			// TODO: this.emit("leave-room", room, id);
-		}
+		a.rooms.DeleteItem(room, sid)
+
 		sids := a.rooms.Get(room)
 		if len(sids) == 0 {
 			a.rooms.Delete(room)
-			// TODO: this.emit("delete-room", room);
 		}
 	}
 }
@@ -156,7 +145,52 @@ func (a *inMemoryAdapter) DeleteAll(sid string) {
 	a.sids.Delete(sid)
 }
 
+func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *BroadcastOptions) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if len(opts.Rooms) > 0 {
+		sids := make(map[string]interface{})
+
+		for room, _ := range opts.Rooms {
+			if !a.rooms.Has(room) {
+				continue
+			}
+
+			for _, sid := range a.rooms.Get(room) {
+				if _, ok := sids[sid]; ok {
+					continue
+				}
+				if _, ok := opts.Except[sid]; ok {
+					continue
+				}
+
+				socket, ok := a.nsp.SocketStore().Get(sid)
+				if ok {
+					sids[sid] = nil
+					socket.packet(packets...)
+				}
+			}
+		}
+	} else {
+		for sid, _ := range a.sids {
+			if _, ok := opts.Except[sid]; ok {
+				continue
+			}
+
+			socket, ok := a.nsp.SocketStore().Get(sid)
+			if ok {
+				socket.packet(packets...)
+			}
+		}
+	}
+
+}
+
 func (a *inMemoryAdapter) Sockets(rooms []string) (sids []string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	if len(rooms) > 0 {
 		for _, room := range rooms {
 			if !a.rooms.Has(room) {
@@ -165,14 +199,26 @@ func (a *inMemoryAdapter) Sockets(rooms []string) (sids []string) {
 
 			sids := a.rooms.Get(room)
 			for _, sid := range sids {
-				if a.namespace.sockets.has(id) {
-					sids.add(id)
+				_, ok := a.nsp.SocketStore().Get(sid)
+				if ok {
+					sids = append(sids, sid)
 				}
 			}
 		}
 	} else {
-
+		for sid, _ := range a.sids {
+			_, ok := a.nsp.SocketStore().Get(sid)
+			if ok {
+				sids = append(sids, sid)
+			}
+		}
 	}
 
 	return
+}
+
+func (a *inMemoryAdapter) SocketRooms(sid string) []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.sids.Get(sid)
 }

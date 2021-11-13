@@ -37,6 +37,8 @@ func newServerSocket(c *serverConn) (*serverSocket, error) {
 	return s, nil
 }
 
+func (s *serverSocket) Auth() *Auth { return nil }
+
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
@@ -140,7 +142,7 @@ func (s *serverSocket) send(buffers ...[]byte) {
 }
 
 func (s *serverSocket) packet(packets ...*eioparser.Packet) {
-	// TODO: s.conn.packet(packets...)
-	// Instead of:
-	// go s.eio.Send(packets...)
+	s.conn.packet(packets...)
 }
+
+func (s *serverSocket) Close() {}
