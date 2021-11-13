@@ -165,10 +165,9 @@ func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *Broadcast
 					continue
 				}
 
-				socket, ok := a.nsp.SocketStore().Get(sid)
+				ok := a.nsp.SocketStore().Packet(sid)
 				if ok {
 					sids[sid] = nil
-					socket.packet(packets...)
 				}
 			}
 		}
@@ -178,10 +177,7 @@ func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *Broadcast
 				continue
 			}
 
-			socket, ok := a.nsp.SocketStore().Get(sid)
-			if ok {
-				socket.packet(packets...)
-			}
+			a.nsp.SocketStore().Packet(sid)
 		}
 	}
 

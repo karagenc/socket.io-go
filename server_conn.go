@@ -127,6 +127,12 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 
 }
 
+func (c *serverConn) packet(packets ...*eioparser.Packet) {
+	go func() {
+		c.eio.Send(packets...)
+	}()
+}
+
 func (c *serverConn) onError(err error) {
 
 }
