@@ -150,36 +150,77 @@ func (s *serverSocket) Connect() {}
 // This is client only. Return nil.
 func (s *serverSocket) IO() *Client { return nil }
 
-func (s *serverSocket) OnConnect(handler ConnectCallback) {}
+func (s *serverSocket) OnConnect(handler ConnectCallback) {
+	s.emitter.On("connect", handler)
+}
 
-func (s *serverSocket) OnceConnect(handler ConnectCallback) {}
+func (s *serverSocket) OnceConnect(handler ConnectCallback) {
+	s.emitter.Once("connect", handler)
+}
 
-func (s *serverSocket) OffConnect(handler ConnectCallback) {}
+func (s *serverSocket) OffConnect(handler ConnectCallback) {
+	s.emitter.Off("connect", handler)
+}
 
+// This is client only. Do nothing.
 func (s *serverSocket) OnConnectError(handler ConnectErrorCallback) {}
 
+// This is client only. Do nothing.
 func (s *serverSocket) OnceConnectError(handler ConnectErrorCallback) {}
 
+// This is client only. Do nothing.
 func (s *serverSocket) OffConnectError(handler ConnectErrorCallback) {}
 
-func (s *serverSocket) OnDisconnect(handler DisconnectCallback) {}
+func (s *serverSocket) OnDisconnect(handler DisconnectCallback) {
+	s.emitter.On("disconnect", handler)
+}
 
-func (s *serverSocket) OnceDisconnect(handler DisconnectCallback) {}
+func (s *serverSocket) OnceDisconnect(handler DisconnectCallback) {
+	s.emitter.Once("disconnect", handler)
+}
 
-func (s *serverSocket) OffDisconnect(handler DisconnectCallback) {}
+func (s *serverSocket) OffDisconnect(handler DisconnectCallback) {
+	s.emitter.Off("disconnect", handler)
+}
 
-func (s *serverSocket) OnDisconnecting(handler DisconnectingCallback) {}
+func (s *serverSocket) OnDisconnecting(handler DisconnectingCallback) {
+	s.emitter.On("disconnecting", handler)
+}
 
-func (s *serverSocket) OnceDisconnecting(handler DisconnectingCallback) {}
+func (s *serverSocket) OnceDisconnecting(handler DisconnectingCallback) {
+	s.emitter.Once("disconnecting", handler)
+}
 
-func (s *serverSocket) OffDisconnecting(handler DisconnectingCallback) {}
+func (s *serverSocket) OffDisconnecting(handler DisconnectingCallback) {
+	s.emitter.Off("disconnecting", handler)
+}
 
-func (s *serverSocket) OnEvent(eventName string, handler interface{}) {}
+func (s *serverSocket) OnEvent(eventName string, handler interface{}) {
+	if IsEventReserved(eventName) {
+		panic(fmt.Errorf("OnEvent: attempted to add a handler to a reserved event"))
+	}
 
-func (s *serverSocket) OnceEvent(eventName string, handler interface{}) {}
+	s.emitter.On(eventName, handler)
+}
 
-func (s *serverSocket) OffEvent(eventName string, handler interface{}) {}
+func (s *serverSocket) OnceEvent(eventName string, handler interface{}) {
+	if IsEventReserved(eventName) {
+		panic(fmt.Errorf("OnceEvent: attempted to add a handler to a reserved event"))
+	}
 
-func (s *serverSocket) OffAll() {}
+	s.emitter.Once(eventName, handler)
+}
+
+func (s *serverSocket) OffEvent(eventName string, handler interface{}) {
+	if IsEventReserved(eventName) {
+		panic(fmt.Errorf("OffEvent: attempted to remove a handler from a reserved event"))
+	}
+
+	s.emitter.Off(eventName, handler)
+}
+
+func (s *serverSocket) OffAll() {
+	s.emitter.OffAll()
+}
 
 func (s *serverSocket) Close() {}

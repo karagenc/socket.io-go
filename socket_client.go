@@ -384,7 +384,7 @@ func (s *clientSocket) OffDisconnecting(handler DisconnectingCallback) {}
 
 func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
-		panic(fmt.Errorf("OnEvent: attempted to attach a handler to a reserved event"))
+		panic(fmt.Errorf("OnEvent: attempted to add a handler to a reserved event"))
 	}
 
 	s.emitter.On(eventName, handler)
@@ -392,7 +392,7 @@ func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
 
 func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
 	if IsEventReserved(eventName) {
-		panic(fmt.Errorf("OnceEvent: attempted to attach a handler to a reserved event"))
+		panic(fmt.Errorf("OnceEvent: attempted to add a handler to a reserved event"))
 	}
 
 	s.emitter.Once(eventName, handler)
