@@ -1,6 +1,8 @@
 package sio
 
 import (
+	"encoding/json"
+	"reflect"
 	"sync"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
@@ -58,7 +60,9 @@ type serverConn struct {
 	id  string
 	eio eio.Socket
 
+	server  *Server
 	sockets *serverSocketStore
+	nsps    *namespaceStore
 
 	// This mutex is used for protecting parser from concurrent calls.
 	// Due to the modular and concurrent nature of Engine.IO,
@@ -73,12 +77,14 @@ func (c *serverConn) ID() string {
 	return c.id
 }
 
-func newServerConn(_eio eio.Socket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
+func newServerConn(server *Server, _eio eio.Socket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
 	c := &serverConn{
 		id:  _eio.ID(),
 		eio: _eio,
 
+		server:  server,
 		sockets: newServerSocketStore(),
+		nsps:    newNamespaceStore(),
 
 		parser: creator(),
 	}
@@ -124,13 +130,84 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 }
 
 func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) {
+	var auth json.RawMessage
 
+	at := reflect.TypeOf(&auth)
+	values, err := decode(at)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(values) == 1 {
+		rmp, ok := values[0].Interface().(*json.RawMessage)
+		if ok {
+			auth = *rmp
+		}
+	}
+
+	nsp := c.server.Of(header.Namespace)
+	socket, err := nsp.add(c, auth)
+	if err != nil {
+		c.connectError(err, nsp.Name())
+		return
+	}
+
+	c.sockets.Set(socket)
+	c.nsps.Set(nsp)
+
+	socket.onConnect()
+
+	f, ok := c.server.onSocketHandler.Load().(OnSocketCallback)
+	if ok {
+		f(socket)
+	}
+}
+
+func (c *serverConn) connectError(err error, nsp string) {
+	e := &connectError{
+		Message: err.Error(),
+	}
+
+	header := parser.PacketHeader{
+		Type:      parser.PacketTypeConnectError,
+		Namespace: nsp,
+	}
+
+	buffers, err := c.parser.Encode(&header, e)
+	if err != nil {
+		panic(err)
+	}
+
+	c.sendBuffers(buffers...)
+}
+
+func (c *serverConn) sendBuffers(buffers ...[]byte) {
+	if len(buffers) > 0 {
+		packets := make([]*eioparser.Packet, len(buffers))
+		buf := buffers[0]
+		buffers = buffers[1:]
+
+		var err error
+		packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
+		if err != nil {
+			c.onError(err)
+			return
+		}
+
+		for i, attachment := range buffers {
+			packets[i+1], err = eioparser.NewPacket(eioparser.PacketTypeMessage, true, attachment)
+			if err != nil {
+				c.onError(err)
+				return
+			}
+		}
+
+		c.packet(packets...)
+	}
 }
 
 func (c *serverConn) packet(packets ...*eioparser.Packet) {
-	go func() {
-		c.eio.Send(packets...)
-	}()
+	go c.eio.Send(packets...)
 }
 
 func (c *serverConn) onError(err error) {

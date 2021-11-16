@@ -24,10 +24,8 @@ type Server struct {
 
 	eio *eio.Server
 
-	connections *serverConnStore
-
-	namespaces   map[string]*Namespace
-	namespacesMu sync.Mutex
+	conns *serverConnStore
+	nsps  *namespaceStore
 
 	onSocketHandler atomic.Value
 }
@@ -35,6 +33,12 @@ type Server struct {
 type serverConnStore struct {
 	conns map[string]*serverConn
 	mu    sync.Mutex
+}
+
+func newServerConnStore() *serverConnStore {
+	return &serverConnStore{
+		conns: make(map[string]*serverConn),
+	}
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -45,6 +49,8 @@ func NewServer(config *ServerConfig) *Server {
 	server := &Server{
 		parserCreator:  config.ParserCreator,
 		adapterCreator: config.AdapterCreator,
+		nsps:           newNamespaceStore(),
+		conns:          newServerConnStore(),
 	}
 
 	var f OnSocketCallback = func(socket Socket) {}
@@ -70,7 +76,7 @@ func (s *Server) OnSocket(handler OnSocketCallback) {
 }
 
 func (s *Server) onEIOSocket(eioSocket eio.Socket) *eio.Callbacks {
-	_, callbacks := newServerConn(eioSocket, s.parserCreator)
+	_, callbacks := newServerConn(s, eioSocket, s.parserCreator)
 	return callbacks
 }
 
@@ -79,18 +85,7 @@ func (s *Server) Of(namespace string) *Namespace {
 		namespace = "/" + namespace
 	}
 
-	s.namespacesMu.Lock()
-	n, ok := s.namespaces[namespace]
-	s.namespacesMu.Unlock()
-
-	if !ok {
-		n = newNamespace(namespace, s.adapterCreator)
-		s.namespacesMu.Lock()
-		s.namespaces[namespace] = n
-		s.namespacesMu.Unlock()
-	}
-
-	return n
+	return s.nsps.GetOrCreate(namespace, s.adapterCreator)
 }
 
 func (s *Server) Run() error {

@@ -1,15 +1,62 @@
 package sio
 
 import (
+	"encoding/json"
 	"sync"
+	"time"
 
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
 type Namespace struct {
-	name    string
+	name string
+
 	sockets *NamespaceSocketStore
+
+	middlewareFuncs   []MiddlewareFunction
+	middlewareFuncsMu sync.RWMutex
+
 	adapter Adapter
+}
+
+type namespaceStore struct {
+	nsps map[string]*Namespace
+	mu   sync.Mutex
+}
+
+func newNamespaceStore() *namespaceStore {
+	return &namespaceStore{
+		nsps: make(map[string]*Namespace),
+	}
+}
+
+func (s *namespaceStore) Set(nsp *Namespace) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nsps[nsp.Name()] = nsp
+}
+
+func (s *namespaceStore) Get(name string) (nsp *Namespace, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	nsp, ok = s.nsps[name]
+	return
+}
+
+func (s *namespaceStore) GetOrCreate(name string, adapterCreator AdapterCreator) *Namespace {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	nsp, ok := s.nsps[name]
+	if !ok {
+		nsp = newNamespace(name, adapterCreator)
+	}
+	return nsp
+}
+
+func (s *namespaceStore) Remove(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.nsps, name)
 }
 
 type NamespaceSocketStore struct {
@@ -92,4 +139,36 @@ func (n *Namespace) Sockets() []Socket {
 
 func (n *Namespace) Emit(v ...interface{}) {
 
+}
+
+type MiddlewareFunction func(socket Socket, handshake *Handshake) error
+
+func (n *Namespace) Use(f MiddlewareFunction) {
+	n.middlewareFuncsMu.Lock()
+	defer n.middlewareFuncsMu.Unlock()
+	n.middlewareFuncs = append(n.middlewareFuncs, f)
+}
+
+func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, error) {
+	handshake := &Handshake{
+		Time: time.Now(),
+		Auth: auth,
+	}
+
+	socket, err := newServerSocket(c, n, c.parser)
+	if err != nil {
+		return nil, err
+	}
+
+	n.middlewareFuncsMu.RLock()
+	defer n.middlewareFuncsMu.RUnlock()
+
+	for _, f := range n.middlewareFuncs {
+		err := f(socket, handshake)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return socket, nil
 }

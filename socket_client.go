@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -194,11 +195,12 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	}
 }
 
-func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
-	type connectError struct {
-		Message string `json:"message"`
-	}
+type connectError struct {
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data,omitempty"`
+}
 
+func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
 	var v *connectError
 	vt := reflect.TypeOf(v)
 	values, err := decode(vt)
@@ -328,7 +330,7 @@ func (s *clientSocket) sendAck(id uint64, values []reflect.Value) {
 		s.onError(err)
 	}
 
-	s.send(buffers...)
+	s.sendBuffers(buffers...)
 }
 
 func (s *clientSocket) onError(err error) {
@@ -450,10 +452,10 @@ func (s *clientSocket) Emit(v ...interface{}) {
 		return
 	}
 
-	s.send(buffers...)
+	s.sendBuffers(buffers...)
 }
 
-func (s *clientSocket) send(buffers ...[]byte) {
+func (s *clientSocket) sendBuffers(buffers ...[]byte) {
 	if len(buffers) > 0 {
 		packets := make([]*eioparser.Packet, len(buffers))
 		buf := buffers[0]

@@ -14,15 +14,17 @@ type serverSocket struct {
 	id string
 
 	conn *serverConn
+	nsp  *Namespace
 
 	emitter *eventEmitter
+	parser  parser.Parser
 
 	acks   map[uint64]*ackHandler
 	ackID  uint64
 	acksMu sync.Mutex
 }
 
-func newServerSocket(c *serverConn) (*serverSocket, error) {
+func newServerSocket(c *serverConn, nsp *Namespace, parser parser.Parser) (*serverSocket, error) {
 	id, err := eio.GenerateBase64ID(eio.Base64IDSize)
 	if err != nil {
 		return nil, err
@@ -31,6 +33,8 @@ func newServerSocket(c *serverConn) (*serverSocket, error) {
 	s := &serverSocket{
 		id:      id,
 		conn:    c,
+		nsp:     nsp,
+		parser:  parser,
 		emitter: newEventEmitter(),
 	}
 
@@ -42,11 +46,13 @@ func (s *serverSocket) Auth() *Auth { return nil }
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.emitter.GetHandlers(eventName)
+		/*
+			handlers := s.emitter.GetHandlers(eventName)
 
-		for _, handler := range handlers {
-			//s.onEvent(handler, header, decode)
-		}
+			for _, handler := range handlers {
+				s.onEvent(handler, header, decode)
+			}
+		*/
 
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
 		//s.onAck(header, decode)
@@ -59,13 +65,31 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	}
 }
 
-func (s *serverSocket) onError(err error) {
+func (s *serverSocket) onConnect() {
+	// TODO: this.join(this.id)
 
+	header := &parser.PacketHeader{
+		Type:      parser.PacketTypeConnect,
+		Namespace: s.nsp.Name(),
+	}
+
+	c := struct {
+		SID string `json:"sid"`
+	}{
+		SID: s.ID(),
+	}
+
+	buffers, err := s.parser.Encode(header, &c)
+	if err != nil {
+		panic(err)
+	}
+
+	s.conn.sendBuffers(buffers...)
 }
 
-func (s *serverSocket) onClose(reason string, err error) {
+func (s *serverSocket) onError(err error) {}
 
-}
+func (s *serverSocket) onClose(reason string, err error) {}
 
 func (s *serverSocket) ID() string {
 	return s.id
@@ -74,7 +98,7 @@ func (s *serverSocket) ID() string {
 func (s *serverSocket) Emit(v ...interface{}) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
-		Namespace: s.namespace,
+		Namespace: s.nsp.Name(),
 	}
 
 	if len(v) == 0 {
@@ -113,36 +137,49 @@ func (s *serverSocket) Emit(v ...interface{}) {
 		return
 	}
 
-	s.send(buffers...)
-}
-
-func (s *serverSocket) send(buffers ...[]byte) {
-	if len(buffers) > 0 {
-		packets := make([]*eioparser.Packet, len(buffers))
-		buf := buffers[0]
-		buffers = buffers[1:]
-
-		var err error
-		packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
-		if err != nil {
-			s.onError(err)
-			return
-		}
-
-		for i, attachment := range buffers {
-			packets[i+1], err = eioparser.NewPacket(eioparser.PacketTypeMessage, true, attachment)
-			if err != nil {
-				s.onError(err)
-				return
-			}
-		}
-
-		s.packet(packets...)
-	}
+	s.conn.sendBuffers(buffers...)
 }
 
 func (s *serverSocket) packet(packets ...*eioparser.Packet) {
 	s.conn.packet(packets...)
 }
+
+// This is client only. Do nothing.
+func (s *serverSocket) Connect() {}
+
+// This is client only. Return nil.
+func (s *serverSocket) IO() *Client { return nil }
+
+func (s *serverSocket) OnConnect(handler ConnectCallback) {}
+
+func (s *serverSocket) OnceConnect(handler ConnectCallback) {}
+
+func (s *serverSocket) OffConnect(handler ConnectCallback) {}
+
+func (s *serverSocket) OnConnectError(handler ConnectErrorCallback) {}
+
+func (s *serverSocket) OnceConnectError(handler ConnectErrorCallback) {}
+
+func (s *serverSocket) OffConnectError(handler ConnectErrorCallback) {}
+
+func (s *serverSocket) OnDisconnect(handler DisconnectCallback) {}
+
+func (s *serverSocket) OnceDisconnect(handler DisconnectCallback) {}
+
+func (s *serverSocket) OffDisconnect(handler DisconnectCallback) {}
+
+func (s *serverSocket) OnDisconnecting(handler DisconnectingCallback) {}
+
+func (s *serverSocket) OnceDisconnecting(handler DisconnectingCallback) {}
+
+func (s *serverSocket) OffDisconnecting(handler DisconnectingCallback) {}
+
+func (s *serverSocket) OnEvent(eventName string, handler interface{}) {}
+
+func (s *serverSocket) OnceEvent(eventName string, handler interface{}) {}
+
+func (s *serverSocket) OffEvent(eventName string, handler interface{}) {}
+
+func (s *serverSocket) OffAll() {}
 
 func (s *serverSocket) Close() {}
