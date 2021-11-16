@@ -152,7 +152,7 @@ func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *Broadcast
 	if len(opts.Rooms) > 0 {
 		sids := make(map[string]interface{})
 
-		for room, _ := range opts.Rooms {
+		for room := range opts.Rooms {
 			if !a.rooms.Has(room) {
 				continue
 			}
@@ -172,7 +172,7 @@ func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *Broadcast
 			}
 		}
 	} else {
-		for sid, _ := range a.sids {
+		for sid := range a.sids {
 			if _, ok := opts.Except[sid]; ok {
 				continue
 			}
@@ -202,7 +202,7 @@ func (a *inMemoryAdapter) Sockets(rooms []string) (sids []string) {
 			}
 		}
 	} else {
-		for sid, _ := range a.sids {
+		for sid := range a.sids {
 			_, ok := a.nsp.SocketStore().Get(sid)
 			if ok {
 				sids = append(sids, sid)
