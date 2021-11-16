@@ -222,6 +222,10 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				ifaces[i] = rv.Interface()
 			}
 
+			if len(payload) == 0 {
+				payload = []byte("[]")
+			}
+
 			err = json.Unmarshal(payload, &ifaces)
 			if err != nil {
 				return nil, err
@@ -237,6 +241,10 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				return nil, &ValueError{err: errNonInterfaceableValue, Value: rv}
 			}
 
+			if len(payload) == 0 {
+				payload = []byte("{}")
+			}
+
 			err = json.Unmarshal(payload, rv.Interface())
 			if err != nil {
 				return nil, err
@@ -250,6 +258,10 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				}
 
 				ifaces[i] = rv.Interface()
+			}
+
+			if len(payload) == 0 {
+				payload = []byte("[]")
 			}
 
 			err = json.Unmarshal(payload, &ifaces)
