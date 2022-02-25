@@ -70,8 +70,8 @@ func main() {
 		ReadTimeout: 120 * time.Second,
 		IdleTimeout: 120 * time.Second,
 
-		// HTTPWriteTimeout returns PollTimeout + 10 seconds (an extra time to write the response).
-		// You should either set this timeout to 0 (infinite) or some value greater than the PollTimeout.
+		// HTTPWriteTimeout returns io.PollTimeout + 10 seconds (extra 10 seconds to write the response).
+		// You should either set this timeout to 0 (infinite) or some value greater than the io.PollTimeout.
 		// Otherwise poll requests may fail.
 		WriteTimeout: io.HTTPWriteTimeout(),
 	}

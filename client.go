@@ -55,7 +55,7 @@ type Client struct {
 
 	// This mutex is used for protecting parser from concurrent calls.
 	// Due to the modular and concurrent nature of Engine.IO,
-	// we should use a mutex to ensure the Engine.IO doesn't access
+	// we should use a mutex to ensure that the Engine.IO doesn't access
 	// the parser's Add method from multiple goroutines.
 	parserMu sync.Mutex
 	parser   parser.Parser
