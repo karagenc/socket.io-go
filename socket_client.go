@@ -420,9 +420,9 @@ func (s *clientSocket) Emit(v ...interface{}) {
 		panic(fmt.Errorf("Emit: at least 1 argument expected"))
 	}
 
-	eventName := reflect.ValueOf(v)
+	eventName := reflect.ValueOf(v[0])
 	if eventName.Kind() != reflect.String {
-		panic(fmt.Errorf("Emit: string expected"))
+		panic(fmt.Errorf("Emit: first argument must be string"))
 	}
 
 	if IsEventReserved(eventName.String()) {
