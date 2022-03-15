@@ -46,6 +46,9 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (Socket, er
 
 	if config == nil {
 		config = new(ClientConfig)
+	} else {
+		c := *config
+		config = &c
 	}
 
 	socket := &clientSocket{

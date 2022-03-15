@@ -91,6 +91,9 @@ const (
 func NewClient(url string, config *ClientConfig) *Client {
 	if config == nil {
 		config = new(ClientConfig)
+	} else {
+		c := *config
+		config = &c
 	}
 
 	io := &Client{
