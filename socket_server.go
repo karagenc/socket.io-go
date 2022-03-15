@@ -95,40 +95,35 @@ func (s *serverSocket) ID() string {
 	return s.id
 }
 
-func (s *serverSocket) Emit(v ...interface{}) {
+func (s *serverSocket) Emit(eventName string, v ...interface{}) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),
 	}
 
-	if len(v) == 0 {
-		panic(fmt.Errorf("Emit: at least 1 argument expected"))
-	}
-
-	eventName := reflect.ValueOf(v[0])
-	if eventName.Kind() != reflect.String {
-		panic(fmt.Errorf("Emit: first argument must be string"))
-	}
-
-	if IsEventReserved(eventName.String()) {
+	if IsEventReserved(eventName) {
 		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
 	}
 
-	f := v[len(v)-1]
-	rt := reflect.TypeOf(f)
+	v = append([]interface{}{eventName}, v...)
 
-	if rt.Kind() == reflect.Func {
-		ackHandler := newAckHandler(f)
+	if len(v) > 0 {
+		f := v[len(v)-1]
+		rt := reflect.TypeOf(f)
 
-		s.acksMu.Lock()
-		id := s.ackID
-		s.acks[id] = ackHandler
-		s.ackID++
-		s.acksMu.Unlock()
+		if rt.Kind() == reflect.Func {
+			ackHandler := newAckHandler(f)
 
-		header.ID = &id
+			s.acksMu.Lock()
+			id := s.ackID
+			s.acks[id] = ackHandler
+			s.ackID++
+			s.acksMu.Unlock()
 
-		v = v[:len(v)-1]
+			header.ID = &id
+
+			v = v[:len(v)-1]
+		}
 	}
 
 	buffers, err := s.parser.Encode(&header, &v)
