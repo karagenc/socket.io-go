@@ -373,36 +373,15 @@ func (s *clientSocket) OffDisconnect(handler DisconnectCallback) {
 	s.emitter.Off("disconnect", handler)
 }
 
-// This is server only. Do nothing.
-func (s *clientSocket) OnDisconnecting(handler DisconnectingCallback) {}
-
-// This is server only. Do nothing.
-func (s *clientSocket) OnceDisconnecting(handler DisconnectingCallback) {}
-
-// This is server only. Do nothing.
-func (s *clientSocket) OffDisconnecting(handler DisconnectingCallback) {}
-
-func (s *clientSocket) OnEvent(eventName string, handler interface{}) {
-	if IsEventReserved(eventName) {
-		panic(fmt.Errorf("OnEvent: attempted to add a handler to a reserved event"))
-	}
-
+func (s *clientSocket) On(eventName string, handler interface{}) {
 	s.emitter.On(eventName, handler)
 }
 
-func (s *clientSocket) OnceEvent(eventName string, handler interface{}) {
-	if IsEventReserved(eventName) {
-		panic(fmt.Errorf("OnceEvent: attempted to add a handler to a reserved event"))
-	}
-
+func (s *clientSocket) Once(eventName string, handler interface{}) {
 	s.emitter.Once(eventName, handler)
 }
 
-func (s *clientSocket) OffEvent(eventName string, handler interface{}) {
-	if IsEventReserved(eventName) {
-		panic(fmt.Errorf("OffEvent: attempted to remove a handler from a reserved event"))
-	}
-
+func (s *clientSocket) Off(eventName string, handler interface{}) {
 	s.emitter.Off(eventName, handler)
 }
 

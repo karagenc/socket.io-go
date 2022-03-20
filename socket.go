@@ -22,42 +22,12 @@ type Socket interface {
 	// Non-JSON-object authentication data is not accepted by Socket.IO.
 	Auth() *Auth
 
-	OnConnect(handler ConnectCallback)
-
-	OnceConnect(handler ConnectCallback)
-
-	OffConnect(handler ConnectCallback)
-
-	// Client only.
-	OnConnectError(handler ConnectErrorCallback)
-
-	// Client only.
-	OnceConnectError(handler ConnectErrorCallback)
-
-	// Client only.
-	OffConnectError(handler ConnectErrorCallback)
-
-	OnDisconnect(handler DisconnectCallback)
-
-	OnceDisconnect(handler DisconnectCallback)
-
-	OffDisconnect(handler DisconnectCallback)
-
-	// Server only.
-	OnDisconnecting(handler DisconnectingCallback)
-
-	// Server only.
-	OnceDisconnecting(handler DisconnectingCallback)
-
-	// Server only.
-	OffDisconnecting(handler DisconnectingCallback)
-
 	// Register an event handler.
-	OnEvent(eventName string, handler interface{})
+	On(eventName string, handler ...interface{})
 
 	// Register a one-time event handler.
 	// The handler will run once and will be removed afterwards.
-	OnceEvent(eventName string, handler interface{})
+	Once(eventName string, handler interface{})
 
 	// Remove an event handler.
 	//
@@ -65,7 +35,7 @@ type Socket interface {
 	// provide the eventName and leave the handler nil.
 	//
 	// Otherwise, provide both the eventName and handler arguments.
-	OffEvent(eventName string, handler interface{})
+	Off(eventName string, handler interface{})
 
 	// Remove all event handlers.
 	// Including special event handlers such as: connect, connect_error, disconnect, disconnecting.

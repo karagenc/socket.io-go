@@ -32,6 +32,10 @@ Try reducing pingInterval and pingTimeout.
 
 If you are a contributor please see: [Developing a Transport](CONTRIBUTING.md#developing-a-transport)
 
+## Handlers
+
+
+
 ## JSON
 
 By default [jsoniter](https://github.com/json-iterator/go) for JSON encoding instead of encoding/json.
