@@ -45,19 +45,14 @@ func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *br
 	}
 }
 
-func (b *broadcastOperator) Clone() *broadcastOperator {
-	n := *b
-	n.rooms = n.rooms.Clone()
-	n.exceptRooms = n.exceptRooms.Clone()
-	return &n
-}
-
 func (b *broadcastOperator) To(room ...string) *broadcastOperator {
-	n := b.Clone()
+	n := *b
+	rooms := b.rooms.Clone()
 	for _, r := range room {
-		n.rooms.Add(r)
+		rooms.Add(r)
 	}
-	return n
+	n.rooms = rooms
+	return &n
 }
 
 func (b *broadcastOperator) In(room ...string) *broadcastOperator {
@@ -65,23 +60,25 @@ func (b *broadcastOperator) In(room ...string) *broadcastOperator {
 }
 
 func (b *broadcastOperator) Except(room ...string) *broadcastOperator {
-	n := b.Clone()
+	n := *b
+	exceptRooms := b.exceptRooms.Clone()
 	for _, r := range room {
 		n.exceptRooms.Add(r)
 	}
-	return n
+	n.exceptRooms = exceptRooms
+	return &n
 }
 
 func (b *broadcastOperator) Compress(compress bool) *broadcastOperator {
-	n := b.Clone()
+	n := *b
 	n.flags.Compress = compress
-	return n
+	return &n
 }
 
 func (b *broadcastOperator) Local() *broadcastOperator {
-	n := b.Clone()
+	n := *b
 	n.flags.Local = true
-	return n
+	return &n
 }
 
 func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {

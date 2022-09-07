@@ -103,6 +103,5 @@ func (e *eventEmitter) GetHandlers(eventName string) (handlers []*eventHandler) 
 	handlers = make([]*eventHandler, 0, len(h)+len(hOnce))
 	handlers = append(handlers, h...)
 	handlers = append(handlers, hOnce...)
-
 	return
 }
