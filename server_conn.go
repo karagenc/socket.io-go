@@ -121,11 +121,14 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 	if header.Type == parser.PacketTypeConnect {
 		c.connect(header, decode)
 	} else {
-		socket, ok := c.sockets.Get(header.Namespace)
-		if !ok {
-			return
+		sockets := c.sockets.GetAll()
+		for _, socket := range sockets {
+			if socket.nsp.Name() == header.Namespace {
+				socket.onPacket(header, eventName, decode)
+			}
 		}
-		socket.onPacket(header, eventName, decode)
+
+		// TODO: Error?
 	}
 }
 

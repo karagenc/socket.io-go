@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/parser"
 )
 
 type Namespace struct {
@@ -17,6 +17,7 @@ type Namespace struct {
 	middlewareFuncsMu sync.RWMutex
 
 	adapter Adapter
+	parser  parser.Parser
 }
 
 type namespaceStore struct {
@@ -43,12 +44,13 @@ func (s *namespaceStore) Get(name string) (nsp *Namespace, ok bool) {
 	return
 }
 
-func (s *namespaceStore) GetOrCreate(name string, adapterCreator AdapterCreator) *Namespace {
+func (s *namespaceStore) GetOrCreate(name string, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	nsp, ok := s.nsps[name]
 	if !ok {
-		nsp = newNamespace(name, adapterCreator)
+		nsp = newNamespace(name, adapterCreator, parserCreator)
+		s.nsps[nsp.Name()] = nsp
 	}
 	return nsp
 }
@@ -78,12 +80,12 @@ func (s *NamespaceSocketStore) Get(sid string) (so *serverSocket, ok bool) {
 }
 
 // Send Engine.IO packets to a specific socket.
-func (s *NamespaceSocketStore) Packet(sid string, packets ...*eioparser.Packet) (ok bool) {
+func (s *NamespaceSocketStore) SendBuffers(sid string, buffers [][]byte) (ok bool) {
 	socket, ok := s.Get(sid)
 	if !ok {
 		return false
 	}
-	socket.packet(packets...)
+	socket.conn.sendBuffers(buffers...)
 	return true
 }
 
@@ -112,10 +114,11 @@ func (s *NamespaceSocketStore) Remove(sid string) {
 	delete(s.sockets, sid)
 }
 
-func newNamespace(name string, adapterCreator AdapterCreator) *Namespace {
+func newNamespace(name string, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	nsp := &Namespace{
 		name:    name,
 		sockets: newNamespaceSocketStore(),
+		parser:  parserCreator(),
 	}
 	nsp.adapter = adapterCreator(nsp)
 	return nsp
@@ -137,8 +140,8 @@ func (n *Namespace) Sockets() []Socket {
 	return n.sockets.GetAll()
 }
 
-func (n *Namespace) Emit(v ...interface{}) {
-
+func (n *Namespace) Emit(eventName string, v ...interface{}) {
+	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
 }
 
 type MiddlewareFunction func(socket Socket, handshake *Handshake) error
@@ -169,6 +172,9 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 			return nil, err
 		}
 	}
+
+	n.adapter.AddAll(socket.ID(), []string{socket.ID()})
+	n.sockets.Set(socket)
 
 	return socket, nil
 }

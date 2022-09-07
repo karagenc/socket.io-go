@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1
+	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/gin-gonic/gin v1.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2

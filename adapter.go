@@ -2,8 +2,6 @@ package sio
 
 import (
 	"sync"
-
-	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
 type AdapterCreator func(namespace *Namespace) Adapter
@@ -15,7 +13,7 @@ type Adapter interface {
 	Delete(sid string, room string)
 	DeleteAll(sid string)
 
-	Broadcast(packet []*eioparser.Packet, opts *BroadcastOptions)
+	Broadcast(buffers [][]byte, opts *broadcastOptions)
 
 	Sockets(rooms []string) (sids []string)
 	SocketRooms(sid string) []string
@@ -35,7 +33,6 @@ type inMemoryAdapter struct {
 // public rooms: Map<Room, Set<SocketId>> = new Map();
 //
 // public sids: Map<SocketId, Set<Room>> = new Map();
-//
 type stringMapStringSlice map[string][]string
 
 func (m stringMapStringSlice) Has(key string) bool {
@@ -145,7 +142,7 @@ func (a *inMemoryAdapter) DeleteAll(sid string) {
 	a.sids.Delete(sid)
 }
 
-func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *BroadcastOptions) {
+func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *broadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -165,7 +162,7 @@ func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *Broadcast
 					continue
 				}
 
-				ok := a.nsp.SocketStore().Packet(sid)
+				ok := a.nsp.SocketStore().SendBuffers(sid, buffers)
 				if ok {
 					sids[sid] = nil
 				}
@@ -177,10 +174,9 @@ func (a *inMemoryAdapter) Broadcast(packets []*eioparser.Packet, opts *Broadcast
 				continue
 			}
 
-			a.nsp.SocketStore().Packet(sid)
+			a.nsp.SocketStore().SendBuffers(sid, buffers)
 		}
 	}
-
 }
 
 func (a *inMemoryAdapter) Sockets(rooms []string) (sids []string) {

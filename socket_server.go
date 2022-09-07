@@ -46,14 +46,11 @@ func (s *serverSocket) Auth() *Auth { return nil }
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		/*
-			handlers := s.emitter.GetHandlers(eventName)
+		handlers := s.emitter.GetHandlers(eventName)
 
-			for _, handler := range handlers {
-				s.onEvent(handler, header, decode)
-			}
-		*/
-
+		for _, handler := range handlers {
+			s.onEvent(handler, header, decode)
+		}
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
 		//s.onAck(header, decode)
 
@@ -65,8 +62,44 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	}
 }
 
+func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
+	values, err := decode(handler.inputArgs...)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	if len(values) == len(handler.inputArgs) {
+		for i, v := range values {
+			if handler.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+				values[i] = v.Elem()
+			}
+		}
+	} else {
+		s.onError(fmt.Errorf("onEvent: invalid number of arguments"))
+		return
+	}
+
+	go func() {
+		_, err := handler.Call(values...)
+		if err != nil {
+			s.onError(err)
+			return
+		}
+
+		if header.ID != nil {
+			//s.sendAck(*header.ID, ret)
+		}
+	}()
+}
+
+func (s *serverSocket) Join(room string) {
+
+}
+
 func (s *serverSocket) onConnect() {
 	// TODO: this.join(this.id)
+	s.nsp.Adapter()
 
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,

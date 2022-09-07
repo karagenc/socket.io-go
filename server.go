@@ -84,8 +84,7 @@ func (s *Server) Of(namespace string) *Namespace {
 	if len(namespace) != 0 && namespace[0] != '/' {
 		namespace = "/" + namespace
 	}
-
-	return s.nsps.GetOrCreate(namespace, s.adapterCreator)
+	return s.nsps.GetOrCreate(namespace, s.adapterCreator, s.parserCreator)
 }
 
 func (s *Server) Run() error {

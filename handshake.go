@@ -6,7 +6,7 @@ import (
 )
 
 type Handshake struct {
-	// Date of creation.
+	// Date of creation
 	Time time.Time
 
 	// Authentication data
