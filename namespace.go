@@ -144,6 +144,30 @@ func (n *Namespace) Emit(eventName string, v ...interface{}) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
 }
 
+func (n *Namespace) To(room ...string) *broadcastOperator {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).To(room...)
+}
+
+func (n *Namespace) In(room ...string) *broadcastOperator {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).In(room...)
+}
+
+func (n *Namespace) Except(room ...string) *broadcastOperator {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Except(room...)
+}
+
+func (n *Namespace) Compress(compress bool) *broadcastOperator {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Compress(compress)
+}
+
+func (n *Namespace) Local() *broadcastOperator {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Local()
+}
+
+func (n *Namespace) AllSockets() (sids []string) {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).AllSockets()
+}
+
 type MiddlewareFunction func(socket Socket, handshake *Handshake) error
 
 func (n *Namespace) Use(f MiddlewareFunction) {
@@ -177,4 +201,8 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	n.sockets.Set(socket)
 
 	return socket, nil
+}
+
+func (n *Namespace) remove(socket *serverSocket) {
+	n.sockets.Remove(socket.ID())
 }

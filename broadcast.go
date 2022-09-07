@@ -81,6 +81,10 @@ func (b *broadcastOperator) Local() *broadcastOperator {
 	return &n
 }
 
+func (b *broadcastOperator) AllSockets() (sids []string) {
+	return b.adapter.Sockets(b.rooms.ToSlice())
+}
+
 func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
