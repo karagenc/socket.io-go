@@ -145,48 +145,29 @@ func (s *serverSocket) Connect() {}
 // This is client only. Return nil.
 func (s *serverSocket) IO() *Client { return nil }
 
-func (s *serverSocket) OnConnect(handler ConnectCallback) {
-	s.emitter.On("connect", handler)
-}
-
-func (s *serverSocket) OnceConnect(handler ConnectCallback) {
-	s.emitter.Once("connect", handler)
-}
-
-func (s *serverSocket) OffConnect(handler ConnectCallback) {
-	s.emitter.Off("connect", handler)
-}
-
-func (s *serverSocket) OnDisconnect(handler DisconnectCallback) {
-	s.emitter.On("disconnect", handler)
-}
-
-func (s *serverSocket) OnceDisconnect(handler DisconnectCallback) {
-	s.emitter.Once("disconnect", handler)
-}
-
-func (s *serverSocket) OffDisconnect(handler DisconnectCallback) {
-	s.emitter.Off("disconnect", handler)
-}
-
-func (s *serverSocket) OnDisconnecting(handler DisconnectingCallback) {
-	s.emitter.On("disconnecting", handler)
-}
-
-func (s *serverSocket) OnceDisconnecting(handler DisconnectingCallback) {
-	s.emitter.Once("disconnecting", handler)
-}
-
-func (s *serverSocket) OffDisconnecting(handler DisconnectingCallback) {
-	s.emitter.Off("disconnecting", handler)
-}
-
 func (s *serverSocket) On(eventName string, handler interface{}) {
+	s.checkHandler(eventName, handler)
 	s.emitter.On(eventName, handler)
 }
 
 func (s *serverSocket) Once(eventName string, handler interface{}) {
-	s.emitter.Once(eventName, handler)
+	s.checkHandler(eventName, handler)
+	s.emitter.On(eventName, handler)
+}
+
+func (s *serverSocket) checkHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		fallthrough
+	case "connect":
+		fallthrough
+	case "connect_error":
+		fallthrough
+	case "disconnecting":
+		fallthrough
+	case "disconnect":
+		checkHandler(eventName, handler)
+	}
 }
 
 func (s *serverSocket) Off(eventName string, handler interface{}) {

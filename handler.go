@@ -5,37 +5,6 @@ import (
 	"reflect"
 )
 
-// Socket callbacks.
-
-type ConnectCallback func()
-
-type ConnectErrorCallback func(err error)
-
-type DisconnectCallback func()
-
-type DisconnectingCallback func()
-
-// Client callbacks.
-
-type OpenCallback func()
-
-type ErrorCallback func(err error)
-
-type PingCallback func()
-
-// err can be nil. Always do a nil check.
-type CloseCallback func(reason string, err error)
-
-type ReconnectCallback func(attempt int)
-
-type ReconnectAttemptCallback func(attempt int)
-
-type ReconnectErrorCallback func(err error)
-
-type ReconnectFailedCallback func()
-
-// Server callbacks.
-
 type OnSocketCallback func(socket Socket)
 
 type eventHandler struct {
@@ -134,4 +103,51 @@ func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 
 	f.rv.Call(args)
 	return
+}
+
+var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
+
+func checkHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		panic("event name cannot be empty")
+	case "connect":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 0 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func()")
+		}
+	case "connect_error":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func(err error)")
+		}
+
+		e := rt.In(0)
+		if !e.Implements(errorInterface) {
+			panic("invalid function signature. must be: func(err error)")
+		}
+	case "disconnect":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 0 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func()")
+		}
+	}
 }

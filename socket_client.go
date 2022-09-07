@@ -337,48 +337,27 @@ func (s *clientSocket) onError(err error) {
 	s.io.onError(err)
 }
 
-func (s *clientSocket) OnConnect(handler ConnectCallback) {
-	s.emitter.On("connect", handler)
-}
-
-func (s *clientSocket) OnceConnect(handler ConnectCallback) {
-	s.emitter.Once("connect", handler)
-}
-
-func (s *clientSocket) OffConnect(handler ConnectCallback) {
-	s.emitter.Off("connect", handler)
-}
-
-func (s *clientSocket) OnConnectError(handler ConnectErrorCallback) {
-	s.emitter.On("connect_error", handler)
-}
-
-func (s *clientSocket) OnceConnectError(handler ConnectErrorCallback) {
-	s.emitter.Once("connect_error", handler)
-}
-
-func (s *clientSocket) OffConnectError(handler ConnectErrorCallback) {
-	s.emitter.Off("connect_error", handler)
-}
-
-func (s *clientSocket) OnDisconnect(handler DisconnectCallback) {
-	s.emitter.On("disconnect", handler)
-}
-
-func (s *clientSocket) OnceDisconnect(handler DisconnectCallback) {
-	s.emitter.Once("disconnect", handler)
-}
-
-func (s *clientSocket) OffDisconnect(handler DisconnectCallback) {
-	s.emitter.Off("disconnect", handler)
-}
-
 func (s *clientSocket) On(eventName string, handler interface{}) {
+	s.checkHandler(eventName, handler)
 	s.emitter.On(eventName, handler)
 }
 
 func (s *clientSocket) Once(eventName string, handler interface{}) {
-	s.emitter.Once(eventName, handler)
+	s.checkHandler(eventName, handler)
+	s.emitter.On(eventName, handler)
+}
+
+func (s *clientSocket) checkHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		fallthrough
+	case "connect":
+		fallthrough
+	case "connect_error":
+		fallthrough
+	case "disconnect":
+		checkHandler(eventName, handler)
+	}
 }
 
 func (s *clientSocket) Off(eventName string, handler interface{}) {

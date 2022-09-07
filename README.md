@@ -16,7 +16,7 @@ The least supported Socket.IO version is 3.0. If you have an older version of So
 
 ## Design Goals
 
-# Q & A
+# Q&A
 
 ### Why use Socket.IO?
 
@@ -32,9 +32,28 @@ Try reducing pingInterval and pingTimeout.
 
 If you are a contributor please see: [Developing a Transport](CONTRIBUTING.md#developing-a-transport)
 
-## Handlers
+## Reserved events
 
+When you call ```socket.On``` the handler...
 
+These are reserved events:
+
+```
+connect
+connect_error
+disconnect
+disconnecting
+
+open
+error
+ping
+
+close
+reconnect
+reconnect_attempt
+reconnect_error
+reconnect_failed
+```
 
 ## JSON
 

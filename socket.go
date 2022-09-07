@@ -23,7 +23,7 @@ type Socket interface {
 	Auth() *Auth
 
 	// Register an event handler.
-	On(eventName string, handler ...interface{})
+	On(eventName string, handler interface{})
 
 	// Register a one-time event handler.
 	// The handler will run once and will be removed afterwards.

@@ -171,100 +171,45 @@ func (c *Client) Socket(namespace string) Socket {
 	return socket
 }
 
-func (c *Client) OnOpen(handler OpenCallback) {
-	c.emitter.On("open", handler)
+func (c *Client) On(eventName string, handler interface{}) {
+	c.checkHandler(eventName, handler)
+	c.emitter.On(eventName, handler)
 }
 
-func (c *Client) OnceOpen(handler OpenCallback) {
-	c.emitter.Once("open", handler)
+func (c *Client) Once(eventName string, handler interface{}) {
+	c.checkHandler(eventName, handler)
+	c.emitter.On(eventName, handler)
 }
 
-func (c *Client) OffOpen(handler OpenCallback) {
-	c.emitter.Off("open", handler)
+func (c *Client) checkHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		fallthrough
+	case "open":
+		fallthrough
+	case "error":
+		fallthrough
+	case "ping":
+		fallthrough
+	case "close":
+		fallthrough
+	case "reconnect":
+		fallthrough
+	case "reconnect_attempt":
+		fallthrough
+	case "reconnect_error":
+		fallthrough
+	case "reconnect_failed":
+		checkHandler(eventName, handler)
+	}
 }
 
-func (c *Client) OnError(handler ErrorCallback) {
-	c.emitter.On("error", handler)
+func (c *Client) Off(eventName string, handler interface{}) {
+	c.emitter.Off(eventName, handler)
 }
 
-func (c *Client) OnceError(handler ErrorCallback) {
-	c.emitter.Once("error", handler)
-}
-
-func (c *Client) OffError(handler ErrorCallback) {
-	c.emitter.Off("error", handler)
-}
-
-func (c *Client) OnPing(handler PingCallback) {
-	c.emitter.On("ping", handler)
-}
-
-func (c *Client) OncePing(handler PingCallback) {
-	c.emitter.Once("ping", handler)
-}
-
-func (c *Client) OffPing(handler PingCallback) {
-	c.emitter.Off("ping", handler)
-}
-
-func (c *Client) OnClose(handler CloseCallback) {
-	c.emitter.On("close", handler)
-}
-
-func (c *Client) OnceClose(handler CloseCallback) {
-	c.emitter.Once("close", handler)
-}
-
-func (c *Client) OffClose(handler CloseCallback) {
-	c.emitter.Off("close", handler)
-}
-
-func (c *Client) OnReconnect(handler ReconnectCallback) {
-	c.emitter.On("reconnect", handler)
-}
-
-func (c *Client) OnceReconnect(handler ReconnectCallback) {
-	c.emitter.Once("reconnect", handler)
-}
-
-func (c *Client) OffReconnect(handler ReconnectCallback) {
-	c.emitter.Off("reconnect", handler)
-}
-
-func (c *Client) OnReconnectAttempt(handler ReconnectAttemptCallback) {
-	c.emitter.On("reconnect_attempt", handler)
-}
-
-func (c *Client) OnceReconnectAttempt(handler ReconnectAttemptCallback) {
-	c.emitter.Once("reconnect_attempt", handler)
-}
-
-func (c *Client) OffReconnectAttempt(handler ReconnectAttemptCallback) {
-	c.emitter.Off("reconnect_attempt", handler)
-}
-
-func (c *Client) OnReconnectError(handler ReconnectErrorCallback) {
-	c.emitter.On("reconnect_error", handler)
-}
-
-func (c *Client) OnceReconnectError(handler ReconnectErrorCallback) {
-	c.emitter.Once("reconnect_error", handler)
-}
-
-func (c *Client) OffReconnectError(handler ReconnectErrorCallback) {
-	c.emitter.Off("reconnect_error", handler)
-}
-
-func (c *Client) OnReconnectFailed(handler ReconnectFailedCallback) {
-	c.emitter.On("reconnect_failed", handler)
-}
-
-func (c *Client) OnceReconnectFailed(handler ReconnectFailedCallback) {
-	c.emitter.Once("reconnect_failed", handler)
-}
-
-func (c *Client) OffReconnectFailed(handler ReconnectFailedCallback) {
-	c.emitter.Off("reconnect_failed", handler)
+func (c *Client) OffAll() {
+	c.emitter.OffAll()
 }
 
 func (c *Client) connect() (err error) {
