@@ -374,7 +374,7 @@ func (s *clientSocket) Emit(eventName string, v ...interface{}) {
 		Namespace: s.namespace,
 	}
 
-	if IsEventReserved(eventName) {
+	if IsEventReservedForClient(eventName) {
 		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
 	}
 

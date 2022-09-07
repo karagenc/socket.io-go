@@ -1,6 +1,6 @@
 package sio
 
-var reservedEvents = map[string]bool{
+var clientReservedEvents = map[string]bool{
 	"connect":        true,
 	"connect_error":  true,
 	"disconnect":     true,
@@ -9,8 +9,27 @@ var reservedEvents = map[string]bool{
 	"removeListener": true,
 }
 
-func IsEventReserved(eventName string) bool {
-	isReserved, ok := reservedEvents[eventName]
+var serverReservedEvents = map[string]bool{
+	"connect":        true,
+	"connect_error":  true,
+	"disconnect":     true,
+	"disconnecting":  true,
+	"newListener":    true,
+	"removeListener": true,
+	"connection":     true,
+	"error":          true,
+}
+
+func IsEventReservedForClient(eventName string) bool {
+	isReserved, ok := clientReservedEvents[eventName]
+	if ok && isReserved {
+		return true
+	}
+	return false
+}
+
+func IsEventReservedForServer(eventName string) bool {
+	isReserved, ok := serverReservedEvents[eventName]
 	if ok && isReserved {
 		return true
 	}

@@ -98,9 +98,6 @@ func (s *serverSocket) Join(room string) {
 }
 
 func (s *serverSocket) onConnect() {
-	// TODO: this.join(this.id)
-	s.nsp.Adapter()
-
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.nsp.Name(),
@@ -134,7 +131,7 @@ func (s *serverSocket) Emit(eventName string, v ...interface{}) {
 		Namespace: s.nsp.Name(),
 	}
 
-	if IsEventReserved(eventName) {
+	if IsEventReservedForServer(eventName) {
 		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
 	}
 

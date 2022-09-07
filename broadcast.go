@@ -90,7 +90,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 		Namespace: b.nsp,
 	}
 
-	if IsEventReserved(eventName) {
+	if IsEventReservedForServer(eventName) {
 		panic(fmt.Errorf("broadcastOperator.Emit: attempted to emit to a reserved event"))
 	}
 
