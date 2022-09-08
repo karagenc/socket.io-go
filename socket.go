@@ -1,20 +1,27 @@
 package sio
 
 type Socket interface {
-	// Socket ID. For client socket, this can be empty if the client hasn't connected yet.
+	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.
 	ID() string
 
 	// Client only.
 	Connect()
 
-	// Client only.
+	// Client only. Returns nil if this is a server socket.
+	// TODO: Should I stay or should I go?
 	//
 	// Retrieves the underlying Client.
 	//
 	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
-	IO() *Client
+	Client() *Client
 
-	// Client only.
+	// Server only. Returns nil if this is a client socket.
+	// TODO: Should I stay or should I go?
+	//
+	// Retrieves the underlying Server.
+	Server() *Server
+
+	// Client only. Returns nil if this is a server socket.
 	//
 	// This is a concurrenct storage that stores the authentication data.
 	//

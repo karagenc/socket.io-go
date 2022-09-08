@@ -57,7 +57,6 @@ func (s *serverSocketStore) Remove(sid string) {
 //
 // This is the equivalent of the Client class at: https://github.com/socketio/socket.io/blob/4.3.2/lib/client.ts#L21
 type serverConn struct {
-	id  string
 	eio eio.Socket
 
 	server  *Server
@@ -72,14 +71,8 @@ type serverConn struct {
 	parser   parser.Parser
 }
 
-// Engine.IO ID
-func (c *serverConn) ID() string {
-	return c.id
-}
-
 func newServerConn(server *Server, _eio eio.Socket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
 	c := &serverConn{
-		id:  _eio.ID(),
 		eio: _eio,
 
 		server:  server,
@@ -159,11 +152,6 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	c.nsps.Set(nsp)
 
 	socket.onConnect()
-
-	f, ok := c.server.onSocketHandler.Load().(OnSocketCallback)
-	if ok {
-		f(socket)
-	}
 }
 
 func (c *serverConn) connectError(err error, nsp string) {

@@ -2,6 +2,7 @@ package sio
 
 import (
 	"encoding/json"
+	"reflect"
 	"sync"
 	"time"
 
@@ -9,7 +10,8 @@ import (
 )
 
 type Namespace struct {
-	name string
+	name   string
+	server *Server
 
 	sockets *NamespaceSocketStore
 
@@ -18,6 +20,8 @@ type Namespace struct {
 
 	adapter Adapter
 	parser  parser.Parser
+
+	emitter *eventEmitter
 }
 
 type namespaceStore struct {
@@ -44,12 +48,12 @@ func (s *namespaceStore) Get(name string) (nsp *Namespace, ok bool) {
 	return
 }
 
-func (s *namespaceStore) GetOrCreate(name string, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
+func (s *namespaceStore) GetOrCreate(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	nsp, ok := s.nsps[name]
 	if !ok {
-		nsp = newNamespace(name, adapterCreator, parserCreator)
+		nsp = newNamespace(name, server, adapterCreator, parserCreator)
 		s.nsps[nsp.Name()] = nsp
 	}
 	return nsp
@@ -114,11 +118,13 @@ func (s *NamespaceSocketStore) Remove(sid string) {
 	delete(s.sockets, sid)
 }
 
-func newNamespace(name string, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
+func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	nsp := &Namespace{
 		name:    name,
+		server:  server,
 		sockets: newNamespaceSocketStore(),
 		parser:  parserCreator(),
+		emitter: newEventEmitter(),
 	}
 	nsp.adapter = adapterCreator(nsp)
 	return nsp
@@ -182,7 +188,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 		Auth: auth,
 	}
 
-	socket, err := newServerSocket(c, n, c.parser)
+	socket, err := newServerSocket(n.server, c, n, c.parser)
 	if err != nil {
 		return nil, err
 	}
@@ -199,10 +205,60 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 
 	n.adapter.AddAll(socket.ID(), []string{socket.ID()})
 	n.sockets.Set(socket)
+	go n.onSocket(socket)
 
 	return socket, nil
 }
 
+func (n *Namespace) onSocket(socket Socket) {
+	connectHandlers := n.emitter.GetHandlers("connect")
+	connectionHandlers := n.emitter.GetHandlers("connection")
+
+	callHandler := func(handler *eventHandler) {
+		_, err := handler.Call(reflect.ValueOf(socket))
+		if err != nil {
+			// TODO: n.onError(err)???
+			return
+		}
+	}
+
+	for _, handler := range connectHandlers {
+		go callHandler(handler)
+	}
+	for _, handler := range connectionHandlers {
+		go callHandler(handler)
+	}
+}
+
 func (n *Namespace) remove(socket *serverSocket) {
 	n.sockets.Remove(socket.ID())
+}
+
+func (n *Namespace) On(eventName string, handler interface{}) {
+	n.checkHandler(eventName, handler)
+	n.emitter.On(eventName, handler)
+}
+
+func (n *Namespace) Once(eventName string, handler interface{}) {
+	n.checkHandler(eventName, handler)
+	n.emitter.Once(eventName, handler)
+}
+
+func (n *Namespace) checkHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		fallthrough
+	case "connect":
+		fallthrough
+	case "connection":
+		checkNamespaceHandler(eventName, handler)
+	}
+}
+
+func (n *Namespace) Off(eventName string, handler interface{}) {
+	n.emitter.Off(eventName, handler)
+}
+
+func (n *Namespace) OffAll() {
+	n.emitter.OffAll()
 }

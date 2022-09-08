@@ -3,7 +3,6 @@ package sio
 import (
 	"net/http"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
@@ -26,8 +25,6 @@ type Server struct {
 
 	conns *serverConnStore
 	nsps  *namespaceStore
-
-	onSocketHandler atomic.Value
 }
 
 type serverConnStore struct {
@@ -53,9 +50,6 @@ func NewServer(config *ServerConfig) *Server {
 		conns:          newServerConnStore(),
 	}
 
-	var f OnSocketCallback = func(socket Socket) {}
-	server.onSocketHandler.Store(f)
-
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 
 	if server.parserCreator == nil {
@@ -69,12 +63,6 @@ func NewServer(config *ServerConfig) *Server {
 	return server
 }
 
-func (s *Server) OnSocket(handler OnSocketCallback) {
-	if handler != nil {
-		s.onSocketHandler.Store(handler)
-	}
-}
-
 func (s *Server) onEIOSocket(eioSocket eio.Socket) *eio.Callbacks {
 	_, callbacks := newServerConn(s, eioSocket, s.parserCreator)
 	return callbacks
@@ -84,7 +72,57 @@ func (s *Server) Of(namespace string) *Namespace {
 	if len(namespace) != 0 && namespace[0] != '/' {
 		namespace = "/" + namespace
 	}
-	return s.nsps.GetOrCreate(namespace, s.adapterCreator, s.parserCreator)
+	return s.nsps.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
+}
+
+// Alias of: s.Of("/").On(...)
+func (s *Server) On(eventName string, handler interface{}) {
+	s.Of("/").On(eventName, handler)
+}
+
+// Alias of: s.Of("/").Once(...)
+func (s *Server) Once(eventName string, handler interface{}) {
+	s.Of("/").Once(eventName, handler)
+}
+
+// Alias of: s.Of("/").Off(...)
+func (s *Server) Off(eventName string, handler interface{}) {
+	s.Of("/").Off(eventName, handler)
+}
+
+// Alias of: s.Of("/").OffAll(...)
+func (s *Server) OffAll() {
+	s.Of("/").OffAll()
+}
+
+// Alias of: s.Of("/").To(...)
+func (s *Server) To(room ...string) *broadcastOperator {
+	return s.Of("/").To(room...)
+}
+
+// Alias of: s.Of("/").In(...)
+func (s *Server) In(room ...string) *broadcastOperator {
+	return s.Of("/").In(room...)
+}
+
+// Alias of: s.Of("/").To(...)
+func (s *Server) Except(room ...string) *broadcastOperator {
+	return s.Of("/").Except(room...)
+}
+
+// Alias of: s.Of("/").Compress(...)
+func (s *Server) Compress(compress bool) *broadcastOperator {
+	return s.Of("/").Compress(compress)
+}
+
+// Alias of: s.Of("/").Local(...)
+func (s *Server) Local() *broadcastOperator {
+	return s.Of("/").Local()
+}
+
+// Alias of: s.Of("/").AllSockets(...)
+func (s *Server) AllSockets() (sids []string) {
+	return s.Of("/").AllSockets()
 }
 
 func (s *Server) Run() error {

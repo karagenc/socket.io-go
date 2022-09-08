@@ -5,8 +5,6 @@ import (
 	"reflect"
 )
 
-type OnSocketCallback func(socket Socket)
-
 type eventHandler struct {
 	rv         reflect.Value
 	inputArgs  []reflect.Type
@@ -261,6 +259,35 @@ func checkHandler(eventName string, handler interface{}) {
 		rt := rv.Type()
 		if rt.NumIn() != 0 || rt.NumOut() != 0 {
 			panic("invalid function signature for event 'ping'. must be: func()")
+		}
+	}
+}
+
+var socketInterface = reflect.TypeOf((*Socket)(nil)).Elem()
+
+func checkNamespaceHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		panic("event name cannot be empty")
+	case "connect":
+		fallthrough
+	case "connection":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			// Event name can be either 'connect' or 'connection', so we use the eventName.
+			panic("invalid function signature for event '" + eventName + "'. must be: func(socket Socket)")
+		}
+
+		e := rt.In(0)
+		if !e.Implements(socketInterface) {
+			// Event name can be either 'connect' or 'connection', so we use the eventName.
+			panic("invalid function signature for event '" + eventName + "'. must be: func(socket Socket)")
 		}
 	}
 }

@@ -13,8 +13,9 @@ import (
 type serverSocket struct {
 	id string
 
-	conn *serverConn
-	nsp  *Namespace
+	server *Server
+	conn   *serverConn
+	nsp    *Namespace
 
 	emitter *eventEmitter
 	parser  parser.Parser
@@ -24,7 +25,7 @@ type serverSocket struct {
 	acksMu sync.Mutex
 }
 
-func newServerSocket(c *serverConn, nsp *Namespace, parser parser.Parser) (*serverSocket, error) {
+func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser) (*serverSocket, error) {
 	id, err := eio.GenerateBase64ID(eio.Base64IDSize)
 	if err != nil {
 		return nil, err
@@ -32,6 +33,7 @@ func newServerSocket(c *serverConn, nsp *Namespace, parser parser.Parser) (*serv
 
 	s := &serverSocket{
 		id:      id,
+		server:  server,
 		conn:    c,
 		nsp:     nsp,
 		parser:  parser,
@@ -173,7 +175,9 @@ func (s *serverSocket) packet(packets ...*eioparser.Packet) {
 func (s *serverSocket) Connect() {}
 
 // This is client only. Return nil.
-func (s *serverSocket) IO() *Client { return nil }
+func (s *serverSocket) Client() *Client { return nil }
+
+func (s *serverSocket) Server() *Server { return s.server }
 
 func (s *serverSocket) On(eventName string, handler interface{}) {
 	s.checkHandler(eventName, handler)

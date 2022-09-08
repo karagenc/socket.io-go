@@ -16,10 +16,6 @@ const addr = "127.0.0.1:3000"
 
 var server *http.Server
 
-/* func onSocket(socket sio.Socket) {
-
-} */
-
 func logEIOServerError(err error) {
 	log.Printf("Server error: %v\n", err)
 }
@@ -31,12 +27,9 @@ func main() {
 		},
 	})
 
-	io.OnSocket(func(socket sio.Socket) {
+	r := io.Of("/")
+	r.On("connect", func(socket sio.Socket) {
 		fmt.Printf("New socket: %s\n", socket.ID())
-		socket.On("broaddd", func(message string) {
-			fmt.Printf("broaddd received with message: %s\n", message)
-			io.Of("/").Emit("broaaad", message)
-		})
 	})
 
 	err := io.Run()

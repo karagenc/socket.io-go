@@ -67,9 +67,9 @@ func (s *clientSocket) Connect() {
 	}
 }
 
-func (s *clientSocket) IO() *Client {
-	return s.client
-}
+func (s *clientSocket) Client() *Client { return s.client }
+
+func (s *clientSocket) Server() *Server { return nil }
 
 func (s *clientSocket) Auth() *Auth {
 	return s.auth
