@@ -149,5 +149,118 @@ func checkHandler(eventName string, handler interface{}) {
 		if rt.NumIn() != 0 || rt.NumOut() != 0 {
 			panic("invalid function signature. must be: func()")
 		}
+	case "open":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 0 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func()")
+		}
+	case "close":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func(reason string)")
+		}
+
+		e := rt.In(0)
+		if e.Kind() != reflect.String {
+			panic("invalid function signature. must be: func(reason string)")
+		}
+	case "error":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func(err error)")
+		}
+
+		e := rt.In(0)
+		if !e.Implements(errorInterface) {
+			panic("invalid function signature. must be: func(err error)")
+		}
+	case "reconnect":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func(attempt int)")
+		}
+
+		e := rt.In(0)
+		if e.Kind() != reflect.Int32 {
+			panic("invalid function signature. must be: func(attempt int)")
+		}
+	case "reconnect_attempt":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func(attempt int)")
+		}
+
+		e := rt.In(0)
+		if e.Kind() != reflect.Int32 {
+			panic("invalid function signature. must be: func(attempt int)")
+		}
+	case "reconnect_error":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func(err error)")
+		}
+
+		e := rt.In(0)
+		if !e.Implements(errorInterface) {
+			panic("invalid function signature. must be: func(err error)")
+		}
+	case "reconnect_failed":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 0 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func()")
+		}
+	case "ping":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			panic("function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 0 || rt.NumOut() != 0 {
+			panic("invalid function signature. must be: func()")
+		}
 	}
 }
