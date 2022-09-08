@@ -164,7 +164,7 @@ func sendTextMessageToAll(message string) {
 func sendTextMessage(socket eio.Socket, message string) {
 	packet, err := parser.NewPacket(parser.PacketTypeMessage, false, []byte(message))
 	if err != nil {
-		panic(fmt.Errorf("Packet creation error (this shouldn't have happened): %w\n", err))
+		panic(err)
 	}
 	socket.Send(packet)
 }

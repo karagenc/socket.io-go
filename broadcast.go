@@ -102,7 +102,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 		rt := reflect.TypeOf(f)
 
 		if rt.Kind() == reflect.Func {
-			panic("callbacks are not supported when broadcasting")
+			panic("broadcastOperator.Emit: callbacks are not supported when broadcasting")
 		}
 	}
 
