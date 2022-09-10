@@ -62,7 +62,7 @@ func main() {
 	<-exitChan
 }
 
-func userInput(socket eio.Socket) {
+func userInput(socket eio.ClientSocket) {
 	defer socket.Close()
 
 	fmt.Printf("Type your message and press enter to send it.\n\n")

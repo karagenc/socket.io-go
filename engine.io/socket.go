@@ -10,9 +10,6 @@ type Socket interface {
 	// Session ID (sid)
 	ID() string
 
-	// Available upgrades
-	Upgrades() []string
-
 	PingInterval() time.Duration
 	PingTimeout() time.Duration
 
@@ -22,4 +19,15 @@ type Socket interface {
 	Send(packets ...*parser.Packet)
 
 	Close()
+}
+
+type ServerSocket interface {
+	Socket
+}
+
+type ClientSocket interface {
+	Socket
+
+	// Available upgrades
+	Upgrades() []string
 }

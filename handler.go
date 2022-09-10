@@ -263,7 +263,7 @@ func checkHandler(eventName string, handler interface{}) {
 	}
 }
 
-var socketInterface = reflect.TypeOf((*Socket)(nil)).Elem()
+var serverSocketInterface = reflect.TypeOf((*ServerSocket)(nil)).Elem()
 
 func checkNamespaceHandler(eventName string, handler interface{}) {
 	switch eventName {
@@ -281,13 +281,13 @@ func checkNamespaceHandler(eventName string, handler interface{}) {
 		rt := rv.Type()
 		if rt.NumIn() != 1 || rt.NumOut() != 0 {
 			// Event name can be either 'connect' or 'connection', so we use the eventName.
-			panic("invalid function signature for event '" + eventName + "'. must be: func(socket Socket)")
+			panic("invalid function signature for event '" + eventName + "'. must be: func(socket ServerSocket)")
 		}
 
 		e := rt.In(0)
-		if !e.Implements(socketInterface) {
+		if !e.Implements(serverSocketInterface) {
 			// Event name can be either 'connect' or 'connection', so we use the eventName.
-			panic("invalid function signature for event '" + eventName + "'. must be: func(socket Socket)")
+			panic("invalid function signature for event '" + eventName + "'. must be: func(socket ServerSocket)")
 		}
 	}
 }

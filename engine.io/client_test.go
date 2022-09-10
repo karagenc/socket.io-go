@@ -82,7 +82,7 @@ func testSendReceive(t *testing.T, transports []string) {
 		return false
 	}
 
-	send := func(socket Socket) {
+	send := func(socket ServerSocket) {
 		for _, p := range test {
 			if p.Type == parser.PacketTypeMessage {
 				socket.Send(p)
@@ -96,7 +96,7 @@ func testSendReceive(t *testing.T, transports []string) {
 		}
 	}
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		callbacks := &Callbacks{
 			OnPacket: func(packets ...*parser.Packet) {
 				for _, packet := range packets {
@@ -159,7 +159,7 @@ func testSendReceive(t *testing.T, transports []string) {
 func TestClientWebSocketClose(t *testing.T) {
 	tw := newTestWaiter(1)
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
 		return nil
 	}
@@ -183,7 +183,7 @@ func TestClientWebSocketClose(t *testing.T) {
 func TestClientWebSocketDiscard(t *testing.T) {
 	tw := newTestWaiter(1)
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
 		return nil
 	}
@@ -209,7 +209,7 @@ func TestClientWebSocketDiscard(t *testing.T) {
 func TestClientPollingClose(t *testing.T) {
 	tw := newTestWaiter(1)
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
 		return nil
 	}
@@ -233,7 +233,7 @@ func TestClientPollingClose(t *testing.T) {
 func TestClientPollingDiscard(t *testing.T) {
 	tw := newTestWaiter(1)
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
 		return nil
 	}
@@ -264,7 +264,7 @@ func TestPingTimeoutAndPingInterval(t *testing.T) {
 		pingTimeout  = 8 * time.Second
 	)
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
 
 		assert.Equal(t, pingInterval, socket.PingInterval())

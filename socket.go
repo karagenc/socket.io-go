@@ -4,37 +4,6 @@ type Socket interface {
 	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.
 	ID() string
 
-	// Client only.
-	Connect()
-
-	// Client only. Returns nil if this is a server socket.
-	// TODO: Should I stay or should I go?
-	//
-	// Retrieves the underlying Client.
-	//
-	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
-	Client() *Client
-
-	// Server only. Returns nil if this is a client socket.
-	// TODO: Should I stay or should I go?
-	//
-	// Retrieves the underlying Server.
-	Server() *Server
-
-	// Server only. Returns nil if this is a client socket.
-	// TODO: Should I stay or should I go?
-	//
-	// Retrieves the Namespace this socket is joined to.
-	Namespace() *Namespace
-
-	// Client only. Returns nil if this is a server socket.
-	//
-	// This is a concurrenct storage that stores the authentication data.
-	//
-	// Setting the authentication data is optional and if used, it must be a JSON object (struct or map).
-	// Non-JSON-object authentication data is not accepted by Socket.IO.
-	Auth() *Auth
-
 	// Register an event handler.
 	On(eventName string, handler interface{})
 
@@ -61,4 +30,35 @@ type Socket interface {
 	// Disconnect from namespace.
 	// If close is true, the underlying Engine.IO connection is terminated.
 	Disconnect(close bool)
+}
+
+type ServerSocket interface {
+	Socket
+
+	// Retrieves the underlying Server.
+	Server() *Server
+
+	// Retrieves the Namespace this socket is connected to.
+	Namespace() *Namespace
+}
+
+type ClientSocket interface {
+	Socket
+
+	// Client only.
+	Connect()
+
+	// Client only. Returns nil if this is a server socket.
+	// TODO: Should I stay or should I go?
+	//
+	// Retrieves the underlying Client.
+	//
+	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
+	Client() *Client
+
+	// This is a concurrenct storage that stores the authentication data.
+	//
+	// Setting the authentication data is optional and if used, it must be a JSON object (struct or map).
+	// Non-JSON-object authentication data is not accepted by Socket.IO.
+	Auth() *Auth
 }

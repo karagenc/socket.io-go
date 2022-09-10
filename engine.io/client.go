@@ -38,7 +38,7 @@ type ClientConfig struct {
 	WebSocketDialer *websocket.Dialer
 }
 
-func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (Socket, error) {
+func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSocket, error) {
 	if callbacks == nil {
 		callbacks = new(Callbacks)
 	}

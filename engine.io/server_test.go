@@ -273,7 +273,7 @@ func TestAuthenticator(t *testing.T) {
 func TestMaxBufferSizeWebSocket(t *testing.T) {
 	tw := newTestWaiter(2) // Wait for the server and client.
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
 			OnClose: func(reason string, err error) {
 				defer tw.Done()
@@ -321,7 +321,7 @@ func TestMaxBufferSizeWebSocket(t *testing.T) {
 func TestMaxBufferSizePolling(t *testing.T) {
 	tw := newTestWaiter(2) // Wait for the server and client.
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
 			OnClose: func(reason string, err error) {
 				defer tw.Done()
@@ -371,7 +371,7 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 
 	testData := []byte("12345678")
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
 			OnPacket: func(packets ...*parser.Packet) {
 				defer tw.Done()
@@ -417,7 +417,7 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 
 	testData := []byte("12345678")
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
 			OnPacket: func(packets ...*parser.Packet) {
 				defer tw.Done()
@@ -470,7 +470,7 @@ func TestJSONP(t *testing.T) {
 		testPacket2 = mustCreatePacket(t, parser.PacketTypeMessage, true, []byte{0x1, 0x2, 0x3})
 	)
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		socket.Send(testPacket1, testPacket2)
 
 		return &Callbacks{
@@ -685,7 +685,7 @@ func TestServerClose(t *testing.T) {
 	tw := newTestWaiter(0)
 	utw := newTestWaiter(0) // For upgrades.
 
-	onSocket := func(socket Socket) *Callbacks {
+	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
 			OnClose: func(reason string, err error) {
 				defer tw.Done()

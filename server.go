@@ -64,7 +64,7 @@ func NewServer(config *ServerConfig) *Server {
 	return server
 }
 
-func (s *Server) onEIOSocket(eioSocket eio.Socket) *eio.Callbacks {
+func (s *Server) onEIOSocket(eioSocket eio.ServerSocket) *eio.Callbacks {
 	_, callbacks := newServerConn(s, eioSocket, s.parserCreator)
 	return callbacks
 }

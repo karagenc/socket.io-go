@@ -21,11 +21,11 @@ const addr = "127.0.0.1:3000"
 var (
 	server *http.Server
 
-	sockets   []eio.Socket
+	sockets   []eio.ServerSocket
 	socketsMu sync.RWMutex
 )
 
-func onSocket(socket eio.Socket) *eio.Callbacks {
+func onSocket(socket eio.ServerSocket) *eio.Callbacks {
 	fmt.Printf("New socket connected: %s\n", socket.ID())
 	addSocket(socket)
 
@@ -144,7 +144,7 @@ func userInput() {
 	}
 }
 
-func addSocket(socket eio.Socket) {
+func addSocket(socket eio.ServerSocket) {
 	socketsMu.Lock()
 	defer socketsMu.Unlock()
 	sockets = append(sockets, socket)
@@ -161,7 +161,7 @@ func sendTextMessageToAll(message string) {
 }
 
 // A little helper function to send a string message with no fuss.
-func sendTextMessage(socket eio.Socket, message string) {
+func sendTextMessage(socket eio.ServerSocket, message string) {
 	packet, err := parser.NewPacket(parser.PacketTypeMessage, false, []byte(message))
 	if err != nil {
 		panic(err)

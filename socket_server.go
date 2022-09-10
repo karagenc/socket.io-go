@@ -175,12 +175,6 @@ func (s *serverSocket) packet(packets ...*eioparser.Packet) {
 	s.conn.packet(packets...)
 }
 
-// This is client only. Do nothing.
-func (s *serverSocket) Connect() {}
-
-// This is client only. Return nil.
-func (s *serverSocket) Client() *Client { return nil }
-
 func (s *serverSocket) Server() *Server { return s.server }
 
 func (s *serverSocket) Namespace() *Namespace { return s.nsp }

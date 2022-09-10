@@ -94,11 +94,11 @@ func (s *NamespaceSocketStore) SendBuffers(sid string, buffers [][]byte) (ok boo
 	return true
 }
 
-func (s *NamespaceSocketStore) GetAll() []Socket {
+func (s *NamespaceSocketStore) GetAll() []ServerSocket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sockets := make([]Socket, len(s.sockets))
+	sockets := make([]ServerSocket, len(s.sockets))
 	i := 0
 	for _, s := range s.sockets {
 		sockets[i] = s
@@ -143,7 +143,7 @@ func (n *Namespace) SocketStore() *NamespaceSocketStore {
 	return n.sockets
 }
 
-func (n *Namespace) Sockets() []Socket {
+func (n *Namespace) Sockets() []ServerSocket {
 	return n.sockets.GetAll()
 }
 
@@ -205,7 +205,7 @@ func (n *Namespace) DisconnectSockets(close bool) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).DisconnectSockets(close)
 }
 
-type MiddlewareFunction func(socket Socket, handshake *Handshake) error
+type MiddlewareFunction func(socket ServerSocket, handshake *Handshake) error
 
 func (n *Namespace) Use(f MiddlewareFunction) {
 	n.middlewareFuncsMu.Lock()
@@ -241,7 +241,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	return socket, nil
 }
 
-func (n *Namespace) onSocket(socket Socket) {
+func (n *Namespace) onSocket(socket ServerSocket) {
 	connectHandlers := n.emitter.GetHandlers("connect")
 	connectionHandlers := n.emitter.GetHandlers("connection")
 

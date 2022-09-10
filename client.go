@@ -71,7 +71,7 @@ type Client struct {
 	emitter *eventEmitter
 	backoff *backoff
 
-	eio   eio.Socket
+	eio   eio.ClientSocket
 	eioMu sync.RWMutex
 }
 
@@ -146,7 +146,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 	return io
 }
 
-func (c *Client) Socket(namespace string) Socket {
+func (c *Client) Socket(namespace string) ClientSocket {
 	if namespace == "" {
 		namespace = "/"
 	}

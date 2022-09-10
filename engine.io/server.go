@@ -127,7 +127,7 @@ type Server struct {
 
 func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 	if onSocket == nil {
-		onSocket = func(socket Socket) *Callbacks { return nil }
+		onSocket = func(socket ServerSocket) *Callbacks { return nil }
 	}
 
 	if config == nil {

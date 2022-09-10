@@ -57,7 +57,7 @@ func (s *serverSocketStore) Remove(sid string) {
 //
 // This is the equivalent of the Client class at: https://github.com/socketio/socket.io/blob/4.3.2/lib/client.ts#L21
 type serverConn struct {
-	eio eio.Socket
+	eio eio.ServerSocket
 
 	server  *Server
 	sockets *serverSocketStore
@@ -71,7 +71,7 @@ type serverConn struct {
 	parser   parser.Parser
 }
 
-func newServerConn(server *Server, _eio eio.Socket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
+func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
 	c := &serverConn{
 		eio: _eio,
 
