@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
@@ -146,32 +147,62 @@ func (n *Namespace) Sockets() []Socket {
 	return n.sockets.GetAll()
 }
 
+// Emits an event to all connected clients in the given namespace.
 func (n *Namespace) Emit(eventName string, v ...interface{}) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
 }
 
+// Sets a modifier for a subsequent event emission that the event
+// will only be broadcast to clients that have joined the given room.
+//
+// To emit to multiple rooms, you can call To several times.
 func (n *Namespace) To(room ...string) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).To(room...)
 }
 
+// Alias of To(...)
 func (n *Namespace) In(room ...string) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).In(room...)
 }
 
+// Sets a modifier for a subsequent event emission that the event
+// will only be broadcast to clients that have not joined the given rooms.
 func (n *Namespace) Except(room ...string) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Except(room...)
 }
 
+// TODO: Should I stay or should I go?
 func (n *Namespace) Compress(compress bool) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Compress(compress)
 }
 
+// Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
+//
+// See: https://socket.io/docs/v4/using-multiple-nodes
 func (n *Namespace) Local() *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Local()
 }
 
-func (n *Namespace) AllSockets() (sids []string) {
+// Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
+func (n *Namespace) AllSockets() (sids mapset.Set[string]) {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).AllSockets()
+}
+
+// Makes the matching socket instances join the specified rooms.
+func (n *Namespace) SocketsJoin(room ...string) {
+	newBroadcastOperator(n.Name(), n.adapter, n.parser).SocketsJoin(room...)
+}
+
+// Makes the matching socket instances leave the specified rooms.
+func (n *Namespace) SocketsLeave(room ...string) {
+	newBroadcastOperator(n.Name(), n.adapter, n.parser).SocketsLeave(room...)
+}
+
+// Makes the matching socket instances disconnect from the namespace.
+//
+// If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
+func (n *Namespace) DisconnectSockets(close bool) {
+	newBroadcastOperator(n.Name(), n.adapter, n.parser).DisconnectSockets(close)
 }
 
 type MiddlewareFunction func(socket Socket, handshake *Handshake) error

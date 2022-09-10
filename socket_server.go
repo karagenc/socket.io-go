@@ -95,7 +95,11 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	}()
 }
 
-func (s *serverSocket) Join(room string) {
+func (s *serverSocket) Join(room ...string) {
+
+}
+
+func (s *serverSocket) Leave(room ...string) {
 
 }
 
@@ -179,6 +183,8 @@ func (s *serverSocket) Client() *Client { return nil }
 
 func (s *serverSocket) Server() *Server { return s.server }
 
+func (s *serverSocket) Namespace() *Namespace { return s.nsp }
+
 func (s *serverSocket) On(eventName string, handler interface{}) {
 	s.checkHandler(eventName, handler)
 	s.emitter.On(eventName, handler)
@@ -212,4 +218,4 @@ func (s *serverSocket) OffAll() {
 	s.emitter.OffAll()
 }
 
-func (s *serverSocket) Close() {}
+func (s *serverSocket) Disconnect(close bool) {}

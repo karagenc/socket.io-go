@@ -21,6 +21,12 @@ type Socket interface {
 	// Retrieves the underlying Server.
 	Server() *Server
 
+	// Server only. Returns nil if this is a client socket.
+	// TODO: Should I stay or should I go?
+	//
+	// Retrieves the Namespace this socket is joined to.
+	Namespace() *Namespace
+
 	// Client only. Returns nil if this is a server socket.
 	//
 	// This is a concurrenct storage that stores the authentication data.
@@ -52,6 +58,7 @@ type Socket interface {
 	// If you want to emit a binary data, use sio.Binary instead of []byte.
 	Emit(eventName string, v ...interface{})
 
-	// Close the Socket and the underlying Engine.IO connection.
-	Close()
+	// Disconnect from namespace.
+	// If close is true, the underlying Engine.IO connection is terminated.
+	Disconnect(close bool)
 }

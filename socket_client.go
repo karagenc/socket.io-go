@@ -71,11 +71,13 @@ func (s *clientSocket) Client() *Client { return s.client }
 
 func (s *clientSocket) Server() *Server { return nil }
 
+func (s *clientSocket) Namespace() *Namespace { return nil }
+
 func (s *clientSocket) Auth() *Auth {
 	return s.auth
 }
 
-func (s *clientSocket) Close() {}
+func (s *clientSocket) Disconnect(close bool) {}
 
 func (s *clientSocket) sendConnectPacket() {
 	header := parser.PacketHeader{

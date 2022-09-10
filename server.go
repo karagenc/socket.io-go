@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
@@ -121,8 +122,31 @@ func (s *Server) Local() *broadcastOperator {
 }
 
 // Alias of: s.Of("/").AllSockets(...)
-func (s *Server) AllSockets() (sids []string) {
+func (s *Server) AllSockets() (sids mapset.Set[string]) {
 	return s.Of("/").AllSockets()
+}
+
+// Alias of: s.Of("/").SocketsJoin(...)
+//
+// Makes the matching socket instances leave the specified rooms.
+func (s *Server) SocketsJoin(room ...string) {
+	s.Of("/").SocketsJoin(room...)
+}
+
+// Alias of: s.Of("/").SocketsLeave(...)
+//
+// Makes the matching socket instances leave the specified rooms.
+func (s *Server) SocketsLeave(room ...string) {
+	s.Of("/").SocketsLeave(room...)
+}
+
+// Alias of: s.Of("/").DisconnectSockets(...)
+//
+// Makes the matching socket instances disconnect from the namespace.
+//
+// If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
+func (s *Server) DisconnectSockets(close bool) {
+	s.Of("/").DisconnectSockets(close)
 }
 
 func (s *Server) Run() error {

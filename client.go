@@ -380,10 +380,10 @@ func (c *Client) onClose(reason string, err error) {
 func (c *Client) Close() {
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
-	c.eio.Close()
 
 	c.backoff.Reset()
-	c.sockets.CloseAll()
+	c.sockets.DisconnectAll()
+	c.eio.Close()
 
 	c.parserMu.Lock()
 	defer c.parserMu.Unlock()
@@ -442,10 +442,10 @@ func (s *clientSocketStore) Remove(namespace string) {
 	delete(s.sockets, namespace)
 }
 
-func (s *clientSocketStore) CloseAll() {
+func (s *clientSocketStore) DisconnectAll() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, socket := range s.sockets {
-		socket.Close()
+		socket.Disconnect(false)
 	}
 }

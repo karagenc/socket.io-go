@@ -2,6 +2,8 @@ package sio
 
 import (
 	"sync"
+
+	mapset "github.com/deckarep/golang-set/v2"
 )
 
 type AdapterCreator func(namespace *Namespace) Adapter
@@ -13,10 +15,16 @@ type Adapter interface {
 	Delete(sid string, room string)
 	DeleteAll(sid string)
 
-	Broadcast(buffers [][]byte, opts *broadcastOptions)
+	Broadcast(buffers [][]byte, opts *BroadcastOptions)
 
-	Sockets(rooms []string) (sids []string)
-	SocketRooms(sid string) []string
+	// The return value 'sids' is a thread safe mapset.Set.
+	Sockets(rooms mapset.Set[string]) (sids mapset.Set[string])
+	// The return value 'rooms' is a thread safe mapset.Set.
+	SocketRooms(sid string) (rooms mapset.Set[string], ok bool)
+
+	AddSockets(opts *BroadcastOptions, rooms ...string)
+	DelSockets(opts *BroadcastOptions, rooms ...string)
+	DisconnectSockets(opts *BroadcastOptions, close bool)
 }
 
 // This is the default in-memory adapter of Socket.IO.
@@ -24,71 +32,15 @@ type Adapter interface {
 type inMemoryAdapter struct {
 	mu    sync.Mutex
 	nsp   *Namespace
-	rooms stringMapStringSlice
-	sids  stringMapStringSlice
-}
-
-// This is the equivalent of the container types as defined in socket.io-adapter:
-//
-// public rooms: Map<Room, Set<SocketId>> = new Map();
-//
-// public sids: Map<SocketId, Set<Room>> = new Map();
-type stringMapStringSlice map[string][]string
-
-func (m stringMapStringSlice) Has(key string) bool {
-	_, ok := m[key]
-	return ok
-}
-
-func (m stringMapStringSlice) Get(key string) []string {
-	s, _ := m[key]
-	return s
-}
-
-func (m stringMapStringSlice) Set(key string, s []string) {
-	m[key] = s
-}
-
-func (m stringMapStringSlice) Add(key, value string) (alreadyExists bool) {
-	arr, _ := m[key]
-	for _, a := range arr {
-		if a == value {
-			return true
-		}
-	}
-	arr = append(arr, value)
-	m[key] = arr
-	return false
-}
-
-func (m stringMapStringSlice) Delete(key string) {
-	delete(m, key)
-}
-
-func (m stringMapStringSlice) DeleteItem(key, value string) (deleted bool) {
-	values, _ := m[key]
-
-	remove := func(slice []string, s int) []string {
-		return append(slice[:s], slice[s+1:]...)
-	}
-
-	for i, v := range values {
-		if v == value {
-			values = remove(values, i)
-			deleted = true
-			break
-		}
-	}
-
-	m[key] = values
-	return
+	rooms map[string]mapset.Set[string]
+	sids  map[string]mapset.Set[string]
 }
 
 func newInMemoryAdapter(nsp *Namespace) Adapter {
 	return &inMemoryAdapter{
 		nsp:   nsp,
-		rooms: make(stringMapStringSlice),
-		sids:  make(stringMapStringSlice),
+		rooms: make(map[string]mapset.Set[string]),
+		sids:  make(map[string]mapset.Set[string]),
 	}
 }
 
@@ -99,10 +51,18 @@ func (a *inMemoryAdapter) AddAll(sid string, rooms []string) {
 	defer a.mu.Unlock()
 
 	for _, room := range rooms {
-		a.sids.Add(sid, room)
+		s, ok := a.sids[sid]
+		if ok {
+			s.Add(room)
+		}
 
-		if !a.rooms.Has(room) {
-			a.rooms.Set(room, nil)
+		r, ok := a.rooms[room]
+		if !ok {
+			r = mapset.NewThreadUnsafeSet[string]()
+			a.rooms[room] = r
+		}
+		if !r.Contains(sid) {
+			r.Add(sid)
 		}
 	}
 }
@@ -111,66 +71,74 @@ func (a *inMemoryAdapter) Delete(sid string, room string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if a.sids.Has(sid) {
-		a.sids.DeleteItem(sid, room)
+	s, ok := a.sids[sid]
+	if ok {
+		s.Remove(room)
 	}
 
 	a.delete(sid, room)
 }
 
 func (a *inMemoryAdapter) delete(sid string, room string) {
-	if a.rooms.Has(room) {
-		a.rooms.DeleteItem(room, sid)
-
-		sids := a.rooms.Get(room)
-		if len(sids) == 0 {
-			a.rooms.Delete(room)
+	r, ok := a.rooms[room]
+	if ok {
+		r.Remove(sid)
+		if r.Cardinality() == 0 {
+			delete(a.rooms, room)
 		}
 	}
 }
 
 func (a *inMemoryAdapter) DeleteAll(sid string) {
-	if !a.sids.Has(sid) {
-		return
-	}
-
-	rooms := a.sids.Get(sid)
-	for _, room := range rooms {
-		a.delete(sid, room)
-	}
-
-	a.sids.Delete(sid)
-}
-
-func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *broadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if len(opts.Rooms) > 0 {
+	s, ok := a.sids[sid]
+	if !ok {
+		return
+	}
+
+	s.Each(func(room string) bool {
+		a.delete(sid, room)
+		return false
+	})
+
+	delete(a.sids, sid)
+}
+
+func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if opts.Rooms.Cardinality() > 0 {
 		sids := make(map[string]interface{})
 
-		for room := range opts.Rooms {
-			if !a.rooms.Has(room) {
-				continue
+		opts.Rooms.Each(func(room string) bool {
+			r, ok := a.rooms[room]
+			if !ok {
+				return false
 			}
 
-			for _, sid := range a.rooms.Get(room) {
+			r.Each(func(sid string) bool {
 				if _, ok := sids[sid]; ok {
-					continue
+					return false
 				}
-				if _, ok := opts.Except[sid]; ok {
-					continue
+				if opts.Except.Contains(sid) {
+					return false
 				}
 
 				ok := a.nsp.SocketStore().SendBuffers(sid, buffers)
 				if ok {
 					sids[sid] = nil
 				}
-			}
-		}
+
+				return false
+			})
+			return false
+		})
 	} else {
 		for sid := range a.sids {
-			if _, ok := opts.Except[sid]; ok {
+			if opts.Except.Contains(sid) {
 				continue
 			}
 
@@ -179,38 +147,112 @@ func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *broadcastOptions) {
 	}
 }
 
-func (a *inMemoryAdapter) Sockets(rooms []string) (sids []string) {
+// The return value 'sids' must be a thread safe mapset.Set.
+func (a *inMemoryAdapter) Sockets(rooms mapset.Set[string]) (sids mapset.Set[string]) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if len(rooms) > 0 {
-		for _, room := range rooms {
-			if !a.rooms.Has(room) {
-				continue
-			}
+	sids = mapset.NewSet[string]()
+	opts := NewBroadcastOptions()
+	opts.Rooms = rooms
 
-			sids := a.rooms.Get(room)
-			for _, sid := range sids {
-				_, ok := a.nsp.SocketStore().Get(sid)
-				if ok {
-					sids = append(sids, sid)
-				}
-			}
-		}
-	} else {
-		for sid := range a.sids {
-			_, ok := a.nsp.SocketStore().Get(sid)
-			if ok {
-				sids = append(sids, sid)
-			}
-		}
-	}
-
+	a.apply(opts, func(socket *serverSocket) {
+		sids.Add(socket.ID())
+	})
 	return
 }
 
-func (a *inMemoryAdapter) SocketRooms(sid string) []string {
+// The return value 'rooms' must be a thread safe mapset.Set.
+func (a *inMemoryAdapter) SocketRooms(sid string) (rooms mapset.Set[string], ok bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return a.sids.Get(sid)
+
+	s, ok := a.sids[sid]
+	if !ok {
+		return nil, false
+	}
+
+	rooms = mapset.NewSet[string]()
+	s.Each(func(room string) bool {
+		rooms.Add(room)
+		return false
+	})
+	return
+}
+
+func (a *inMemoryAdapter) AddSockets(opts *BroadcastOptions, rooms ...string) {
+	a.apply(opts, func(socket *serverSocket) {
+		socket.Join(rooms...)
+	})
+}
+
+func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...string) {
+	a.apply(opts, func(socket *serverSocket) {
+		socket.Leave(rooms...)
+	})
+}
+
+func (a *inMemoryAdapter) DisconnectSockets(opts *BroadcastOptions, close bool) {
+	a.apply(opts, func(socket *serverSocket) {
+		socket.Disconnect(close)
+	})
+}
+
+func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket *serverSocket)) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	rooms := opts.Rooms
+	exceptSids := a.computeExceptSids(opts.Except)
+
+	if rooms.Cardinality() > 0 {
+		ids := mapset.NewThreadUnsafeSet[string]()
+		rooms.Each(func(room string) bool {
+			r, ok := a.rooms[room]
+			if !ok {
+				return false
+			}
+
+			r.Each(func(sid string) bool {
+				if ids.Contains(sid) || exceptSids.Contains(sid) {
+					return false
+				}
+				socket, ok := a.nsp.sockets.Get(sid)
+				if ok {
+					callback(socket)
+					ids.Add(sid)
+				}
+				return false
+			})
+			return false
+		})
+	} else {
+		for sid := range a.sids {
+			if exceptSids.Contains(sid) {
+				continue
+			}
+			socket, ok := a.nsp.sockets.Get(sid)
+			if ok {
+				callback(socket)
+			}
+		}
+	}
+}
+
+// Beware that the return value 'exceptSids' is thread unsafe.
+func (a *inMemoryAdapter) computeExceptSids(exceptRooms mapset.Set[string]) (exceptSids mapset.Set[string]) {
+	exceptSids = mapset.NewThreadUnsafeSet[string]()
+	if exceptRooms.Cardinality() > 0 {
+		exceptRooms.Each(func(room string) bool {
+			r, ok := a.rooms[room]
+			if ok {
+				r.Each(func(sid string) bool {
+					exceptSids.Add(sid)
+					return false
+				})
+			}
+			return false
+		})
+	}
+	return
 }
