@@ -45,12 +45,8 @@ type ServerSocket interface {
 type ClientSocket interface {
 	Socket
 
-	// Client only.
 	Connect()
 
-	// Client only. Returns nil if this is a server socket.
-	// TODO: Should I stay or should I go?
-	//
 	// Retrieves the underlying Client.
 	//
 	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
