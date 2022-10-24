@@ -69,7 +69,7 @@ func (s *serverSocket) onConnectError(header *parser.PacketHeader, decode parser
 }
 
 func (s *serverSocket) onDisconnect() {
-	s.onClose("server namespace disconnect", nil)
+	s.onClose("server namespace disconnect")
 }
 
 func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
@@ -152,6 +152,24 @@ func (s *serverSocket) Leave(room ...string) {
 
 }
 
+func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
+	handlers := s.emitter.GetHandlers(eventName)
+	values := make([]reflect.Value, len(v))
+	for i := range values {
+		values[i] = reflect.ValueOf(v)
+	}
+
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			_, err := handler.Call(values...)
+			if err != nil {
+				s.onError(fmt.Errorf("emitReserved: %s", err))
+				return
+			}
+		}(handler)
+	}
+}
+
 func (s *serverSocket) onConnect() {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
@@ -178,11 +196,11 @@ func (s *serverSocket) leaveAll() {
 	s.nsp.adapter.DeleteAll(s.ID())
 }
 
-func (s *serverSocket) onClose(reason string, err error) {
-
+func (s *serverSocket) onClose(reason string) {
+	s.emitReserved("disconnecting", reason)
 	s.nsp.remove(s)
 	s.conn.sockets.Remove(s.ID())
-
+	s.emitReserved("disconnect", reason)
 }
 
 func (s *serverSocket) ID() string {
