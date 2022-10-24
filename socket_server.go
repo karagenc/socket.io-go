@@ -54,14 +54,22 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 			s.onEvent(handler, header, decode)
 		}
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
-		//s.onAck(header, decode)
+		s.onAck(header, decode)
 
 	case parser.PacketTypeConnectError:
-		//s.onConnectError(header, decode)
+		s.onConnectError(header, decode)
 
 	case parser.PacketTypeDisconnect:
-		//s.onDisconnect()
+		s.onDisconnect()
 	}
+}
+
+func (s *serverSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
+
+}
+
+func (s *serverSocket) onDisconnect() {
+	s.onClose("server namespace disconnect", nil)
 }
 
 func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
@@ -91,6 +99,47 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 
 		if header.ID != nil {
 			//s.sendAck(*header.ID, ret)
+		}
+	}()
+}
+
+func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
+	if header.ID == nil {
+		// TODO: Error?
+		return
+	}
+	s.acksMu.Lock()
+	ack, ok := s.acks[*header.ID]
+	delete(s.acks, *header.ID)
+	s.acksMu.Unlock()
+
+	if !ok {
+		// TODO: Error?
+		return
+	}
+
+	values, err := decode(ack.inputArgs...)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	if len(values) == len(ack.inputArgs) {
+		for i, v := range values {
+			if ack.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+				values[i] = v.Elem()
+			}
+		}
+	} else {
+		s.onError(fmt.Errorf("onEvent: invalid number of arguments"))
+		return
+	}
+
+	go func() {
+		err := ack.Call(values...)
+		if err != nil {
+			s.onError(err)
+			return
 		}
 	}()
 }
@@ -125,7 +174,16 @@ func (s *serverSocket) onConnect() {
 
 func (s *serverSocket) onError(err error) {}
 
-func (s *serverSocket) onClose(reason string, err error) {}
+func (s *serverSocket) leaveAll() {
+	s.nsp.adapter.DeleteAll(s.ID())
+}
+
+func (s *serverSocket) onClose(reason string, err error) {
+
+	s.nsp.remove(s)
+	s.conn.sockets.Remove(s.ID())
+
+}
 
 func (s *serverSocket) ID() string {
 	return s.id
