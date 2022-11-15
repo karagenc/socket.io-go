@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
-	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
@@ -208,8 +207,12 @@ func (s *serverSocket) ID() string {
 }
 
 func (s *serverSocket) Emit(eventName string, v ...interface{}) {
+	s.sendDataPacket(parser.PacketTypeEvent, eventName, v...)
+}
+
+func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v ...interface{}) {
 	header := parser.PacketHeader{
-		Type:      parser.PacketTypeEvent,
+		Type:      typ,
 		Namespace: s.nsp.Name(),
 	}
 
@@ -247,8 +250,19 @@ func (s *serverSocket) Emit(eventName string, v ...interface{}) {
 	s.conn.sendBuffers(buffers...)
 }
 
-func (s *serverSocket) packet(packets ...*eioparser.Packet) {
-	s.conn.packet(packets...)
+func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...interface{}) {
+	header := parser.PacketHeader{
+		Type:      typ,
+		Namespace: s.nsp.Name(),
+	}
+
+	buffers, err := s.parser.Encode(&header, &v)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	s.conn.sendBuffers(buffers...)
 }
 
 func (s *serverSocket) Server() *Server { return s.server }
@@ -288,4 +302,12 @@ func (s *serverSocket) OffAll() {
 	s.emitter.OffAll()
 }
 
-func (s *serverSocket) Disconnect(close bool) {}
+func (s *serverSocket) Disconnect(close bool) {
+	if close {
+		s.conn.DisconnectAll()
+		s.conn.Close()
+	} else {
+		s.sendControlPacket(parser.PacketTypeDisconnect)
+		s.onClose("server namespace disconnect")
+	}
+}

@@ -446,6 +446,6 @@ func (s *clientSocketStore) DisconnectAll() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, socket := range s.sockets {
-		socket.Disconnect(false)
+		socket.Disconnect()
 	}
 }

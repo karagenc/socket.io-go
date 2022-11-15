@@ -21,10 +21,10 @@ func newServerSocketStore() *serverSocketStore {
 	}
 }
 
-func (s *serverSocketStore) Get(sid string) (ss *serverSocket, ok bool) {
+func (s *serverSocketStore) Get(sid string) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	ss, ok = s.sockets[sid]
+	socket, ok = s.sockets[sid]
 	return
 }
 
@@ -34,17 +34,31 @@ func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
 
 	sockets = make([]*serverSocket, len(s.sockets))
 	i := 0
-	for _, ss := range s.sockets {
-		sockets[i] = ss
+	for _, socket := range s.sockets {
+		sockets[i] = socket
 		i++
 	}
 	return
 }
 
-func (s *serverSocketStore) Set(ss *serverSocket) {
+func (s *serverSocketStore) GetAllAndRemoveAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.sockets[ss.ID()] = ss
+
+	sockets = make([]*serverSocket, len(s.sockets))
+	i := 0
+	for _, socket := range s.sockets {
+		sockets[i] = socket
+		i++
+	}
+	s.sockets = make(map[string]*serverSocket)
+	return
+}
+
+func (s *serverSocketStore) Set(socket *serverSocket) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sockets[socket.ID()] = socket
 }
 
 func (s *serverSocketStore) Remove(sid string) {
@@ -207,4 +221,15 @@ func (c *serverConn) onError(err error) {
 
 func (c *serverConn) onClose(reason string, err error) {
 
+}
+
+func (c *serverConn) DisconnectAll() {
+	for _, socket := range c.sockets.GetAllAndRemoveAll() {
+		socket.Disconnect(false)
+	}
+}
+
+func (c *serverConn) Close() {
+	c.eio.Close()
+	c.onClose("forced server close", nil)
 }

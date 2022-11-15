@@ -121,8 +121,8 @@ type Server struct {
 
 	store *socketStore
 
-	closed chan struct{}
-	once   sync.Once
+	closed    chan struct{}
+	closeOnce sync.Once
 }
 
 func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
@@ -410,7 +410,7 @@ func (s *Server) IsClosed() bool {
 
 func (s *Server) Close() error {
 	// Prevent new clients from connecting.
-	s.once.Do(func() {
+	s.closeOnce.Do(func() {
 		close(s.closed)
 	})
 

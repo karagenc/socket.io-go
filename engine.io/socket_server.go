@@ -23,7 +23,7 @@ type serverSocket struct {
 
 	onClose   func(sid string)
 	closeChan chan struct{}
-	once      sync.Once
+	closeOnce sync.Once
 }
 
 func newServerSocket(id string, upgrades []string, t ServerTransport, pingInterval time.Duration, pingTimeout time.Duration, onClose func(sid string)) *serverSocket {
@@ -201,7 +201,7 @@ func (s *serverSocket) onTransportClose(name string, err error) {
 }
 
 func (s *serverSocket) close(reason string, err error) {
-	s.once.Do(func() {
+	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		defer s.onClose(s.id)
 

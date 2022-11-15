@@ -73,7 +73,7 @@ func (s *clientSocket) Auth() *Auth {
 	return s.auth
 }
 
-func (s *clientSocket) Disconnect(close bool) {}
+func (s *clientSocket) Disconnect() {}
 
 func (s *clientSocket) sendConnectPacket() {
 	header := parser.PacketHeader{

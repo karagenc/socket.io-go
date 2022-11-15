@@ -26,10 +26,6 @@ type Socket interface {
 	// Emit a message.
 	// If you want to emit a binary data, use sio.Binary instead of []byte.
 	Emit(eventName string, v ...interface{})
-
-	// Disconnect from namespace.
-	// If close is true, the underlying Engine.IO connection is terminated.
-	Disconnect(close bool)
 }
 
 type ServerSocket interface {
@@ -40,6 +36,15 @@ type ServerSocket interface {
 
 	// Retrieves the Namespace this socket is connected to.
 	Namespace() *Namespace
+
+	// Disconnect from namespace.
+	//
+	// If `close` is true, all namespaces are going to be disconnected (a DISCONNECT packet will be sent),
+	// and the underlying Engine.IO connection will be terminated.
+	//
+	// If `close` is false, only the current namespace will be disconnected (a DISCONNECT packet will be sent),
+	// and the underlying Engine.IO connection will be kept open.
+	Disconnect(close bool)
 }
 
 type ClientSocket interface {
@@ -57,4 +62,7 @@ type ClientSocket interface {
 	// Setting the authentication data is optional and if used, it must be a JSON object (struct or map).
 	// Non-JSON-object authentication data is not accepted by Socket.IO.
 	Auth() *Auth
+
+	// Disconnect the Socket (a DISCONNECT packet).
+	Disconnect()
 }

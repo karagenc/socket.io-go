@@ -44,7 +44,7 @@ type clientSocket struct {
 	pingChan chan struct{}
 
 	closeChan chan struct{}
-	once      sync.Once
+	closeOnce sync.Once
 }
 
 func (s *clientSocket) Connect(transports []string) (err error) {
@@ -284,7 +284,7 @@ func (s *clientSocket) Send(packets ...*parser.Packet) {
 }
 
 func (s *clientSocket) close(reason string, err error) {
-	s.once.Do(func() {
+	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		defer s.callbacks.OnClose(reason, err)
 
