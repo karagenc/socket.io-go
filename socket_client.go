@@ -260,32 +260,33 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		}
 
 		if header.ID != nil {
-			s.sendAck(*header.ID, ret)
+			s.sendAckPacket(*header.ID, ret)
 		}
 	}()
 }
 
 func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
 	s.acksMu.Lock()
-	handler, ok := s.acks[*header.ID]
+	ack, ok := s.acks[*header.ID]
 	if ok {
 		delete(s.acks, *header.ID)
 	}
 	s.acksMu.Unlock()
 
 	if !ok {
+		// TODO: Error?
 		return
 	}
 
-	values, err := decode(handler.inputArgs...)
+	values, err := decode(ack.inputArgs...)
 	if err != nil {
 		s.onError(err)
 		return
 	}
 
-	if len(values) == len(handler.inputArgs) {
+	if len(values) == len(ack.inputArgs) {
 		for i, v := range values {
-			if handler.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+			if ack.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
 				values[i] = v.Elem()
 			}
 		}
@@ -294,39 +295,13 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	go func(handler *ackHandler) {
-		err := handler.Call(values...)
+	go func() {
+		err := ack.Call(values...)
 		if err != nil {
 			s.onError(err)
 			return
 		}
-	}(handler)
-}
-
-func (s *clientSocket) sendAck(id uint64, values []reflect.Value) {
-	header := parser.PacketHeader{
-		Type:      parser.PacketTypeAck,
-		Namespace: s.namespace,
-		ID:        &id,
-	}
-
-	v := make([]interface{}, len(values))
-
-	for i := range values {
-		if values[i].CanInterface() {
-			v[i] = values[i].Interface()
-		} else {
-			s.onError(fmt.Errorf("sendAck: CanInterface must be true"))
-			return
-		}
-	}
-
-	buffers, err := s.parser.Encode(&header, &v)
-	if err != nil {
-		s.onError(err)
-	}
-
-	s.sendBuffers(buffers...)
+	}()
 }
 
 func (s *clientSocket) onError(err error) {
@@ -365,8 +340,12 @@ func (s *clientSocket) OffAll() {
 }
 
 func (s *clientSocket) Emit(eventName string, v ...interface{}) {
+	s.sendDataPacket(parser.PacketTypeEvent, eventName, v...)
+}
+
+func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v ...interface{}) {
 	header := parser.PacketHeader{
-		Type:      parser.PacketTypeEvent,
+		Type:      typ,
 		Namespace: s.namespace,
 	}
 
@@ -392,6 +371,33 @@ func (s *clientSocket) Emit(eventName string, v ...interface{}) {
 			header.ID = &id
 
 			v = v[:len(v)-1]
+		}
+	}
+
+	buffers, err := s.parser.Encode(&header, &v)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	s.sendBuffers(buffers...)
+}
+
+func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
+	header := parser.PacketHeader{
+		Type:      parser.PacketTypeAck,
+		Namespace: s.namespace,
+		ID:        &id,
+	}
+
+	v := make([]interface{}, len(values))
+
+	for i := range values {
+		if values[i].CanInterface() {
+			v[i] = values[i].Interface()
+		} else {
+			s.onError(fmt.Errorf("sendAck: CanInterface must be true"))
+			return
 		}
 	}
 

@@ -90,14 +90,14 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	}
 
 	go func() {
-		_, err := handler.Call(values...)
+		ret, err := handler.Call(values...)
 		if err != nil {
 			s.onError(err)
 			return
 		}
 
 		if header.ID != nil {
-			//s.sendAck(*header.ID, ret)
+			s.sendAckPacket(*header.ID, ret)
 		}
 	}()
 }
@@ -107,9 +107,12 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		// TODO: Error?
 		return
 	}
+
 	s.acksMu.Lock()
 	ack, ok := s.acks[*header.ID]
-	delete(s.acks, *header.ID)
+	if ok {
+		delete(s.acks, *header.ID)
+	}
 	s.acksMu.Unlock()
 
 	if !ok {
@@ -254,6 +257,33 @@ func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...interface{}
 	header := parser.PacketHeader{
 		Type:      typ,
 		Namespace: s.nsp.Name(),
+	}
+
+	buffers, err := s.parser.Encode(&header, &v)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	s.conn.sendBuffers(buffers...)
+}
+
+func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
+	header := parser.PacketHeader{
+		Type:      parser.PacketTypeAck,
+		Namespace: s.nsp.Name(),
+		ID:        &id,
+	}
+
+	v := make([]interface{}, len(values))
+
+	for i := range values {
+		if values[i].CanInterface() {
+			v[i] = values[i].Interface()
+		} else {
+			s.onError(fmt.Errorf("sendAck: CanInterface must be true"))
+			return
+		}
 	}
 
 	buffers, err := s.parser.Encode(&header, &v)
