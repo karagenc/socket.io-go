@@ -69,9 +69,7 @@ func (s *clientSocket) Connect() {
 
 func (s *clientSocket) Client() *Client { return s.client }
 
-func (s *clientSocket) Auth() *Auth {
-	return s.auth
-}
+func (s *clientSocket) Auth() *Auth { return s.auth }
 
 func (s *clientSocket) Disconnect() {}
 
@@ -342,7 +340,7 @@ func (s *clientSocket) On(eventName string, handler interface{}) {
 
 func (s *clientSocket) Once(eventName string, handler interface{}) {
 	s.checkHandler(eventName, handler)
-	s.emitter.On(eventName, handler)
+	s.emitter.Once(eventName, handler)
 }
 
 func (s *clientSocket) checkHandler(eventName string, handler interface{}) {
