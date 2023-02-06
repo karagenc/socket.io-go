@@ -71,7 +71,15 @@ func (s *clientSocket) Client() *Client { return s.client }
 
 func (s *clientSocket) Auth() *Auth { return s.auth }
 
-func (s *clientSocket) Disconnect() {}
+func (s *clientSocket) Disconnect() {
+	s.connectedMu.Lock()
+	if s.connected {
+		go s.sendControlPacket(parser.PacketTypeDisconnect)
+	}
+	s.connectedMu.Unlock()
+
+	s.client.onClose("io client disconnect", nil)
+}
 
 func (s *clientSocket) sendConnectPacket() {
 	header := parser.PacketHeader{
@@ -372,6 +380,21 @@ func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 
 			v = v[:len(v)-1]
 		}
+	}
+
+	buffers, err := s.parser.Encode(&header, &v)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
+	s.sendBuffers(buffers...)
+}
+
+func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...interface{}) {
+	header := parser.PacketHeader{
+		Type:      typ,
+		Namespace: s.namespace,
 	}
 
 	buffers, err := s.parser.Encode(&header, &v)
