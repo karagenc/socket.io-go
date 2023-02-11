@@ -5,7 +5,7 @@
 ## Pre-commit Checklist
 
 - Run all tests.
-- Make sure you use [jsoniter](github.com/json-iterator/go) instead of encoding/json
+- Make sure you use [go-json](https://github.com/goccy/go-json) instead of `encoding/json`
 
 And you're good to go.
 

@@ -9,7 +9,7 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	c := NewCreator(0)
+	c := NewCreator(0, nil)
 	p := c()
 
 	tests := createDecodeTests(t)
@@ -51,7 +51,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestMaxAttachmentsDecode(t *testing.T) {
-	c := NewCreator(0)
+	c := NewCreator(0, nil)
 	p := c()
 
 	header := &parser.PacketHeader{
@@ -78,7 +78,7 @@ func TestMaxAttachmentsDecode(t *testing.T) {
 	// Empty
 	finish := func(header *parser.PacketHeader, eventName string, decode parser.Decode) {}
 
-	c = NewCreator(3)
+	c = NewCreator(3, nil)
 	p = c()
 
 	err = p.Add(buffers[0], finish)

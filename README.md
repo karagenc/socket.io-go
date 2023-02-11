@@ -57,7 +57,7 @@ reconnect_failed
 
 ## JSON
 
-By default [jsoniter](https://github.com/json-iterator/go) for JSON encoding instead of encoding/json.
+By default [go-json](https://github.com/goccy/go-json) for JSON encoding instead of `encoding/json`.
 
 # Contributing
 

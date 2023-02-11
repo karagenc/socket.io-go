@@ -62,7 +62,7 @@ func (p *Parser) Encode(header *parser.PacketHeader, v interface{}) ([][]byte, e
 func (p *Parser) encodeString(header *parser.PacketHeader, v interface{}) ([]byte, error) {
 	var (
 		buf  = bytes.Buffer{}
-		e    = json.NewEncoder(&buf)
+		e    = p.json.NewEncoder(&buf)
 		grow int
 	)
 
@@ -108,7 +108,7 @@ func (p *Parser) encodeString(header *parser.PacketHeader, v interface{}) ([]byt
 
 func (p *Parser) encodeBinary(header *parser.PacketHeader, v interface{}) (buffers [][]byte, err error) {
 	numBuffers := 0
-	buffers, err = deconstructPacket(reflect.ValueOf(v), &numBuffers)
+	buffers, err = p.deconstructPacket(reflect.ValueOf(v), &numBuffers)
 	if err != nil {
 		return nil, err
 	}

@@ -1,13 +1,10 @@
 package parser
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type HandshakeResponse struct {
 	SID          string   `json:"sid"`

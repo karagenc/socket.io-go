@@ -1,6 +1,7 @@
 package eio
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,11 +14,7 @@ import (
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
 
 	"github.com/gorilla/websocket"
-
-	jsoniter "github.com/json-iterator/go"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type AuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
 

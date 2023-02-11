@@ -10,7 +10,7 @@ import (
 )
 
 func TestEncode(t *testing.T) {
-	c := NewCreator(0)
+	c := NewCreator(0, nil)
 	p := c()
 
 	tests := createEncodeTests(t)
@@ -47,7 +47,7 @@ func TestEncode(t *testing.T) {
 }
 
 func TestMaxAttachmentsEncode(t *testing.T) {
-	c := NewCreator(3)
+	c := NewCreator(3, nil)
 	p := c()
 
 	header := &parser.PacketHeader{

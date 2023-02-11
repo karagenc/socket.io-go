@@ -6,9 +6,9 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/gin-gonic/gin v1.7.1
+	github.com/goccy/go-json v0.10.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/json-iterator/go v1.1.10
 	github.com/stretchr/testify v1.7.0
 )
 
@@ -19,6 +19,7 @@ require (
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/golang/protobuf v1.3.3 // indirect
+	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect

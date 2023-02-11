@@ -1,6 +1,7 @@
 package jsonparser
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -43,11 +44,11 @@ type placeholder struct {
 	Num         int  `json:"num"`
 }
 
-func deconstructPacket(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
-	return deconstructValue(rv, numBuffers)
+func (p *Parser) deconstructPacket(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
+	return p.deconstructValue(rv, numBuffers)
 }
 
-func deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
+func (p *Parser) deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
 	k := rv.Kind()
 	original := rv
 	if k == reflect.Interface || k == reflect.Ptr {
@@ -70,7 +71,7 @@ func deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err 
 			sl := rv.Len()
 			for i := 0; i < sl; i++ {
 				el := rv.Index(i)
-				b, err := deconstructValue(el, numBuffers)
+				b, err := p.deconstructValue(el, numBuffers)
 				if err != nil {
 					return nil, err
 				}
@@ -88,7 +89,7 @@ func deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err 
 				return nil, errBinaryCannotBeAPtr
 			}
 
-			buf, err := deconstructBinaryValue(rv, original, numBuffers, nil)
+			buf, err := p.deconstructBinaryValue(rv, original, numBuffers, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -105,14 +106,14 @@ func deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err 
 			rv = el
 		}
 
-		b, err := deconstructStruct(rv, numBuffers)
+		b, err := p.deconstructStruct(rv, numBuffers)
 		if err != nil {
 			return nil, err
 		}
 		buffers = append(buffers, b...)
 
 	case reflect.Map:
-		b, err := deconstructMap(rv, numBuffers)
+		b, err := p.deconstructMap(rv, numBuffers)
 		if err != nil {
 			return nil, err
 		}
@@ -122,19 +123,19 @@ func deconstructValue(rv reflect.Value, numBuffers *int) (buffers [][]byte, err 
 	return
 }
 
-func deconstructBinaryValue(rv reflect.Value, original reflect.Value, numBuffers *int, customSetter func([]byte) error) (buf []byte, err error) {
+func (p *Parser) deconstructBinaryValue(rv reflect.Value, original reflect.Value, numBuffers *int, customSetter func([]byte) error) (buf []byte, err error) {
 	if rv.CanInterface() {
 		sb, ok := rv.Interface().(socketIOBinary)
 		if ok && sb.SocketIOBinary() == true {
 			buf = rv.Bytes()
 
-			p := placeholder{
+			phold := placeholder{
 				Placeholder: true,
 				Num:         *numBuffers,
 			}
 			*numBuffers++
 
-			pBuf, err := json.Marshal(&p)
+			pBuf, err := p.json.Marshal(&phold)
 			if err != nil {
 				return nil, err
 			}
@@ -168,7 +169,7 @@ func deconstructBinaryValue(rv reflect.Value, original reflect.Value, numBuffers
 	return
 }
 
-func deconstructStruct(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
+func (p *Parser) deconstructStruct(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
 	nf := rv.NumField()
 
 	for i := 0; i < nf; i++ {
@@ -184,7 +185,7 @@ func deconstructStruct(rv reflect.Value, numBuffers *int) (buffers [][]byte, err
 			continue
 		}
 
-		b, err := deconstructValue(fv, numBuffers)
+		b, err := p.deconstructValue(fv, numBuffers)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +195,7 @@ func deconstructStruct(rv reflect.Value, numBuffers *int) (buffers [][]byte, err
 	return
 }
 
-func deconstructMap(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
+func (p *Parser) deconstructMap(rv reflect.Value, numBuffers *int) (buffers [][]byte, err error) {
 	iter := rv.MapRange()
 	for iter.Next() {
 		mk := iter.Key()
@@ -222,7 +223,7 @@ func deconstructMap(rv reflect.Value, numBuffers *int) (buffers [][]byte, err er
 				return nil
 			}
 
-			buf, err := deconstructBinaryValue(mv, original, numBuffers, set)
+			buf, err := p.deconstructBinaryValue(mv, original, numBuffers, set)
 			if err != nil {
 				return nil, err
 			}
@@ -230,7 +231,7 @@ func deconstructMap(rv reflect.Value, numBuffers *int) (buffers [][]byte, err er
 			continue
 		}
 
-		b, err := deconstructValue(mv, numBuffers)
+		b, err := p.deconstructValue(mv, numBuffers)
 		if err != nil {
 			return nil, err
 		}

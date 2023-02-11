@@ -54,7 +54,7 @@ func NewServer(config *ServerConfig) *Server {
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 
 	if server.parserCreator == nil {
-		server.parserCreator = jsonparser.NewCreator(0)
+		server.parserCreator = jsonparser.NewCreator(0, jsonparser.NewGoJSONAPI(nil, nil))
 	}
 
 	if server.adapterCreator == nil {

@@ -130,7 +130,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 
 	parserCreator := config.ParserCreator
 	if parserCreator == nil {
-		parserCreator = jsonparser.NewCreator(0)
+		parserCreator = jsonparser.NewCreator(0, jsonparser.NewGoJSONAPI(nil, nil))
 	}
 	io.parser = parserCreator()
 

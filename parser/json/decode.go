@@ -178,7 +178,7 @@ func (p *Parser) parseHeader(data []byte) (header *parser.PacketHeader, buf []by
 		}
 
 		var v []string
-		err = json.Unmarshal(tmp, &v)
+		err = p.json.Unmarshal(tmp, &v)
 		if err != nil {
 			return
 		}
@@ -226,7 +226,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				payload = []byte("[]")
 			}
 
-			err = json.Unmarshal(payload, &ifaces)
+			err = p.json.Unmarshal(payload, &ifaces)
 			if err != nil {
 				return nil, err
 			}
@@ -245,7 +245,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				payload = []byte("{}")
 			}
 
-			err = json.Unmarshal(payload, rv.Interface())
+			err = p.json.Unmarshal(payload, rv.Interface())
 			if err != nil {
 				return nil, err
 			}
@@ -264,7 +264,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				payload = []byte("[]")
 			}
 
-			err = json.Unmarshal(payload, &ifaces)
+			err = p.json.Unmarshal(payload, &ifaces)
 			if err != nil {
 				return nil, err
 			}
