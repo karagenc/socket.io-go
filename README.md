@@ -57,10 +57,16 @@ reconnect_failed
 
 ## JSON
 
-JSON serialization is highly customizable. Supported packages are:
-- `encoding/json` (default)
+JSON serialization is highly customizable. Under the `parser/json` directory there are different packages for JSON serialization:
+
+- `stdjson` (stdlib's `encoding/json`)
+    - This is the default serializer.
 - [go-json](https://github.com/goccy/go-json)
+    - To use go-json, read its [README.md](parser/json/go-json/README.md).
 - [sonic](https://github.com/bytedance/sonic)
+    - To use sonic, read its [README.md](parser/json/sonic/README.md).
+- `fast` (combines sonic and go-json)
+    - To use fast, read its [README.md](parser/json/fast/README.md)
 
 # Contributing
 
