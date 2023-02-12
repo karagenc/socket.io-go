@@ -1,7 +1,6 @@
 package jsonparser
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -246,6 +245,7 @@ type reconstructor struct {
 	eventName string
 	buffers   [][]byte
 	remaining int
+	json      JSONSerializer
 }
 
 func (r *reconstructor) AddBuffer(buf []byte) (ok bool) {
@@ -279,7 +279,7 @@ func (r *reconstructor) Reconstruct(types ...reflect.Type) (values []reflect.Val
 		ifaces[i] = rv.Interface()
 	}
 
-	err = json.Unmarshal(payload, &ifaces)
+	err = r.json.Unmarshal(payload, &ifaces)
 	if err != nil {
 		return
 	}
@@ -361,7 +361,7 @@ func (r *reconstructor) reconstructBinaryValue(rv reflect.Value, original reflec
 			pBuf := rv.Bytes()
 
 			var p placeholder
-			err := json.Unmarshal(pBuf, &p)
+			err := r.json.Unmarshal(pBuf, &p)
 			if err != nil {
 				return err
 			}

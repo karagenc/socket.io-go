@@ -35,6 +35,7 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 			eventName: eventName,
 			buffers:   [][]byte{buf},
 			remaining: header.Attachments,
+			json:      p.json,
 		}
 
 		if p.maxAttachments > 0 && header.Attachments > p.maxAttachments {
