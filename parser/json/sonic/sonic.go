@@ -9,6 +9,8 @@ import (
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 )
 
+type Config = sonic.Config
+
 type serializer struct {
 	api sonic.API
 }
