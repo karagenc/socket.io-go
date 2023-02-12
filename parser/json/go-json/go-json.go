@@ -7,49 +7,31 @@ import (
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 )
 
-type goJSONAPI struct {
+type serializer struct {
 	encodeOptions []json.EncodeOptionFunc
 	decodeOptions []json.DecodeOptionFunc
 }
 
-func (j *goJSONAPI) Marshal(v any) ([]byte, error) {
-	return json.MarshalWithOption(v, j.encodeOptions...)
+func (s *serializer) Marshal(v any) ([]byte, error) {
+	return json.MarshalWithOption(v, s.encodeOptions...)
 }
 
-func (j *goJSONAPI) Unmarshal(data []byte, v any) error {
-	return json.UnmarshalWithOption(data, v, j.decodeOptions...)
+func (s *serializer) Unmarshal(data []byte, v any) error {
+	return json.UnmarshalWithOption(data, v, s.decodeOptions...)
 }
 
-type goJSONEncoder struct {
-	e             *json.Encoder
-	encodeOptions []json.EncodeOptionFunc
-}
-
-func (e *goJSONEncoder) Encode(v any) error {
-	return e.e.EncodeWithOption(v, e.encodeOptions...)
-}
-
-func (j *goJSONAPI) NewEncoder(w io.Writer) jsonparser.JSONEncoder {
+func (s *serializer) NewEncoder(w io.Writer) jsonparser.JSONEncoder {
 	e := json.NewEncoder(w)
-	return &goJSONEncoder{e: e, encodeOptions: j.encodeOptions}
+	return &encoder{e: e, options: s.encodeOptions}
 }
 
-type goJSONDecoder struct {
-	d             *json.Decoder
-	decodeOptions []json.DecodeOptionFunc
-}
-
-func (d *goJSONDecoder) Decode(v any) error {
-	return d.d.DecodeWithOption(v, d.decodeOptions...)
-}
-
-func (j *goJSONAPI) NewDecoder(r io.Reader) jsonparser.JSONDecoder {
+func (s *serializer) NewDecoder(r io.Reader) jsonparser.JSONDecoder {
 	d := json.NewDecoder(r)
-	return &goJSONDecoder{d: d, decodeOptions: j.decodeOptions}
+	return &decoder{d: d, options: s.decodeOptions}
 }
 
-func NewGoJSONAPI(encodeOptions []json.EncodeOptionFunc, decodeOptions []json.DecodeOptionFunc) jsonparser.JSONAPI {
-	return &goJSONAPI{
+func New(encodeOptions []json.EncodeOptionFunc, decodeOptions []json.DecodeOptionFunc) jsonparser.JSONSerializer {
+	return &serializer{
 		encodeOptions: encodeOptions,
 		decodeOptions: decodeOptions,
 	}

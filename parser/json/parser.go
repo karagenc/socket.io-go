@@ -6,14 +6,14 @@ import (
 
 // maxAttachments is the maximum number of the binary attachments to parse/send.
 // If maxAttachments is 0, there will be no limit set for binary attachments.
-func NewCreator(maxAttachments int, jsonAPI JSONAPI) parser.Creator {
-	if jsonAPI == nil {
-		panic("jsonparser.NewCreator: jsonAPI must be set")
+func NewCreator(maxAttachments int, json JSONSerializer) parser.Creator {
+	if json == nil {
+		panic("jsonparser.NewCreator: `json` must be set")
 	}
 	return func() parser.Parser {
 		return &Parser{
 			maxAttachments: maxAttachments,
-			json:           jsonAPI,
+			json:           json,
 		}
 	}
 }
@@ -21,7 +21,7 @@ func NewCreator(maxAttachments int, jsonAPI JSONAPI) parser.Creator {
 type Parser struct {
 	r              *reconstructor
 	maxAttachments int
-	json           JSONAPI
+	json           JSONSerializer
 }
 
 func (p *Parser) Reset() {

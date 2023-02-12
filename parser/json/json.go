@@ -2,7 +2,7 @@ package jsonparser
 
 import "io"
 
-type JSONAPI interface {
+type JSONSerializer interface {
 	JSONMarshalUnmarshaler
 	JSONEncodeDecoder
 }

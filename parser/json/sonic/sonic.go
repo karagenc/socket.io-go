@@ -9,26 +9,26 @@ import (
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 )
 
-type sonicAPI struct {
+type serializer struct {
 	api sonic.API
 }
 
-func (j *sonicAPI) Marshal(v any) ([]byte, error) {
-	return j.api.Marshal(v)
+func (s *serializer) Marshal(v any) ([]byte, error) {
+	return s.api.Marshal(v)
 }
 
-func (j *sonicAPI) Unmarshal(data []byte, v any) error {
-	return j.api.Unmarshal(data, v)
+func (s *serializer) Unmarshal(data []byte, v any) error {
+	return s.api.Unmarshal(data, v)
 }
 
-func (j *sonicAPI) NewEncoder(w io.Writer) jsonparser.JSONEncoder {
-	return j.api.NewEncoder(w)
+func (s *serializer) NewEncoder(w io.Writer) jsonparser.JSONEncoder {
+	return s.api.NewEncoder(w)
 }
 
-func (j *sonicAPI) NewDecoder(r io.Reader) jsonparser.JSONDecoder {
-	return j.api.NewDecoder(r)
+func (s *serializer) NewDecoder(r io.Reader) jsonparser.JSONDecoder {
+	return s.api.NewDecoder(r)
 }
 
-func NewSonicAPI(config sonic.Config) jsonparser.JSONAPI {
-	return &sonicAPI{api: config.Froze()}
+func New(config sonic.Config) jsonparser.JSONSerializer {
+	return &serializer{api: config.Froze()}
 }

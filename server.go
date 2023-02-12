@@ -55,8 +55,8 @@ func NewServer(config *ServerConfig) *Server {
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 
 	if server.parserCreator == nil {
-		api := stdjson.NewStdJSONAPI()
-		server.parserCreator = jsonparser.NewCreator(0, api)
+		json := stdjson.New()
+		server.parserCreator = jsonparser.NewCreator(0, json)
 	}
 
 	if server.adapterCreator == nil {
