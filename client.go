@@ -10,6 +10,7 @@ import (
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
+	"github.com/tomruk/socket.io-go/parser/json/stdjson"
 )
 
 type ClientConfig struct {
@@ -130,7 +131,8 @@ func NewClient(url string, config *ClientConfig) *Client {
 
 	parserCreator := config.ParserCreator
 	if parserCreator == nil {
-		parserCreator = jsonparser.NewCreator(0, jsonparser.NewGoJSONAPI(nil, nil))
+		api := stdjson.NewStdJSONAPI()
+		parserCreator = jsonparser.NewCreator(0, api)
 	}
 	io.parser = parserCreator()
 

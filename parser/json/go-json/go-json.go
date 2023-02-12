@@ -1,9 +1,10 @@
-package jsonparser
+package gojson
 
 import (
 	"io"
 
 	"github.com/goccy/go-json"
+	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 )
 
 type goJSONAPI struct {
@@ -28,7 +29,7 @@ func (e *goJSONEncoder) Encode(v any) error {
 	return e.e.EncodeWithOption(v, e.encodeOptions...)
 }
 
-func (j *goJSONAPI) NewEncoder(w io.Writer) JSONEncoder {
+func (j *goJSONAPI) NewEncoder(w io.Writer) jsonparser.JSONEncoder {
 	e := json.NewEncoder(w)
 	return &goJSONEncoder{e: e, encodeOptions: j.encodeOptions}
 }
@@ -42,12 +43,12 @@ func (d *goJSONDecoder) Decode(v any) error {
 	return d.d.DecodeWithOption(v, d.decodeOptions...)
 }
 
-func (j *goJSONAPI) NewDecoder(r io.Reader) JSONDecoder {
+func (j *goJSONAPI) NewDecoder(r io.Reader) jsonparser.JSONDecoder {
 	d := json.NewDecoder(r)
 	return &goJSONDecoder{d: d, decodeOptions: j.decodeOptions}
 }
 
-func NewGoJSONAPI(encodeOptions []json.EncodeOptionFunc, decodeOptions []json.DecodeOptionFunc) JSONAPI {
+func NewGoJSONAPI(encodeOptions []json.EncodeOptionFunc, decodeOptions []json.DecodeOptionFunc) jsonparser.JSONAPI {
 	return &goJSONAPI{
 		encodeOptions: encodeOptions,
 		decodeOptions: decodeOptions,

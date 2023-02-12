@@ -9,6 +9,7 @@ import (
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
+	"github.com/tomruk/socket.io-go/parser/json/stdjson"
 )
 
 type ServerConfig struct {
@@ -54,7 +55,8 @@ func NewServer(config *ServerConfig) *Server {
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 
 	if server.parserCreator == nil {
-		server.parserCreator = jsonparser.NewCreator(0, jsonparser.NewGoJSONAPI(nil, nil))
+		api := stdjson.NewStdJSONAPI()
+		server.parserCreator = jsonparser.NewCreator(0, api)
 	}
 
 	if server.adapterCreator == nil {
