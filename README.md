@@ -57,7 +57,10 @@ reconnect_failed
 
 ## JSON
 
-By default [go-json](https://github.com/goccy/go-json) for JSON encoding instead of `encoding/json`.
+JSON serialization is highly customizable. Supported packages are:
+- `encoding/json` (default)
+- [go-json](https://github.com/goccy/go-json)
+- [sonic](https://github.com/bytedance/sonic)
 
 # Contributing
 

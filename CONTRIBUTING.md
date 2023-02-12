@@ -5,7 +5,7 @@
 ## Pre-commit Checklist
 
 - Run all tests.
-- Make sure you use [go-json](https://github.com/goccy/go-json) instead of `encoding/json`
+- Make sure to use `JSONSerializer` inside socket.io parser (`parser/json` package). Do not accidentally use `encoding/json` or other JSON packages.
 
 And you're good to go.
 
