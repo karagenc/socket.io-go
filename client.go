@@ -376,7 +376,9 @@ func (c *Client) onClose(reason string, err error) {
 		}(handler)
 	}
 
-	// TODO: Reconnect.
+	if !c.noReconnection {
+		c.reconnect()
+	}
 }
 
 func (c *Client) Close() {
