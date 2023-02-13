@@ -1,6 +1,10 @@
 # Fast JSON Serializer
 
-This is a package that contains code to use the fastest JSON serializer possible. The idea of combining sonic and go-json into one package seemed very gorgeous to me, so I wrote [fj4echo](https://github.com/tomruk/fj4echo). Now I'm applying the same concept to my socket.io library.
+This is a package that contains code to use the fastest JSON serializer possible. The idea of combining [sonic](https://github.com/bytedance/sonic) and [go-json](https://github.com/goccy/go-json) into one package seemed very gorgeous to me, so I wrote [fj4echo](https://github.com/tomruk/fj4echo). Now I'm applying the same concept to this library.
+
+Selection of JSON library is platform dependent. If the platform supports sonic (at the time of writing sonic supports AMD64 and Linux, macOS, & Windows), then sonic is used, otherwise go-json is used.
+
+Also note that go-json's version is `0.10.0` at the time of writing. Please consider your backend's stability before using it.
 
 ## Usage
 

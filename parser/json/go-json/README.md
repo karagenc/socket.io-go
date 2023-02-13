@@ -2,6 +2,8 @@
 
 This package is for [go-json](https://github.com/goccy/go-json) support. go-json is configured via `EncodeOptionFunc` and `DecodeOptionFunc` types.
 
+Note that go-json's version is `0.10.0` at the time of writing. Please consider your backend's stability before using it.
+
 ## Usage
 
 ```go
