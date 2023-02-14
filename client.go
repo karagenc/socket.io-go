@@ -343,7 +343,7 @@ func (c *Client) reconnect() {
 }
 
 func (c *Client) onEIOError(err error) {
-	c.onError(fmt.Errorf("engine.io error: %w", err))
+	c.onError(err)
 }
 
 func (c *Client) onEIOClose(reason string, err error) {

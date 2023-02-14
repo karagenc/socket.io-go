@@ -190,13 +190,13 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 
 func (s *Server) Run() error {
 	if s.pingInterval < 1*time.Second {
-		return fmt.Errorf("pingInterval must be equal or greater than 1 second")
+		return fmt.Errorf("eio: pingInterval must be equal or greater than 1 second")
 	}
 	if s.pingTimeout < 1*time.Second {
-		return fmt.Errorf("pingTimeout must be equal or greater than 1 second")
+		return fmt.Errorf("eio: pingTimeout must be equal or greater than 1 second")
 	}
 	if s.upgradeTimeout < 1*time.Second {
-		return fmt.Errorf("upgradeTimeout must be equal or greater than 1 second")
+		return fmt.Errorf("eio: upgradeTimeout must be equal or greater than 1 second")
 	}
 	return nil
 }
@@ -309,7 +309,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 	handshakePacket, err := newHandshakePacket(upgrades)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		s.onError(fmt.Errorf("newHandshakePacket failed: %w", err))
+		s.onError(wrapInternalError(fmt.Errorf("newHandshakePacket failed: %w", err)))
 		return
 	}
 
@@ -326,8 +326,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 	ok = s.store.Set(sid, socket)
 	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
-		err := fmt.Errorf("sid's overlap")
-		s.onError(err)
+		s.onError(wrapInternalError(fmt.Errorf("sid's overlap")))
 		socket.close(ReasonTransportError, err)
 		return
 	}
@@ -358,7 +357,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 			return
 		case <-time.After(s.upgradeTimeout):
 			t.Close()
-			s.onError(fmt.Errorf("upgrade failed: upgradeTimeout exceeded"))
+			s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
 		}
 	}()
 
@@ -382,7 +381,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 			socket.UpgradeTo(t)
 		default:
 			t.Close()
-			socket.onError(fmt.Errorf("upgrade failed: invalid packet received"))
+			socket.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
 			return
 		}
 	}

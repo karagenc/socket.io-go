@@ -64,7 +64,7 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 	}
 
 	if len(packets) < 1 {
-		err = fmt.Errorf("expected at least 1 packet")
+		err = fmt.Errorf("polling: expected at least 1 packet")
 		return
 	}
 
@@ -159,7 +159,7 @@ func (t *ClientTransport) poll() ([]*parser.Packet, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("non-200 HTTP response received")
+		return nil, fmt.Errorf("polling: non-200 HTTP response received")
 	}
 
 	r, err := compressedReader(resp)
@@ -195,7 +195,7 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		t.close(fmt.Errorf("non-200 HTTP response received"))
+		t.close(fmt.Errorf("polling: non-200 HTTP response received"))
 		return
 	}
 
@@ -212,7 +212,7 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 
 	rWeOk := respBody[0] == 'o' && respBody[1] == 'k'
 	if !rWeOk {
-		t.close(fmt.Errorf("invalid response received"))
+		t.close(fmt.Errorf("polling: invalid response received"))
 		return
 	}
 }

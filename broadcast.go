@@ -1,7 +1,6 @@
 package sio
 
 import (
-	"fmt"
 	"reflect"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -53,7 +52,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 	}
 
 	if IsEventReservedForServer(eventName) {
-		panic(fmt.Errorf("broadcastOperator.Emit: attempted to emit to a reserved event"))
+		panic("broadcastOperator.Emit: attempted to emit to a reserved event")
 	}
 
 	v = append([]interface{}{eventName}, v...)

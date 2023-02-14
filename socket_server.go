@@ -85,7 +85,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 			}
 		}
 	} else {
-		s.onError(fmt.Errorf("onEvent: invalid number of arguments"))
+		s.onError(fmt.Errorf("sio: onEvent: invalid number of arguments"))
 		return
 	}
 
@@ -133,7 +133,7 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 			}
 		}
 	} else {
-		s.onError(fmt.Errorf("onEvent: invalid number of arguments"))
+		s.onError(fmt.Errorf("sio: onEvent: invalid number of arguments"))
 		return
 	}
 
@@ -165,7 +165,7 @@ func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
 		go func(handler *eventHandler) {
 			_, err := handler.Call(values...)
 			if err != nil {
-				s.onError(fmt.Errorf("emitReserved: %s", err))
+				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
 				return
 			}
 		}(handler)
@@ -281,7 +281,7 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		if values[i].CanInterface() {
 			v[i] = values[i].Interface()
 		} else {
-			s.onError(fmt.Errorf("sendAck: CanInterface must be true"))
+			s.onError(fmt.Errorf("sio: sendAck: CanInterface must be true"))
 			return
 		}
 	}

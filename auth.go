@@ -11,7 +11,7 @@ type Auth struct {
 	data interface{}
 }
 
-var errAuthInvalidValue = fmt.Errorf("Auth.Set(): non-JSON data cannot be accepted. please provide a struct or map")
+var ErrAuthInvalidValue = fmt.Errorf("sio: Auth.Set(): non-JSON data cannot be accepted. please provide a struct or map")
 
 func newAuth() *Auth {
 	return new(Auth)
@@ -28,7 +28,7 @@ func (a *Auth) Set(data interface{}) error {
 		}
 
 		if k != reflect.Struct && k != reflect.Map {
-			return errAuthInvalidValue
+			return ErrAuthInvalidValue
 		}
 	}
 

@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var errOpenExpected = fmt.Errorf("parser: packet with a type of OPEN was expected")
+
 type HandshakeResponse struct {
 	SID          string   `json:"sid"`
 	Upgrades     []string `json:"upgrades"`
@@ -23,7 +25,7 @@ func (hr *HandshakeResponse) GetPingTimeout() time.Duration {
 
 func ParseHandshakeResponse(p *Packet) (*HandshakeResponse, error) {
 	if p.Type != PacketTypeOpen {
-		return nil, fmt.Errorf("packet with a type of OPEN was expected")
+		return nil, errOpenExpected
 	}
 
 	hr := new(HandshakeResponse)

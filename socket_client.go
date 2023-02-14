@@ -104,7 +104,7 @@ func (s *clientSocket) sendConnectPacket() {
 		s.onError(err)
 		return
 	} else if len(buffers) != 1 {
-		s.onError(fmt.Errorf("onEIOConnect: len(buffers) != 1"))
+		s.onError(wrapInternalError(fmt.Errorf("onEIOConnect: len(buffers) != 1")))
 		return
 	}
 
@@ -147,7 +147,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	}
 
 	connectError := func(err error) {
-		errValue := reflect.ValueOf(fmt.Errorf("invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
+		errValue := reflect.ValueOf(fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
 		handlers := s.emitter.GetHandlers("connect_error")
 		for _, handler := range handlers {
 			go func(handler *eventHandler) {
@@ -163,18 +163,18 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 		connectError(err)
 		return
 	} else if len(values) != 1 {
-		connectError(fmt.Errorf("len(values) != 1"))
+		connectError(wrapInternalError(fmt.Errorf("len(values) != 1")))
 		return
 	}
 
 	v, ok := values[0].Interface().(*sidInfo)
 	if !ok {
-		connectError(fmt.Errorf("cast failed"))
+		connectError(wrapInternalError(fmt.Errorf("cast failed")))
 		return
 	}
 
 	if v.SID == "" {
-		connectError(fmt.Errorf("sid is empty"))
+		connectError(wrapInternalError(fmt.Errorf("sid is empty")))
 		return
 	}
 
@@ -212,17 +212,17 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		s.onError(err)
 		return
 	} else if len(values) != 1 {
-		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet"))
+		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet")))
 		return
 	}
 
 	v, ok := values[0].Interface().(*connectError)
 	if !ok {
-		s.onError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed"))
+		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed")))
 		return
 	}
 
-	errValue := reflect.ValueOf(fmt.Errorf("%s", v.Message))
+	errValue := reflect.ValueOf(fmt.Errorf("sio: %s", v.Message))
 
 	handlers := s.emitter.GetHandlers("connect_error")
 	for _, handler := range handlers {
@@ -256,7 +256,7 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 			}
 		}
 	} else {
-		s.onError(fmt.Errorf("onEvent: invalid number of arguments"))
+		s.onError(fmt.Errorf("sio: onEvent: invalid number of arguments"))
 		return
 	}
 
@@ -275,6 +275,7 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 
 func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
 	s.acksMu.Lock()
+	// TODO: Check header.ID != nil
 	ack, ok := s.acks[*header.ID]
 	if ok {
 		delete(s.acks, *header.ID)
@@ -282,7 +283,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	s.acksMu.Unlock()
 
 	if !ok {
-		// TODO: Error?
+		s.onError(wrapInternalError(fmt.Errorf("ACK with ID %d not found", *header.ID)))
 		return
 	}
 
@@ -299,7 +300,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 			}
 		}
 	} else {
-		s.onError(fmt.Errorf("onAck: invalid number of arguments"))
+		s.onError(fmt.Errorf("sio: onAck: invalid number of arguments"))
 		return
 	}
 
@@ -358,7 +359,7 @@ func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 	}
 
 	if IsEventReservedForClient(eventName) {
-		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
+		panic("Emit: attempted to emit to a reserved event")
 	}
 
 	v = append([]interface{}{eventName}, v...)
@@ -419,7 +420,7 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		if values[i].CanInterface() {
 			v[i] = values[i].Interface()
 		} else {
-			s.onError(fmt.Errorf("sendAck: CanInterface must be true"))
+			s.onError(fmt.Errorf("sio: sendAck: CanInterface must be true"))
 			return
 		}
 	}

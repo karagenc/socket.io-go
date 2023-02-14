@@ -14,8 +14,8 @@ const (
 )
 
 var (
-	ErrBase64IDMaxTryReached = fmt.Errorf("base64 ID generation failed: base64IDMaxTry reached")
-	errBase64IDInvalidSize   = fmt.Errorf("base64 ID generation failed: invalid size")
+	ErrBase64IDMaxTryReached = fmt.Errorf("eio: base64 ID generation failed: base64IDMaxTry reached")
+	errBase64IDInvalidSize   = fmt.Errorf("eio: base64 ID generation failed: invalid size")
 
 	base64IDMu  sync.Mutex
 	base64IDSeq uint32 = 0 // Sequence number to prevent sid overlaps.

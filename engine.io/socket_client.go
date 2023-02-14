@@ -62,7 +62,7 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 		case "polling":
 			s.t = polling.NewClientTransport(c, ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
 		default:
-			err = fmt.Errorf("invalid transport name: %s", name)
+			err = fmt.Errorf("eio: invalid transport name: %s", name)
 			return
 		}
 
@@ -140,7 +140,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		switch packet.Type {
 		case parser.PacketTypePong:
 			if string(packet.Data) != "probe" {
-				s.onError(fmt.Errorf("upgrade failed: invalid packet received"))
+				s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
 				t.Close()
 				return
 			}
@@ -149,7 +149,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 			s.upgradeTo(t)
 		default:
 			t.Close()
-			s.onError(fmt.Errorf("upgrade failed: invalid packet received"))
+			s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
 			return
 		}
 	}
@@ -163,7 +163,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	_, err := t.Handshake()
 	if err != nil {
 		t.Close()
-		s.onError(fmt.Errorf("upgrade failed: %w", err))
+		s.onError(fmt.Errorf("eio: upgrade failed: %w", err))
 		return
 	}
 
@@ -173,7 +173,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 			return
 		case <-time.After(s.upgradeTimeout):
 			t.Close()
-			s.onError(fmt.Errorf("upgrade failed: upgradeTimeout exceeded"))
+			s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
 		}
 	}()
 
@@ -182,7 +182,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	ping, err := parser.NewPacket(parser.PacketTypePing, false, []byte("probe"))
 	if err != nil {
 		t.Close()
-		s.onError(fmt.Errorf("upgrade failed: %w", err))
+		s.onError(wrapInternalError(fmt.Errorf("upgrade failed: %w", err)))
 		return
 	}
 	t.Send(ping)
