@@ -1,13 +1,14 @@
 package websocket
 
 import (
+	"context"
 	"net/url"
 	"strconv"
 	"sync"
 
-	"github.com/gorilla/websocket"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
+	"nhooyr.io/websocket"
 )
 
 type ClientTransport struct {
@@ -17,16 +18,16 @@ type ClientTransport struct {
 	url             *url.URL
 	requestHeader   *transport.RequestHeader
 
-	dialer  *websocket.Dialer
-	conn    *websocket.Conn
-	writeMu sync.Mutex
+	dialOptions *websocket.DialOptions
+	conn        *websocket.Conn
+	writeMu     sync.Mutex
 
 	callbacks *transport.Callbacks
 
 	once sync.Once
 }
 
-func NewClientTransport(callbacks *transport.Callbacks, sid string, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, dialer *websocket.Dialer) *ClientTransport {
+func NewClientTransport(callbacks *transport.Callbacks, sid string, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, dialOptions *websocket.DialOptions) *ClientTransport {
 	return &ClientTransport{
 		sid: sid,
 
@@ -36,7 +37,7 @@ func NewClientTransport(callbacks *transport.Callbacks, sid string, protocolVers
 
 		callbacks: callbacks,
 
-		dialer: dialer,
+		dialOptions: dialOptions,
 	}
 }
 
@@ -66,7 +67,7 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 		t.url.Scheme = "ws"
 	}
 
-	t.conn, _, err = t.dialer.Dial(t.url.String(), t.requestHeader.Header())
+	t.conn, _, err = websocket.Dial(context.Background(), t.url.String(), t.dialOptions)
 	if err != nil {
 		return
 	}
@@ -105,11 +106,11 @@ func (t *ClientTransport) Run() {
 }
 
 func (t *ClientTransport) nextPacket() (*parser.Packet, error) {
-	mt, r, err := t.conn.NextReader()
+	mt, r, err := t.conn.Reader(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	return parser.Decode(r, mt == websocket.BinaryMessage)
+	return parser.Decode(r, mt == websocket.MessageBinary)
 }
 
 func (t *ClientTransport) Send(packets ...*parser.Packet) {
@@ -118,18 +119,19 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 	defer t.writeMu.Unlock()
 
 	for _, p := range packets {
-		var mt int
+		var mt websocket.MessageType
 		if p.IsBinary {
-			mt = websocket.BinaryMessage
+			mt = websocket.MessageBinary
 		} else {
-			mt = websocket.TextMessage
+			mt = websocket.MessageText
 		}
 
-		w, err := t.conn.NextWriter(mt)
+		w, err := t.conn.Writer(context.Background(), mt)
 		if err != nil {
 			t.close(err)
 			break
 		}
+		defer w.Close()
 
 		err = p.Encode(w, true)
 		if err != nil {
@@ -142,21 +144,28 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 func (t *ClientTransport) Discard() {
 	t.once.Do(func() {
 		if t.conn != nil {
-			t.conn.Close()
+			t.conn.Close(websocket.StatusNormalClosure, "")
 		}
 	})
 }
 
 func (t *ClientTransport) close(err error) {
 	t.once.Do(func() {
-		if websocket.IsCloseError(err, expectedCloseCodes...) {
+		status := websocket.CloseStatus(err)
+		if status == -1 {
 			err = nil
+		}
+		for _, expected := range expectedCloseCodes {
+			if status == expected {
+				err = nil
+				break
+			}
 		}
 
 		defer t.callbacks.OnClose(t.Name(), err)
 
 		if t.conn != nil {
-			t.conn.Close()
+			t.conn.Close(websocket.StatusNormalClosure, "")
 		}
 	})
 }

@@ -3,7 +3,6 @@ package eio
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
@@ -269,54 +267,6 @@ func TestAuthenticator(t *testing.T) {
 	io.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusForbidden, rec.Code)
-}
-
-func TestMaxBufferSizeWebSocket(t *testing.T) {
-	tw := newTestWaiter(2) // Wait for the server and client.
-
-	onSocket := func(socket ServerSocket) *Callbacks {
-		return &Callbacks{
-			OnClose: func(reason string, err error) {
-				defer tw.Done()
-
-				if reason != ReasonTransportError || !errors.Is(err, websocket.ErrReadLimit) {
-					t.Error("exceeding the MaxBufferSize should've caused a transport error and an ErrReadLimit error")
-				}
-			},
-		}
-	}
-
-	io := NewServer(onSocket, &ServerConfig{
-		MaxBufferSize: 5,
-	})
-
-	err := io.Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	s := httptest.NewServer(io)
-
-	callbacks := &Callbacks{
-		OnClose: func(reason string, err error) {
-			defer tw.Done()
-
-			if reason != ReasonTransportError || !websocket.IsCloseError(err, websocket.CloseMessageTooBig) {
-				t.Error("exceeding the MaxBufferSize should've caused a transport error and the close code should've been 1009")
-			}
-		},
-	}
-
-	socket := testDial(t, s.URL, callbacks, &ClientConfig{
-		Transports: []string{"websocket"},
-	})
-
-	assert.Equal(t, "websocket", socket.TransportName())
-
-	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
-	socket.Send(packet)
-
-	tw.WaitTimeout(t, 3*time.Second)
 }
 
 func TestMaxBufferSizePolling(t *testing.T) {

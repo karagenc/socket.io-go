@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"nhooyr.io/websocket"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
@@ -31,7 +31,7 @@ type clientSocket struct {
 	requestHeader *transport.RequestHeader
 
 	// WebSocket dialer to use on transports.
-	wsDialer *websocket.Dialer
+	wsDialOptions *websocket.DialOptions
 
 	// These are set after the handshake.
 	sid          string
@@ -58,7 +58,7 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 
 		switch name {
 		case "websocket":
-			s.t = _websocket.NewClientTransport(c, "", ProtocolVersion, *s.url, s.requestHeader, s.wsDialer)
+			s.t = _websocket.NewClientTransport(c, "", ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
 		case "polling":
 			s.t = polling.NewClientTransport(c, ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
 		default:
@@ -131,8 +131,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	}
 
 	c := transport.NewCallbacks()
-
-	t := _websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialer)
+	t := _websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
 	done := make(chan struct{})
 	once := new(sync.Once)
 

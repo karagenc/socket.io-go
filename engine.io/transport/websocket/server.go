@@ -1,35 +1,38 @@
 package websocket
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
-	"github.com/gorilla/websocket"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
+	"nhooyr.io/websocket"
 )
 
 type ServerTransport struct {
 	readLimit      int64
 	supportsBinary bool
 
-	upgrader *websocket.Upgrader
-	conn     *websocket.Conn
-	writeMu  sync.Mutex
+	acceptOptions *websocket.AcceptOptions
+
+	conn    *websocket.Conn
+	ctx     context.Context
+	writeMu sync.Mutex
 
 	callbacks *transport.Callbacks
 
 	once sync.Once
 }
 
-func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, supportsBinary bool, upgrader *websocket.Upgrader) *ServerTransport {
+func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, supportsBinary bool, acceptOptions *websocket.AcceptOptions) *ServerTransport {
 	return &ServerTransport{
 		readLimit:      int64(maxBufferSize),
 		supportsBinary: supportsBinary,
 
 		callbacks: callbacks,
 
-		upgrader: upgrader,
+		acceptOptions: acceptOptions,
 	}
 }
 
@@ -52,18 +55,19 @@ func (t *ServerTransport) Send(packets ...*parser.Packet) {
 	defer t.writeMu.Unlock()
 
 	for _, p := range packets {
-		var mt int
+		var mt websocket.MessageType
 		if p.IsBinary {
-			mt = websocket.BinaryMessage
+			mt = websocket.MessageBinary
 		} else {
-			mt = websocket.TextMessage
+			mt = websocket.MessageText
 		}
 
-		w, err := t.conn.NextWriter(mt)
+		w, err := t.conn.Writer(t.ctx, mt)
 		if err != nil {
 			t.close(err)
 			break
 		}
+		defer w.Close()
 
 		err = p.Encode(w, true)
 		if err != nil {
@@ -74,7 +78,8 @@ func (t *ServerTransport) Send(packets ...*parser.Packet) {
 }
 
 func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) (err error) {
-	t.conn, err = t.upgrader.Upgrade(w, r, nil)
+	t.ctx = r.Context()
+	t.conn, err = websocket.Accept(w, r, t.acceptOptions)
 	if err != nil {
 		return
 	}
@@ -88,15 +93,16 @@ func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.Respo
 
 func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
 	if packet != nil {
-		w, err := t.conn.NextWriter(websocket.TextMessage)
+		w, err := t.conn.Writer(t.ctx, websocket.MessageText)
 		if err != nil {
-			t.conn.Close()
+			t.close(err)
 			return err
 		}
+		defer w.Close()
 
 		err = packet.Encode(w, t.supportsBinary)
 		if err != nil {
-			t.conn.Close()
+			t.close(err)
 			return err
 		}
 	}
@@ -105,13 +111,13 @@ func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
 
 func (t *ServerTransport) PostHandshake() {
 	for {
-		mt, r, err := t.conn.NextReader()
+		mt, r, err := t.conn.Reader(t.ctx)
 		if err != nil {
 			t.close(err)
 			break
 		}
 
-		p, err := parser.Decode(r, mt == websocket.BinaryMessage)
+		p, err := parser.Decode(r, mt == websocket.MessageBinary)
 		if err != nil {
 			t.close(err)
 			break
@@ -128,28 +134,35 @@ func (t *ServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (t *ServerTransport) Discard() {
 	t.once.Do(func() {
 		if t.conn != nil {
-			t.conn.Close()
+			t.conn.Close(websocket.StatusNormalClosure, "")
 		}
 	})
 }
 
-var expectedCloseCodes = []int{
-	websocket.CloseNormalClosure,
-	websocket.CloseGoingAway,
-	websocket.CloseNoStatusReceived,
-	websocket.CloseAbnormalClosure,
+var expectedCloseCodes = []websocket.StatusCode{
+	websocket.StatusNormalClosure,
+	websocket.StatusGoingAway,
+	websocket.StatusNoStatusRcvd,
+	websocket.StatusAbnormalClosure,
 }
 
 func (t *ServerTransport) close(err error) {
 	t.once.Do(func() {
-		if websocket.IsCloseError(err, expectedCloseCodes...) {
+		status := websocket.CloseStatus(err)
+		if status == -1 {
 			err = nil
+		}
+		for _, expected := range expectedCloseCodes {
+			if status == expected {
+				err = nil
+				break
+			}
 		}
 
 		defer t.callbacks.OnClose(t.Name(), err)
 
 		if t.conn != nil {
-			t.conn.Close()
+			t.conn.Close(websocket.StatusNormalClosure, "")
 		}
 	})
 }

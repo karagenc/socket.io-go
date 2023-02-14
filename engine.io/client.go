@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
+	"nhooyr.io/websocket"
 )
 
 type ClientConfig struct {
@@ -35,7 +35,7 @@ type ClientConfig struct {
 	HTTPTransport http.RoundTripper
 
 	// Custom WebSocket dialer to use.
-	WebSocketDialer *websocket.Dialer
+	WebSocketDialOptions *websocket.DialOptions
 }
 
 func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSocket, error) {
@@ -53,7 +53,6 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 
 	socket := &clientSocket{
 		httpClient: newHTTPClient(config.HTTPTransport),
-		wsDialer:   websocket.DefaultDialer,
 
 		upgradeTimeout: defaultUpgradeTimeout,
 		upgradeDone:    config.UpgradeDone,
@@ -86,8 +85,8 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 		socket.upgradeDone = func(transportName string) {}
 	}
 
-	if config.WebSocketDialer != nil {
-		socket.wsDialer = config.WebSocketDialer
+	if config.WebSocketDialOptions != nil {
+		socket.wsDialOptions = config.WebSocketDialOptions
 	}
 
 	var err error

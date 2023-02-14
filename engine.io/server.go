@@ -13,7 +13,7 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
 
-	"github.com/gorilla/websocket"
+	"nhooyr.io/websocket"
 )
 
 type AuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
@@ -93,8 +93,8 @@ type ServerConfig struct {
 	MaxBufferSize        int
 	DisableMaxBufferSize bool
 
-	// Custom WebSocket upgrader to use.
-	WebSocketUpgrader *websocket.Upgrader
+	// Custom WebSocket options to use.
+	WebSocketAcceptOptions *websocket.AcceptOptions
 
 	// Callback function for Engine.IO server errors.
 	// You may use this function to log server errors.
@@ -111,7 +111,7 @@ type Server struct {
 	maxBufferSize        int
 	disableMaxBufferSize bool
 
-	wsUpgrader *websocket.Upgrader
+	wsAcceptOptions *websocket.AcceptOptions
 
 	onSocket NewSocketCallback
 	onError  ErrorCallback
@@ -141,7 +141,7 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 		maxBufferSize:        config.MaxBufferSize,
 		disableMaxBufferSize: config.DisableMaxBufferSize,
 
-		wsUpgrader: config.WebSocketUpgrader,
+		wsAcceptOptions: config.WebSocketAcceptOptions,
 
 		onSocket: onSocket,
 		onError:  config.OnError,
@@ -172,13 +172,6 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 	} else {
 		if s.maxBufferSize == 0 {
 			s.maxBufferSize = defaultMaxBufferSize
-		}
-	}
-
-	if s.wsUpgrader == nil {
-		s.wsUpgrader = &websocket.Upgrader{
-			ReadBufferSize:  defaultWebSocketBufferSize,
-			WriteBufferSize: defaultWebSocketBufferSize,
 		}
 	}
 
@@ -300,7 +293,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		t = polling.NewServerTransport(c, s.maxBufferSize, s.PollTimeout())
 		upgrades = []string{"websocket"}
 	case "websocket":
-		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsUpgrader)
+		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
 	default:
 		writeError(w, ErrorUnknownTransport)
 		return
@@ -342,7 +335,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 
 	c := transport.NewCallbacks()
 
-	t := _websocket.NewServerTransport(c, s.maxBufferSize, true, s.wsUpgrader)
+	t := _websocket.NewServerTransport(c, s.maxBufferSize, true, s.wsAcceptOptions)
 	done := make(chan struct{})
 	once := new(sync.Once)
 
