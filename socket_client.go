@@ -274,8 +274,12 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 }
 
 func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
+	if header.ID == nil {
+		s.onError(wrapInternalError(fmt.Errorf("header.ID is nil")))
+		return
+	}
+
 	s.acksMu.Lock()
-	// TODO: Check header.ID != nil
 	ack, ok := s.acks[*header.ID]
 	if ok {
 		delete(s.acks, *header.ID)

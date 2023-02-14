@@ -248,8 +248,7 @@ func (n *Namespace) onSocket(socket ServerSocket) {
 	callHandler := func(handler *eventHandler) {
 		_, err := handler.Call(reflect.ValueOf(socket))
 		if err != nil {
-			// TODO: n.onError(err)???
-			return
+			panic(err)
 		}
 	}
 

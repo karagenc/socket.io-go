@@ -44,7 +44,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 
 func (s *serverSocket) Auth() *Auth { return nil }
 
-func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
+func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
 		handlers := s.emitter.GetHandlers(eventName)
@@ -55,16 +55,13 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
 		s.onAck(header, decode)
 
-	case parser.PacketTypeConnectError:
-		s.onConnectError(header, decode)
-
 	case parser.PacketTypeDisconnect:
 		s.onDisconnect()
+	default:
+		return wrapInternalError(fmt.Errorf("invalid packet type: %d", header.Type))
 	}
-}
 
-func (s *serverSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
-
+	return nil
 }
 
 func (s *serverSocket) onDisconnect() {
@@ -104,7 +101,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 
 func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
 	if header.ID == nil {
-		// TODO: Error?
+		s.onError(wrapInternalError(fmt.Errorf("header.ID is nil")))
 		return
 	}
 
@@ -116,7 +113,7 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	s.acksMu.Unlock()
 
 	if !ok {
-		// TODO: Error?
+		s.onError(wrapInternalError(fmt.Errorf("ACK with ID %d not found", *header.ID)))
 		return
 	}
 

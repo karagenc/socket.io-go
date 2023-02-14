@@ -2,6 +2,7 @@ package sio
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -131,11 +132,13 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 		sockets := c.sockets.GetAll()
 		for _, socket := range sockets {
 			if socket.nsp.Name() == header.Namespace {
-				socket.onPacket(header, eventName, decode)
+				err := socket.onPacket(header, eventName, decode)
+				c.onError(err)
+				break
 			}
 		}
 
-		// TODO: Error?
+		c.onError(wrapInternalError(fmt.Errorf("socket not found")))
 	}
 }
 
