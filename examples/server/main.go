@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	sio "github.com/tomruk/socket.io-go"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 )
@@ -38,12 +37,12 @@ func main() {
 	}
 
 	fs := http.FileServer(http.Dir("public"))
-	router := mux.NewRouter()
+	router := http.NewServeMux()
 
 	if allowOrigin == "" {
 		// Make sure to have a slash at the end of the URL.
 		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
-		router.PathPrefix("/socket.io/").Handler(io)
+		router.Handle("/socket.io/", io)
 	} else {
 		if !strings.HasPrefix(allowOrigin, "http://") {
 			allowOrigin = "http://" + allowOrigin
@@ -54,10 +53,10 @@ func main() {
 
 		// Make sure to have a slash at the end of the URL.
 		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
-		router.PathPrefix("/socket.io/").Handler(h)
+		router.Handle("/socket.io/", h)
 	}
 
-	router.PathPrefix("/").Handler(fs)
+	router.Handle("/", fs)
 
 	fmt.Printf("Listening on: %s\n", addr)
 
