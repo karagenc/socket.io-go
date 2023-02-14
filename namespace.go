@@ -171,7 +171,7 @@ func (n *Namespace) Except(room ...string) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Except(room...)
 }
 
-// TODO: Should I stay or should I go?
+// Compression flag is unused at the moment, thus setting this will have no effect on compression.
 func (n *Namespace) Compress(compress bool) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Compress(compress)
 }

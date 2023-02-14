@@ -20,8 +20,10 @@ func NewBroadcastOptions() *BroadcastOptions {
 	}
 }
 
+// These flags are unused at the moment, but for
+// compatibility with the socket.io API, these stay here.
 type BroadcastFlags struct {
-	Compress bool // TODO: Remove this?
+	Compress bool
 	Local    bool
 }
 
@@ -68,8 +70,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 
 	buffers, err := b.parser.Encode(&header, &v)
 	if err != nil {
-		b.onError(err)
-		return
+		panic(err)
 	}
 
 	opts := NewBroadcastOptions()
@@ -111,7 +112,7 @@ func (b *broadcastOperator) Except(room ...string) *broadcastOperator {
 	return &n
 }
 
-// TODO: Should I stay or should I go?
+// Compression flag is unused at the moment, thus setting this will have no effect on compression.
 func (b *broadcastOperator) Compress(compress bool) *broadcastOperator {
 	n := *b
 	n.flags.Compress = compress
@@ -162,8 +163,4 @@ func (b *broadcastOperator) DisconnectSockets(close bool) {
 	opts.Flags = b.flags
 
 	b.adapter.DisconnectSockets(opts, close)
-}
-
-func (b *broadcastOperator) onError(err error) {
-	// TODO: Error?
 }
