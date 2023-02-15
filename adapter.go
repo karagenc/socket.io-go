@@ -188,7 +188,9 @@ func (a *inMemoryAdapter) AddSockets(opts *BroadcastOptions, rooms ...string) {
 
 func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...string) {
 	a.apply(opts, func(socket *serverSocket) {
-		socket.Leave(rooms...)
+		for _, room := range rooms {
+			socket.Leave(room)
+		}
 	})
 }
 

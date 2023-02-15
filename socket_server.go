@@ -144,11 +144,11 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 }
 
 func (s *serverSocket) Join(room ...string) {
-
+	s.nsp.Adapter().AddAll(s.ID(), room)
 }
 
-func (s *serverSocket) Leave(room ...string) {
-
+func (s *serverSocket) Leave(room string) {
+	s.nsp.Adapter().Delete(s.ID(), room)
 }
 
 func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
