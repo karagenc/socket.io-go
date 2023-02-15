@@ -202,7 +202,7 @@ func (s *serverSocket) onError(err error) {
 				// This should panic.
 				// If you cannot handle the error via `onError`
 				// then what option do you have?
-				panic(err)
+				panic(fmt.Errorf("sio: %w", err))
 			}
 		}(handler)
 	}
@@ -337,7 +337,7 @@ func (s *serverSocket) checkHandler(eventName string, handler interface{}) {
 	case "disconnect":
 		err := checkHandler(eventName, handler)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("sio: %w", err))
 		}
 	}
 }

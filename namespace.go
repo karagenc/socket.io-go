@@ -2,6 +2,7 @@ package sio
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -248,7 +249,7 @@ func (n *Namespace) onSocket(socket ServerSocket) {
 	callHandler := func(handler *eventHandler) {
 		_, err := handler.Call(reflect.ValueOf(socket))
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("sio: %w", err))
 		}
 	}
 
@@ -283,7 +284,7 @@ func (n *Namespace) checkHandler(eventName string, handler interface{}) {
 	case "connection":
 		err := checkNamespaceHandler(eventName, handler)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("sio: %w", err))
 		}
 	}
 }

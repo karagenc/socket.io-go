@@ -43,7 +43,7 @@ func (f *eventHandler) Call(args ...reflect.Value) (ret []reflect.Value, err err
 			var ok bool
 			err, ok = r.(error)
 			if !ok {
-				err = fmt.Errorf("handler error: %v", r)
+				err = fmt.Errorf("sio: handler error: %v", r)
 			}
 		}
 	}()
@@ -94,7 +94,7 @@ func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 			var ok bool
 			err, ok = r.(error)
 			if !ok {
-				err = fmt.Errorf("ack handler error: %v", r)
+				err = fmt.Errorf("sio: ack handler error: %v", r)
 			}
 		}
 	}()
@@ -113,7 +113,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'connect': function expected")
 		}
 
 		rt := rv.Type()
@@ -124,7 +124,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'connect_error': function expected")
 		}
 
 		rt := rv.Type()
@@ -140,7 +140,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'disconnect': function expected")
 		}
 
 		rt := rv.Type()
@@ -151,7 +151,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'open': function expected")
 		}
 
 		rt := rv.Type()
@@ -162,7 +162,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'close': function expected")
 		}
 
 		rt := rv.Type()
@@ -178,7 +178,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'error': function expected")
 		}
 
 		rt := rv.Type()
@@ -194,7 +194,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'reconnect': function expected")
 		}
 
 		rt := rv.Type()
@@ -210,7 +210,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'reconnect_attempt': function expected")
 		}
 
 		rt := rv.Type()
@@ -226,7 +226,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'reconnect_error': function expected")
 		}
 
 		rt := rv.Type()
@@ -242,7 +242,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'reconnect_failed': function expected")
 		}
 
 		rt := rv.Type()
@@ -253,7 +253,7 @@ func checkHandler(eventName string, handler interface{}) error {
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("function expected")
+			return fmt.Errorf("'ping': function expected")
 		}
 
 		rt := rv.Type()
@@ -271,24 +271,36 @@ func checkNamespaceHandler(eventName string, handler interface{}) error {
 	case "":
 		return fmt.Errorf("event name cannot be empty")
 	case "connect":
-		fallthrough
-	case "connection":
 		rv := reflect.ValueOf(handler)
 
 		if rv.Kind() != reflect.Func {
-			return fmt.Errorf("event name is '%s': function expected", eventName)
+			return fmt.Errorf("'connect': function expected")
 		}
 
 		rt := rv.Type()
 		if rt.NumIn() != 1 || rt.NumOut() != 0 {
-			// Event name can be either 'connect' or 'connection', so we use the eventName.
-			return fmt.Errorf("invalid function signature for event '%s'. must be: func(socket ServerSocket)", eventName)
+			return fmt.Errorf("invalid function signature for event 'connect'. must be: func(socket ServerSocket)")
 		}
 
 		e := rt.In(0)
 		if !e.Implements(serverSocketInterface) {
-			// Event name can be either 'connect' or 'connection', so we use the eventName.
-			return fmt.Errorf("invalid function signature for event '%s'. must be: func(socket ServerSocket)", eventName)
+			return fmt.Errorf("invalid function signature for event 'connect'. must be: func(socket ServerSocket)")
+		}
+	case "connection":
+		rv := reflect.ValueOf(handler)
+
+		if rv.Kind() != reflect.Func {
+			return fmt.Errorf("'connection': function expected")
+		}
+
+		rt := rv.Type()
+		if rt.NumIn() != 1 || rt.NumOut() != 0 {
+			return fmt.Errorf("invalid function signature for event 'connection'. must be: func(socket ServerSocket)")
+		}
+
+		e := rt.In(0)
+		if !e.Implements(serverSocketInterface) {
+			return fmt.Errorf("invalid function signature for event 'connection'. must be: func(socket ServerSocket)")
 		}
 	}
 	return nil

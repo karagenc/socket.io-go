@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"fmt"
 	"reflect"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -70,7 +71,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 
 	buffers, err := b.parser.Encode(&header, &v)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("sio: %w", err))
 	}
 
 	opts := NewBroadcastOptions()

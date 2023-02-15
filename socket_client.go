@@ -357,7 +357,7 @@ func (s *clientSocket) checkHandler(eventName string, handler interface{}) {
 	case "disconnect":
 		err := checkHandler(eventName, handler)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("sio: %w", err))
 		}
 	}
 }
