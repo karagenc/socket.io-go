@@ -12,7 +12,7 @@ Also note that go-json's version is `0.10.0` at the time of writing. Please cons
 import (
     sio "github.com/tomruk/socket.io-go"
     jsonparser "github.com/tomruk/socket.io-go/parser/json"
-    "github.com/tomruk/socket.io-go/parser/json/fast"
+    "github.com/tomruk/socket.io-go/parser/json/serializer/fast"
 )
 
 func main() {
@@ -43,7 +43,7 @@ switch serializerType {
 import (
     sio "github.com/tomruk/socket.io-go"
     jsonparser "github.com/tomruk/socket.io-go/parser/json"
-    "github.com/tomruk/socket.io-go/parser/json/fast"
+    "github.com/tomruk/socket.io-go/parser/json/serializer/fast"
     "github.com/bytedance/sonic"
     "github.com/goccy/go-json"
 )

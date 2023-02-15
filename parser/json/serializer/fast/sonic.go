@@ -3,16 +3,16 @@
 package fast
 
 import (
-	jsonparser "github.com/tomruk/socket.io-go/parser/json"
-	"github.com/tomruk/socket.io-go/parser/json/sonic"
+	"github.com/tomruk/socket.io-go/parser/json/serializer"
+	"github.com/tomruk/socket.io-go/parser/json/serializer/sonic"
 )
 
-func New() jsonparser.JSONSerializer {
+func New() serializer.JSONSerializer {
 	defaultConfig := DefaultConfig()
 	return sonic.New(defaultConfig.SonicConfig)
 }
 
-func NewWithConfig(config Config) jsonparser.JSONSerializer {
+func NewWithConfig(config Config) serializer.JSONSerializer {
 	return sonic.New(config.SonicConfig)
 }
 

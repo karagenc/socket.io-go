@@ -5,7 +5,7 @@
 ## Pre-commit Checklist
 
 - Run all tests.
-- Make sure to use `JSONSerializer` inside socket.io parser (`parser/json` package). Do not accidentally use `encoding/json` or other JSON packages.
+- Make sure to use `JSONSerializer` inside socket.io parser (`parser/json/serializer` package). Do not accidentally use `encoding/json` or other JSON packages.
 - Make sure to use Mutex on:
     - `Client.eio`
 - Make sure to use `InternalError` for socket.io internal errors.

@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/tomruk/socket.io-go/parser"
+	"github.com/tomruk/socket.io-go/parser/json/serializer"
 )
 
 var (
@@ -245,7 +246,7 @@ type reconstructor struct {
 	eventName string
 	buffers   [][]byte
 	remaining int
-	json      JSONSerializer
+	json      serializer.JSONSerializer
 }
 
 func (r *reconstructor) AddBuffer(buf []byte) (ok bool) {

@@ -10,7 +10,7 @@ Note that go-json's version is `0.10.0` at the time of writing. Please consider 
 import (
     sio "github.com/tomruk/socket.io-go"
     jsonparser "github.com/tomruk/socket.io-go/parser/json"
-    gojson "github.com/tomruk/socket.io-go/parser/json/go-json"
+    gojson "github.com/tomruk/socket.io-go/parser/json/serializer/go-json"
     "github.com/goccy/go-json"
 )
 

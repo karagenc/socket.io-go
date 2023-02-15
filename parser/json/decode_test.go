@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/tomruk/socket.io-go/parser"
+	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
 func TestDecode(t *testing.T) {
-	c := NewCreator(0, nil)
+	c := NewCreator(0, stdjson.New())
 	p := c()
 
 	tests := createDecodeTests(t)
@@ -51,7 +52,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestMaxAttachmentsDecode(t *testing.T) {
-	c := NewCreator(0, nil)
+	c := NewCreator(0, stdjson.New())
 	p := c()
 
 	header := &parser.PacketHeader{
@@ -78,7 +79,7 @@ func TestMaxAttachmentsDecode(t *testing.T) {
 	// Empty
 	finish := func(header *parser.PacketHeader, eventName string, decode parser.Decode) {}
 
-	c = NewCreator(3, nil)
+	c = NewCreator(3, stdjson.New())
 	p = c()
 
 	err = p.Add(buffers[0], finish)

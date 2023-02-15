@@ -1,4 +1,4 @@
-package jsonparser
+package serializer
 
 import "io"
 

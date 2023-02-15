@@ -7,10 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/tomruk/socket.io-go/parser"
+	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
 func TestEncode(t *testing.T) {
-	c := NewCreator(0, nil)
+	c := NewCreator(0, stdjson.New())
 	p := c()
 
 	tests := createEncodeTests(t)
@@ -47,7 +48,7 @@ func TestEncode(t *testing.T) {
 }
 
 func TestMaxAttachmentsEncode(t *testing.T) {
-	c := NewCreator(3, nil)
+	c := NewCreator(3, stdjson.New())
 	p := c()
 
 	header := &parser.PacketHeader{

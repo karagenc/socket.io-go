@@ -57,14 +57,14 @@ reconnect_failed
 
 ## JSON
 
-JSON serialization is highly customizable. Under the `parser/json` directory there are different packages for JSON serialization:
+JSON serialization is highly customizable. Under the `parser/json/serializer` directory there are different packages for JSON serialization:
 
 | Name                                        | Description                                               | Usage                                      |
 | ------------------------------------------- | --------------------------------------------------------- | ------------------------------------------ |
-| `stdjson`                                   | stdlib's `encoding/json`. This is the default serializer. | [README.md](parser/json/stdjson/README.md) |
-| [go-json](https://github.com/goccy/go-json) |                                                           | [README.md](parser/json/go-json/README.md) |
-| [sonic](https://github.com/bytedance/sonic) |                                                           | [README.md](parser/json/sonic/README.md)   |
-| `fast`                                      | Conditionally uses sonic or go-json.                      | [README.md](parser/json/fast/README.md)    |
+| `stdjson`                                   | stdlib's `encoding/json`. This is the default serializer. | [README.md](parser/json/serializer/stdjson/README.md) |
+| [go-json](https://github.com/goccy/go-json) |                                                           | [README.md](parser/json/serializer/go-json/README.md) |
+| [sonic](https://github.com/bytedance/sonic) |                                                           | [README.md](parser/json/serializer/sonic/README.md)   |
+| `fast`                                      | Conditionally uses sonic or go-json.                      | [README.md](parser/json/serializer/fast/README.md)    |
 
 # Contributing
 

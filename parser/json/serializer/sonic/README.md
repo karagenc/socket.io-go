@@ -12,7 +12,7 @@ In the below code, you can see the recommended configuration options. I explaine
 import (
     sio "github.com/tomruk/socket.io-go"
     jsonparser "github.com/tomruk/socket.io-go/parser/json"
-    "github.com/tomruk/socket.io-go/parser/json/sonic"
+    "github.com/tomruk/socket.io-go/parser/json/serializer/sonic"
 )
 
 func main() {

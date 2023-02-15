@@ -9,7 +9,7 @@ import (
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
-	"github.com/tomruk/socket.io-go/parser/json/stdjson"
+	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
 type ServerConfig struct {
