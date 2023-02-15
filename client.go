@@ -140,6 +140,8 @@ func NewClient(url string, config *ClientConfig) *Client {
 			err := io.connect()
 			if err != nil && io.noReconnection == false {
 				go io.reconnect()
+				// TODO: Which one should handle this error, Client or clientSocket?
+				io.onError(err)
 			}
 		}()
 	}
@@ -168,7 +170,6 @@ func (c *Client) Socket(namespace string) ClientSocket {
 
 		c.sockets.Set(socket)
 	}
-
 	return socket
 }
 
@@ -262,7 +263,7 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 		case eioparser.PacketTypeMessage:
 			err := c.parser.Add(packet.Data, c.onFinishEIOPacket)
 			if err != nil {
-				c.onError(err)
+				c.onError(wrapInternalError(err))
 				return
 			}
 
@@ -270,7 +271,11 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 			handlers := c.emitter.GetHandlers("ping")
 			for _, handler := range handlers {
 				go func(handler *eventHandler) {
-					handler.Call()
+					_, err := handler.Call()
+					if err != nil {
+						c.onError(wrapInternalError(err))
+						return
+					}
 				}(handler)
 			}
 		}
@@ -297,7 +302,11 @@ func (c *Client) reconnect() {
 		handlers := c.emitter.GetHandlers("reconnect_failed")
 		for _, handler := range handlers {
 			go func(handler *eventHandler) {
-				handler.Call()
+				_, err := handler.Call()
+				if err != nil {
+					c.onError(wrapInternalError(err))
+					return
+				}
 			}(handler)
 		}
 		return
@@ -310,7 +319,11 @@ func (c *Client) reconnect() {
 	handlers := c.emitter.GetHandlers("reconnect_attempt")
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call(attemptsValue)
+			_, err := handler.Call(attemptsValue)
+			if err != nil {
+				c.onError(wrapInternalError(err))
+				return
+			}
 		}(handler)
 	}
 
@@ -320,7 +333,11 @@ func (c *Client) reconnect() {
 		handlers := c.emitter.GetHandlers("reconnect_error")
 		for _, handler := range handlers {
 			go func(handler *eventHandler) {
-				handler.Call(errValue)
+				_, err := handler.Call(errValue)
+				if err != nil {
+					c.onError(wrapInternalError(err))
+					return
+				}
 			}(handler)
 		}
 
@@ -334,7 +351,11 @@ func (c *Client) reconnect() {
 	handlers = c.emitter.GetHandlers("reconnect")
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call(attemptsValue)
+			_, err := handler.Call(attemptsValue)
+			if err != nil {
+				c.onError(wrapInternalError(err))
+				return
+			}
 		}(handler)
 	}
 }
@@ -348,6 +369,8 @@ func (c *Client) onEIOClose(reason string, err error) {
 
 	if err != nil && c.noReconnection == false {
 		go c.reconnect()
+		// TODO: Which one should handle this error, Client or clientSocket?
+		c.onError(err)
 	}
 }
 
@@ -357,7 +380,13 @@ func (c *Client) onError(err error) {
 	handlers := c.emitter.GetHandlers("error")
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call(errValue)
+			_, err := handler.Call(errValue)
+			if err != nil {
+				// This should panic.
+				// If you cannot handle the error via `onError`
+				// then what option do you have?
+				panic(err)
+			}
 		}(handler)
 	}
 }
@@ -369,7 +398,11 @@ func (c *Client) onClose(reason string, err error) {
 	handlers := c.emitter.GetHandlers("close")
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call(reasonValue, errValue)
+			_, err := handler.Call(reasonValue, errValue)
+			if err != nil {
+				c.onError(wrapInternalError(err))
+				return
+			}
 		}(handler)
 	}
 

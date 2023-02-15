@@ -6,6 +6,11 @@
 
 - Run all tests.
 - Make sure to use `JSONSerializer` inside socket.io parser (`parser/json` package). Do not accidentally use `encoding/json` or other JSON packages.
+- Make sure to use Mutex on:
+    - `Client.eio`
+- Make sure to use `InternalError` for socket.io internal errors.
+    - Use `wrapInternalError` when an error is this package's responsibility.
+    - Internal server error vs bad request error
 
 And you're good to go.
 

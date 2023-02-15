@@ -43,7 +43,7 @@ func (f *eventHandler) Call(args ...reflect.Value) (ret []reflect.Value, err err
 			var ok bool
 			err, ok = r.(error)
 			if !ok {
-				err = wrapInternalError(fmt.Errorf("handler error: %v", r))
+				err = fmt.Errorf("handler error: %v", r)
 			}
 		}
 	}()
@@ -94,7 +94,7 @@ func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 			var ok bool
 			err, ok = r.(error)
 			if !ok {
-				err = wrapInternalError(fmt.Errorf("ack handler error: %v", r))
+				err = fmt.Errorf("ack handler error: %v", r)
 			}
 		}
 	}()

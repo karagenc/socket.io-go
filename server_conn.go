@@ -114,7 +114,7 @@ func (c *serverConn) onEIOPacket(packets ...*eioparser.Packet) {
 		if packet.Type == eioparser.PacketTypeMessage {
 			err := c.parser.Add(packet.Data, c.onFinishEIOPacket)
 			if err != nil {
-				c.onError(err)
+				c.onError(wrapInternalError(err))
 				return
 			}
 		}
@@ -198,14 +198,14 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 		var err error
 		packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
 		if err != nil {
-			c.onError(err)
+			c.onError(wrapInternalError(err))
 			return
 		}
 
 		for i, attachment := range buffers {
 			packets[i+1], err = eioparser.NewPacket(eioparser.PacketTypeMessage, true, attachment)
 			if err != nil {
-				c.onError(err)
+				c.onError(wrapInternalError(err))
 				return
 			}
 		}

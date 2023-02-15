@@ -63,6 +63,8 @@ func (s *clientSocket) Connect() {
 		err := s.client.connect()
 		if err != nil && s.client.noReconnection == false {
 			go s.client.reconnect()
+			// TODO: Which one should handle this error, Client or clientSocket?
+			s.Client().onError(err)
 		}
 	}
 }
@@ -104,6 +106,7 @@ func (s *clientSocket) sendConnectPacket() {
 		s.onError(err)
 		return
 	} else if len(buffers) != 1 {
+		// TODO: Should I panic or should I not?
 		s.onError(wrapInternalError(fmt.Errorf("onEIOConnect: len(buffers) != 1")))
 		return
 	}
@@ -112,7 +115,7 @@ func (s *clientSocket) sendConnectPacket() {
 
 	packet, err := eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 	s.client.packet(packet)
@@ -142,16 +145,16 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 }
 
 func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
-	type sidInfo struct {
-		SID string `json:"sid"`
-	}
-
 	connectError := func(err error) {
 		errValue := reflect.ValueOf(fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
 		handlers := s.emitter.GetHandlers("connect_error")
 		for _, handler := range handlers {
 			go func(handler *eventHandler) {
-				handler.Call(errValue)
+				_, err := handler.Call(errValue)
+				if err != nil {
+					s.onError(wrapInternalError(err))
+					return
+				}
 			}(handler)
 		}
 	}
@@ -187,7 +190,11 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	handlers := s.emitter.GetHandlers("connect")
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call()
+			_, err := handler.Call()
+			if err != nil {
+				s.onError(wrapInternalError(err))
+				return
+			}
 		}(handler)
 	}
 
@@ -209,7 +216,7 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 	vt := reflect.TypeOf(v)
 	values, err := decode(vt)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	} else if len(values) != 1 {
 		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet")))
@@ -227,7 +234,11 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 	handlers := s.emitter.GetHandlers("connect_error")
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call(errValue)
+			_, err := handler.Call(errValue)
+			if err != nil {
+				s.onError(wrapInternalError(err))
+				return
+			}
 		}(handler)
 	}
 }
@@ -237,7 +248,11 @@ func (s *clientSocket) onDisconnect() {
 
 	for _, handler := range handlers {
 		go func(handler *eventHandler) {
-			handler.Call()
+			_, err := handler.Call()
+			if err != nil {
+				s.onError(wrapInternalError(err))
+				return
+			}
 		}(handler)
 	}
 }
@@ -245,7 +260,7 @@ func (s *clientSocket) onDisconnect() {
 func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -263,7 +278,7 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	go func() {
 		ret, err := handler.Call(values...)
 		if err != nil {
-			s.onError(err)
+			s.onError(wrapInternalError(err))
 			return
 		}
 
@@ -293,7 +308,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 
 	values, err := decode(ack.inputArgs...)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -311,7 +326,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	go func() {
 		err := ack.Call(values...)
 		if err != nil {
-			s.onError(err)
+			s.onError(wrapInternalError(err))
 			return
 		}
 	}()
@@ -363,6 +378,7 @@ func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 	}
 
 	if IsEventReservedForClient(eventName) {
+		// TODO: Should I stay or should I go?
 		panic("Emit: attempted to emit to a reserved event")
 	}
 
@@ -389,7 +405,7 @@ func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -404,7 +420,7 @@ func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...interface{}
 
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -431,7 +447,7 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -447,14 +463,14 @@ func (s *clientSocket) sendBuffers(buffers ...[]byte) {
 		var err error
 		packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
 		if err != nil {
-			s.onError(err)
+			s.onError(wrapInternalError(err))
 			return
 		}
 
 		for i, attachment := range buffers {
 			packets[i+1], err = eioparser.NewPacket(eioparser.PacketTypeMessage, true, attachment)
 			if err != nil {
-				s.onError(err)
+				s.onError(wrapInternalError(err))
 				return
 			}
 		}

@@ -38,7 +38,6 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 		parser:  parser,
 		emitter: newEventEmitter(),
 	}
-
 	return s, nil
 }
 
@@ -71,7 +70,7 @@ func (s *serverSocket) onDisconnect() {
 func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -89,7 +88,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	go func() {
 		ret, err := handler.Call(values...)
 		if err != nil {
-			s.onError(err)
+			s.onError(wrapInternalError(err))
 			return
 		}
 
@@ -119,7 +118,7 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 
 	values, err := decode(ack.inputArgs...)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -137,7 +136,7 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	go func() {
 		err := ack.Call(values...)
 		if err != nil {
-			s.onError(err)
+			s.onError(wrapInternalError(err))
 			return
 		}
 	}()
@@ -169,21 +168,24 @@ func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
 	}
 }
 
+type sidInfo struct {
+	SID string `json:"sid"`
+}
+
 func (s *serverSocket) onConnect() {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.nsp.Name(),
 	}
 
-	c := struct {
-		SID string `json:"sid"`
-	}{
+	c := &sidInfo{
 		SID: s.ID(),
 	}
 
-	buffers, err := s.parser.Encode(header, &c)
+	buffers, err := s.parser.Encode(header, c)
 	if err != nil {
-		panic(err)
+		s.onError(wrapInternalError(err))
+		return
 	}
 
 	s.conn.sendBuffers(buffers...)
@@ -243,7 +245,7 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -258,7 +260,7 @@ func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...interface{}
 
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
@@ -278,6 +280,7 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		if values[i].CanInterface() {
 			v[i] = values[i].Interface()
 		} else {
+			// TODO: Should I panic or should I not?
 			s.onError(fmt.Errorf("sio: sendAck: CanInterface must be true"))
 			return
 		}
@@ -285,7 +288,7 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 
 	buffers, err := s.parser.Encode(&header, &v)
 	if err != nil {
-		s.onError(err)
+		s.onError(wrapInternalError(err))
 		return
 	}
 
