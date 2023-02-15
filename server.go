@@ -78,6 +78,11 @@ func (s *Server) Of(namespace string) *Namespace {
 	return s.nsps.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
 }
 
+// Alias of: s.Of("/").Use(...)
+func (s *Server) Use(f MiddlewareFunction) {
+	s.Of("/").Use(f)
+}
+
 // Alias of: s.Of("/").On(...)
 func (s *Server) On(eventName string, handler interface{}) {
 	s.Of("/").On(eventName, handler)
