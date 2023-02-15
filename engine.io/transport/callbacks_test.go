@@ -3,6 +3,8 @@ package transport
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCallbacks(t *testing.T) {
@@ -10,14 +12,8 @@ func TestCallbacks(t *testing.T) {
 	callbacks.Set(nil, nil)
 
 	v := reflect.ValueOf(callbacks)
+	assert.Equal(t, 2, v.NumField(), "number of fields must be 2, if not, that means another field is added. add that field to the test and increase the number")
 
-	// Ensure that the all callbacks are non-nil.
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-
-		if field.IsNil() {
-			name := reflect.TypeOf(callbacks).Field(i).Name
-			t.Errorf("%s is nil. It shouldn't be", name)
-		}
-	}
+	assert.NotNil(t, callbacks.onPacket.Load())
+	assert.NotNil(t, callbacks.onClose.Load())
 }
