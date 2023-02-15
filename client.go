@@ -202,7 +202,10 @@ func (c *Client) checkHandler(eventName string, handler interface{}) {
 	case "reconnect_error":
 		fallthrough
 	case "reconnect_failed":
-		checkHandler(eventName, handler)
+		err := checkHandler(eventName, handler)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

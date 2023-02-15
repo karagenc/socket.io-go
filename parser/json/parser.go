@@ -8,7 +8,7 @@ import (
 // If maxAttachments is 0, there will be no limit set for binary attachments.
 func NewCreator(maxAttachments int, json JSONSerializer) parser.Creator {
 	if json == nil {
-		panic("jsonparser.NewCreator: `json` must be set")
+		panic("sio: jsonparser.NewCreator: `json` must be set")
 	}
 	return func() parser.Parser {
 		return &Parser{

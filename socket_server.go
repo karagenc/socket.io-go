@@ -219,7 +219,7 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 	}
 
 	if IsEventReservedForServer(eventName) {
-		panic(fmt.Errorf("Emit: attempted to emit to a reserved event"))
+		panic(fmt.Errorf("sio: Emit: attempted to emit a reserved event"))
 	}
 
 	v = append([]interface{}{eventName}, v...)
@@ -280,7 +280,6 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		if values[i].CanInterface() {
 			v[i] = values[i].Interface()
 		} else {
-			// TODO: Should I panic or should I not?
 			s.onError(fmt.Errorf("sio: sendAck: CanInterface must be true"))
 			return
 		}
@@ -320,7 +319,10 @@ func (s *serverSocket) checkHandler(eventName string, handler interface{}) {
 	case "disconnecting":
 		fallthrough
 	case "disconnect":
-		checkHandler(eventName, handler)
+		err := checkHandler(eventName, handler)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

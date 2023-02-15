@@ -106,7 +106,6 @@ func (s *clientSocket) sendConnectPacket() {
 		s.onError(err)
 		return
 	} else if len(buffers) != 1 {
-		// TODO: Should I panic or should I not?
 		s.onError(wrapInternalError(fmt.Errorf("onEIOConnect: len(buffers) != 1")))
 		return
 	}
@@ -355,7 +354,10 @@ func (s *clientSocket) checkHandler(eventName string, handler interface{}) {
 	case "connect_error":
 		fallthrough
 	case "disconnect":
-		checkHandler(eventName, handler)
+		err := checkHandler(eventName, handler)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -378,8 +380,7 @@ func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 	}
 
 	if IsEventReservedForClient(eventName) {
-		// TODO: Should I stay or should I go?
-		panic("Emit: attempted to emit to a reserved event")
+		panic("sio: Emit: attempted to emit a reserved event")
 	}
 
 	v = append([]interface{}{eventName}, v...)

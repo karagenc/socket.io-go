@@ -148,7 +148,8 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	at := reflect.TypeOf(&auth)
 	values, err := decode(at)
 	if err != nil {
-		panic(err)
+		c.onError(wrapInternalError(err))
+		return
 	}
 
 	if len(values) == 1 {
@@ -183,7 +184,8 @@ func (c *serverConn) connectError(err error, nsp string) {
 
 	buffers, err := c.parser.Encode(&header, e)
 	if err != nil {
-		panic(err)
+		c.onError(wrapInternalError(err))
+		return
 	}
 
 	c.sendBuffers(buffers...)

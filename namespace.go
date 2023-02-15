@@ -281,7 +281,10 @@ func (n *Namespace) checkHandler(eventName string, handler interface{}) {
 	case "connect":
 		fallthrough
 	case "connection":
-		checkNamespaceHandler(eventName, handler)
+		err := checkNamespaceHandler(eventName, handler)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

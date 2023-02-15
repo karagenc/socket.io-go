@@ -54,7 +54,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 	}
 
 	if IsEventReservedForServer(eventName) {
-		panic("broadcastOperator.Emit: attempted to emit to a reserved event")
+		panic("sio: broadcastOperator.Emit: attempted to emit to a reserved event")
 	}
 
 	v = append([]interface{}{eventName}, v...)
@@ -64,7 +64,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 		rt := reflect.TypeOf(f)
 
 		if rt.Kind() == reflect.Func {
-			panic("broadcastOperator.Emit: callbacks are not supported when broadcasting")
+			panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
 		}
 	}
 
