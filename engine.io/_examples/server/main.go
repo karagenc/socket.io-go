@@ -63,7 +63,7 @@ func main() {
 
 	err := io.Run()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	fs := http.FileServer(http.Dir("public"))
@@ -108,7 +108,7 @@ func main() {
 
 	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 }
 

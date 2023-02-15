@@ -52,7 +52,7 @@ func main() {
 
 	socket, err := eio.Dial("http://127.0.0.1:3000/engine.io", callbacks, config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	fmt.Printf("Connected with Session ID: %s\n", socket.ID())
