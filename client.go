@@ -1,7 +1,6 @@
 package sio
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -292,8 +291,6 @@ func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string
 
 func (c *Client) reconnect() {
 	attempts := c.backoff.Attempts()
-
-	fmt.Printf("reconnect attempt: %d\n", attempts)
 
 	if c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts {
 		c.backoff.Reset()
