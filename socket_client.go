@@ -71,7 +71,14 @@ func (s *clientSocket) Connect() {
 
 func (s *clientSocket) Client() *Client { return s.client }
 
-func (s *clientSocket) Auth() *Auth { return s.auth }
+func (s *clientSocket) Auth() any { return s.auth.Get() }
+
+func (s *clientSocket) SetAuth(v any) {
+	err := s.auth.Set(v)
+	if err != nil {
+		panic(fmt.Errorf("sio: %w", err))
+	}
+}
 
 func (s *clientSocket) Disconnect() {
 	s.connectedMu.Lock()

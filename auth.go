@@ -8,16 +8,14 @@ import (
 
 type Auth struct {
 	mu   sync.Mutex
-	data interface{}
+	data any
 }
-
-var ErrAuthInvalidValue = fmt.Errorf("sio: Auth.Set(): non-JSON data cannot be accepted. please provide a struct or map")
 
 func newAuth() *Auth {
 	return new(Auth)
 }
 
-func (a *Auth) Set(data interface{}) error {
+func (a *Auth) Set(data any) error {
 	if data != nil {
 		rt := reflect.TypeOf(data)
 		k := rt.Kind()
@@ -28,7 +26,7 @@ func (a *Auth) Set(data interface{}) error {
 		}
 
 		if k != reflect.Struct && k != reflect.Map {
-			return ErrAuthInvalidValue
+			return fmt.Errorf("Auth.Set(): non-JSON data cannot be accepted. please provide a struct or map")
 		}
 	}
 
@@ -38,7 +36,7 @@ func (a *Auth) Set(data interface{}) error {
 	return nil
 }
 
-func (a *Auth) Get() (data interface{}) {
+func (a *Auth) Get() (data any) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.data

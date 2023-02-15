@@ -57,12 +57,13 @@ type ClientSocket interface {
 	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
 	Client() *Client
 
-	// This is a concurrenct storage that stores the authentication data.
-	//
 	// Setting the authentication data is optional and if used, it must be a JSON object (struct or map).
-	// Non-JSON-object authentication data is not accepted by Socket.IO.
-	Auth() *Auth
+	// Non-JSON-object authentication data will not accepted, and panic will occur.
+	SetAuth(v any)
+	// Get the authentication data that was set by `SetAuth`.
+	// As you might have guessed, returns nil if authentication data was not set before.
+	Auth() (v any)
 
-	// Disconnect the Socket (a DISCONNECT packet).
+	// Disconnect the Socket (a DISCONNECT packet will be sent).
 	Disconnect()
 }

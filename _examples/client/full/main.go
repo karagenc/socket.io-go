@@ -37,7 +37,7 @@ func main() {
 		fmt.Println("Connected!")
 	})
 
-	socket.Auth().Set(&authData{
+	socket.SetAuth(&authData{
 		Token: "12345",
 	})
 
