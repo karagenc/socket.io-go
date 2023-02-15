@@ -332,6 +332,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 }
 
 func (s *clientSocket) onError(err error) {
+	// In original socket.io, errors are handled on `Manager` (`Client` in this implementation).
 	s.client.onError(err)
 }
 

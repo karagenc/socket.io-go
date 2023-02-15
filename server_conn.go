@@ -221,11 +221,25 @@ func (c *serverConn) packet(packets ...*eioparser.Packet) {
 }
 
 func (c *serverConn) onError(err error) {
+	sockets := c.sockets.GetAll()
+	for _, socket := range sockets {
+		socket.onError(err)
+	}
 
+	// TODO: Close engine.io connection or not?
+	// We don't close the engine.io connection here
+	// (as opposed to the original socket.io) because...
 }
 
 func (c *serverConn) onClose(reason string, err error) {
+	sockets := c.sockets.GetAllAndRemoveAll()
+	for _, socket := range sockets {
+		socket.onClose(reason)
+	}
 
+	c.parserMu.Lock()
+	defer c.parserMu.Unlock()
+	c.parser.Reset()
 }
 
 func (c *serverConn) DisconnectAll() {

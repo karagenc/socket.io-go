@@ -191,7 +191,22 @@ func (s *serverSocket) onConnect() {
 	s.conn.sendBuffers(buffers...)
 }
 
-func (s *serverSocket) onError(err error) {}
+func (s *serverSocket) onError(err error) {
+	errValue := reflect.ValueOf(err)
+
+	handlers := s.emitter.GetHandlers("error")
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			_, err := handler.Call(errValue)
+			if err != nil {
+				// This should panic.
+				// If you cannot handle the error via `onError`
+				// then what option do you have?
+				panic(err)
+			}
+		}(handler)
+	}
+}
 
 func (s *serverSocket) leaveAll() {
 	s.nsp.adapter.DeleteAll(s.ID())
@@ -200,6 +215,7 @@ func (s *serverSocket) leaveAll() {
 func (s *serverSocket) onClose(reason string) {
 	s.emitReserved("disconnecting", reason)
 	s.nsp.remove(s)
+	s.leaveAll()
 	s.conn.sockets.Remove(s.ID())
 	s.emitReserved("disconnect", reason)
 }
