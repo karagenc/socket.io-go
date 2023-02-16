@@ -230,15 +230,7 @@ func (c *Client) connect() (err error) {
 
 	eio, err := eio.Dial(c.url, callbacks, &c.eioConfig)
 	if err != nil {
-		errValue := reflect.ValueOf(err)
-
-		handlers := c.emitter.GetHandlers("error")
-		for _, handler := range handlers {
-			go func(handler *eventHandler) {
-				handler.Call(errValue)
-			}(handler)
-		}
-
+		c.emitReserved("error", err)
 		return err
 	}
 	c.eio = eio
@@ -248,13 +240,7 @@ func (c *Client) connect() (err error) {
 		go socket.sendConnectPacket()
 	}
 
-	handlers := c.emitter.GetHandlers("open")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			handler.Call()
-		}(handler)
-	}
-
+	c.emitReserved("open")
 	return
 }
 
@@ -272,16 +258,7 @@ func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 			}
 
 		case eioparser.PacketTypePing:
-			handlers := c.emitter.GetHandlers("ping")
-			for _, handler := range handlers {
-				go func(handler *eventHandler) {
-					_, err := handler.Call()
-					if err != nil {
-						c.onError(wrapInternalError(err))
-						return
-					}
-				}(handler)
-			}
+			c.emitReserved("ping")
 		}
 	}
 }
@@ -303,65 +280,27 @@ func (c *Client) reconnect() {
 
 	if c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts {
 		c.backoff.Reset()
-		handlers := c.emitter.GetHandlers("reconnect_failed")
-		for _, handler := range handlers {
-			go func(handler *eventHandler) {
-				_, err := handler.Call()
-				if err != nil {
-					c.onError(wrapInternalError(err))
-					return
-				}
-			}(handler)
-		}
+		c.emitReserved("reconnect_failed")
 		return
 	}
 
 	backoffDuration := c.backoff.Duration()
 	time.Sleep(backoffDuration)
 
-	attemptsValue := reflect.ValueOf(c.backoff.Attempts())
-	handlers := c.emitter.GetHandlers("reconnect_attempt")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call(attemptsValue)
-			if err != nil {
-				c.onError(wrapInternalError(err))
-				return
-			}
-		}(handler)
-	}
+	attempts = c.backoff.Attempts()
+	c.emitReserved("reconnect_attempt", attempts)
 
 	err := c.connect()
 	if err != nil {
-		errValue := reflect.ValueOf(err)
-		handlers := c.emitter.GetHandlers("reconnect_error")
-		for _, handler := range handlers {
-			go func(handler *eventHandler) {
-				_, err := handler.Call(errValue)
-				if err != nil {
-					c.onError(wrapInternalError(err))
-					return
-				}
-			}(handler)
-		}
-
+		c.emitReserved("reconnect", err)
 		c.reconnect()
 		return
 	}
 
-	attemptsValue = reflect.ValueOf(c.backoff.Attempts())
+	attempts = c.backoff.Attempts()
 	c.backoff.Reset()
 
-	handlers = c.emitter.GetHandlers("reconnect")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call(attemptsValue)
-			if err != nil {
-				c.onError(wrapInternalError(err))
-				return
-			}
-		}(handler)
-	}
+	c.emitReserved("reconnect", attempts)
 }
 
 func (c *Client) onEIOError(err error) {
@@ -378,7 +317,29 @@ func (c *Client) onEIOClose(reason string, err error) {
 	}
 }
 
+// Convenience method for emitting events to the user.
+func (s *Client) emitReserved(eventName string, v ...interface{}) {
+	handlers := s.emitter.GetHandlers(eventName)
+	values := make([]reflect.Value, len(v))
+	for i := range values {
+		values[i] = reflect.ValueOf(v)
+	}
+
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			_, err := handler.Call(values...)
+			if err != nil {
+				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+				return
+			}
+		}(handler)
+	}
+}
+
 func (c *Client) onError(err error) {
+	// emitReserved is not used because if an error would happen in handler.Call
+	// onError would be called recursively.
+
 	errValue := reflect.ValueOf(err)
 
 	handlers := c.emitter.GetHandlers("error")
@@ -396,19 +357,7 @@ func (c *Client) onError(err error) {
 }
 
 func (c *Client) onClose(reason string, err error) {
-	reasonValue := reflect.ValueOf(reason)
-	errValue := reflect.ValueOf(err)
-
-	handlers := c.emitter.GetHandlers("close")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call(reasonValue, errValue)
-			if err != nil {
-				c.onError(wrapInternalError(err))
-				return
-			}
-		}(handler)
-	}
+	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {
 		c.reconnect()

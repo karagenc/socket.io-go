@@ -152,17 +152,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 
 func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
 	connectError := func(err error) {
-		errValue := reflect.ValueOf(fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
-		handlers := s.emitter.GetHandlers("connect_error")
-		for _, handler := range handlers {
-			go func(handler *eventHandler) {
-				_, err := handler.Call(errValue)
-				if err != nil {
-					s.onError(wrapInternalError(err))
-					return
-				}
-			}(handler)
-		}
+		s.emitReserved("connect_error", fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
 	}
 
 	var v *sidInfo
@@ -193,16 +183,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.connected = true
 	s.connectedMu.Unlock()
 
-	handlers := s.emitter.GetHandlers("connect")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call()
-			if err != nil {
-				s.onError(wrapInternalError(err))
-				return
-			}
-		}(handler)
-	}
+	s.emitReserved("connect")
 
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
@@ -235,32 +216,11 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		return
 	}
 
-	errValue := reflect.ValueOf(fmt.Errorf("sio: %s", v.Message))
-
-	handlers := s.emitter.GetHandlers("connect_error")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call(errValue)
-			if err != nil {
-				s.onError(wrapInternalError(err))
-				return
-			}
-		}(handler)
-	}
+	s.emitReserved("connect_error", fmt.Errorf("sio: %s", v.Message))
 }
 
 func (s *clientSocket) onDisconnect() {
-	handlers := s.emitter.GetHandlers("disconnect")
-
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call()
-			if err != nil {
-				s.onError(wrapInternalError(err))
-				return
-			}
-		}(handler)
-	}
+	s.emitReserved("disconnect")
 }
 
 func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
@@ -336,6 +296,25 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 			return
 		}
 	}()
+}
+
+// Convenience method for emitting events to the user.
+func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
+	handlers := s.emitter.GetHandlers(eventName)
+	values := make([]reflect.Value, len(v))
+	for i := range values {
+		values[i] = reflect.ValueOf(v)
+	}
+
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			_, err := handler.Call(values...)
+			if err != nil {
+				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+				return
+			}
+		}(handler)
+	}
 }
 
 func (s *clientSocket) onError(err error) {

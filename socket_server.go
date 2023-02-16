@@ -148,24 +148,6 @@ func (s *serverSocket) Leave(room string) {
 	s.nsp.Adapter().Delete(s.ID(), room)
 }
 
-func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
-	handlers := s.emitter.GetHandlers(eventName)
-	values := make([]reflect.Value, len(v))
-	for i := range values {
-		values[i] = reflect.ValueOf(v)
-	}
-
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
-			_, err := handler.Call(values...)
-			if err != nil {
-				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-				return
-			}
-		}(handler)
-	}
-}
-
 type sidInfo struct {
 	SID string `json:"sid"`
 }
@@ -189,7 +171,29 @@ func (s *serverSocket) onConnect() {
 	s.conn.sendBuffers(buffers...)
 }
 
+// Convenience method for emitting events to the user.
+func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
+	handlers := s.emitter.GetHandlers(eventName)
+	values := make([]reflect.Value, len(v))
+	for i := range values {
+		values[i] = reflect.ValueOf(v)
+	}
+
+	for _, handler := range handlers {
+		go func(handler *eventHandler) {
+			_, err := handler.Call(values...)
+			if err != nil {
+				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+				return
+			}
+		}(handler)
+	}
+}
+
 func (s *serverSocket) onError(err error) {
+	// emitReserved is not used because if an error would happen in handler.Call
+	// onError would be called recursively.
+
 	errValue := reflect.ValueOf(err)
 
 	handlers := s.emitter.GetHandlers("error")
@@ -206,16 +210,16 @@ func (s *serverSocket) onError(err error) {
 	}
 }
 
-func (s *serverSocket) leaveAll() {
-	s.nsp.adapter.DeleteAll(s.ID())
-}
-
 func (s *serverSocket) onClose(reason string) {
 	s.emitReserved("disconnecting", reason)
 	s.nsp.remove(s)
 	s.leaveAll()
 	s.conn.sockets.Remove(s.ID())
 	s.emitReserved("disconnect", reason)
+}
+
+func (s *serverSocket) leaveAll() {
+	s.nsp.adapter.DeleteAll(s.ID())
 }
 
 func (s *serverSocket) ID() string {
