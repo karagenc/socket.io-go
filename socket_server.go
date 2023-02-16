@@ -222,6 +222,15 @@ func (s *serverSocket) ID() string {
 	return s.id
 }
 
+func (s *serverSocket) setAck(handler *ackHandler) (id uint64) {
+	s.acksMu.Lock()
+	id = s.ackID
+	s.acks[id] = handler
+	s.ackID++
+	s.acksMu.Unlock()
+	return
+}
+
 func (s *serverSocket) Emit(eventName string, v ...interface{}) {
 	s.sendDataPacket(parser.PacketTypeEvent, eventName, v...)
 }
@@ -243,16 +252,8 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 		rt := reflect.TypeOf(f)
 
 		if rt.Kind() == reflect.Func {
-			ackHandler := newAckHandler(f)
-
-			s.acksMu.Lock()
-			id := s.ackID
-			s.acks[id] = ackHandler
-			s.ackID++
-			s.acksMu.Unlock()
-
-			header.ID = &id
-
+			ackID := s.setAck(newAckHandler(f))
+			header.ID = &ackID
 			v = v[:len(v)-1]
 		}
 	}

@@ -80,6 +80,12 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 	// Instead of s.conn.sendBuffers(buffers...)
 	// we use:
 	b.adapter.Broadcast(buffers, opts)
+
+	a := newAckHandler(func(msg string) {
+		// TODO: Implement this
+	})
+
+	b.adapter.BroadcastWithAck("TODO: packetID", buffers, opts, a)
 }
 
 // Sets a modifier for a subsequent event emission that the event

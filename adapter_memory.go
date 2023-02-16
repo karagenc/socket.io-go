@@ -126,6 +126,13 @@ func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
 	}
 }
 
+func (a *inMemoryAdapter) BroadcastWithAck(packetID string, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
+	a.apply(opts, func(socket *serverSocket) {
+		a.nsp.SocketStore().SetAck(socket.ID(), ackHandler)
+		a.nsp.SocketStore().SendBuffers(socket.ID(), buffers)
+	})
+}
+
 // The return value 'sids' must be a thread safe mapset.Set.
 func (a *inMemoryAdapter) Sockets(rooms mapset.Set[string]) (sids mapset.Set[string]) {
 	a.mu.Lock()
@@ -155,6 +162,13 @@ func (a *inMemoryAdapter) SocketRooms(sid string) (rooms mapset.Set[string], ok 
 	s.Each(func(room string) bool {
 		rooms.Add(room)
 		return false
+	})
+	return
+}
+
+func (a *inMemoryAdapter) FetchSockets(opts *BroadcastOptions) (sockets []*serverSocket) {
+	a.apply(opts, func(socket *serverSocket) {
+		sockets = append(sockets, socket)
 	})
 	return
 }

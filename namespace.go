@@ -95,6 +95,15 @@ func (s *NamespaceSocketStore) SendBuffers(sid string, buffers [][]byte) (ok boo
 	return true
 }
 
+func (s *NamespaceSocketStore) SetAck(sid string, ackHandler *ackHandler) (ok bool) {
+	socket, ok := s.Get(sid)
+	if !ok {
+		return false
+	}
+	socket.setAck(ackHandler)
+	return true
+}
+
 func (s *NamespaceSocketStore) GetAll() []ServerSocket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
