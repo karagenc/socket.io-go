@@ -2,7 +2,6 @@ package sio
 
 import (
 	"net/http"
-	"sync"
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -25,19 +24,7 @@ type Server struct {
 
 	eio *eio.Server
 
-	conns *serverConnStore
-	nsps  *namespaceStore
-}
-
-type serverConnStore struct {
-	conns map[string]*serverConn
-	mu    sync.Mutex
-}
-
-func newServerConnStore() *serverConnStore {
-	return &serverConnStore{
-		conns: make(map[string]*serverConn),
-	}
+	namespaces *namespaceStore
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -48,8 +35,7 @@ func NewServer(config *ServerConfig) *Server {
 	server := &Server{
 		parserCreator:  config.ParserCreator,
 		adapterCreator: config.AdapterCreator,
-		nsps:           newNamespaceStore(),
-		conns:          newServerConnStore(),
+		namespaces:     newNamespaceStore(),
 	}
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
@@ -75,7 +61,7 @@ func (s *Server) Of(namespace string) *Namespace {
 	if len(namespace) != 0 && namespace[0] != '/' {
 		namespace = "/" + namespace
 	}
-	return s.nsps.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
+	return s.namespaces.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
 }
 
 // Alias of: s.Of("/").Use(...)

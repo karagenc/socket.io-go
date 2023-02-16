@@ -6,20 +6,23 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 )
 
-// This is the default in-memory adapter of Socket.IO.
+// This is the equivalent of the default in-memory adapter of Socket.IO.
 // Have a look at: https://github.com/socketio/socket.io-adapter
 type inMemoryAdapter struct {
 	mu    sync.Mutex
-	nsp   *Namespace
 	rooms map[string]mapset.Set[string]
 	sids  map[string]mapset.Set[string]
+
+	namespace *Namespace
+	sockets   *NamespaceSocketStore
 }
 
-func newInMemoryAdapter(nsp *Namespace) Adapter {
+func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter {
 	return &inMemoryAdapter{
-		nsp:   nsp,
-		rooms: make(map[string]mapset.Set[string]),
-		sids:  make(map[string]mapset.Set[string]),
+		rooms:     make(map[string]mapset.Set[string]),
+		sids:      make(map[string]mapset.Set[string]),
+		namespace: namespace,
+		sockets:   socketStore,
 	}
 }
 
@@ -90,14 +93,14 @@ func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
 	defer a.mu.Unlock()
 
 	a.apply(opts, func(socket *serverSocket) {
-		a.nsp.SocketStore().SendBuffers(socket.ID(), buffers)
+		a.sockets.SendBuffers(socket.ID(), buffers)
 	})
 }
 
 func (a *inMemoryAdapter) BroadcastWithAck(packetID string, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
 	a.apply(opts, func(socket *serverSocket) {
-		a.nsp.SocketStore().SetAck(socket.ID(), ackHandler)
-		a.nsp.SocketStore().SendBuffers(socket.ID(), buffers)
+		a.sockets.SetAck(socket.ID(), ackHandler)
+		a.sockets.SendBuffers(socket.ID(), buffers)
 	})
 }
 
@@ -182,7 +185,7 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket *se
 				if ids.Contains(sid) || exceptSids.Contains(sid) {
 					return false
 				}
-				socket, ok := a.nsp.sockets.Get(sid)
+				socket, ok := a.sockets.Get(sid)
 				if ok {
 					callback(socket)
 					ids.Add(sid)
@@ -196,7 +199,7 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket *se
 			if exceptSids.Contains(sid) {
 				continue
 			}
-			socket, ok := a.nsp.sockets.Get(sid)
+			socket, ok := a.sockets.Get(sid)
 			if ok {
 				callback(socket)
 			}

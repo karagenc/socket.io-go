@@ -2,7 +2,7 @@ package sio
 
 import mapset "github.com/deckarep/golang-set/v2"
 
-type AdapterCreator func(namespace *Namespace) Adapter
+type AdapterCreator func(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter
 
 type Adapter interface {
 	Close()
