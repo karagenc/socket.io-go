@@ -89,41 +89,9 @@ func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if opts.Rooms.Cardinality() > 0 {
-		sids := make(map[string]interface{})
-
-		opts.Rooms.Each(func(room string) bool {
-			r, ok := a.rooms[room]
-			if !ok {
-				return false
-			}
-
-			r.Each(func(sid string) bool {
-				if _, ok := sids[sid]; ok {
-					return false
-				}
-				if opts.Except.Contains(sid) {
-					return false
-				}
-
-				ok := a.nsp.SocketStore().SendBuffers(sid, buffers)
-				if ok {
-					sids[sid] = nil
-				}
-
-				return false
-			})
-			return false
-		})
-	} else {
-		for sid := range a.sids {
-			if opts.Except.Contains(sid) {
-				continue
-			}
-
-			a.nsp.SocketStore().SendBuffers(sid, buffers)
-		}
-	}
+	a.apply(opts, func(socket *serverSocket) {
+		a.nsp.SocketStore().SendBuffers(socket.ID(), buffers)
+	})
 }
 
 func (a *inMemoryAdapter) BroadcastWithAck(packetID string, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
@@ -197,12 +165,14 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket *se
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	rooms := opts.Rooms
 	exceptSids := a.computeExceptSids(opts.Except)
 
-	if rooms.Cardinality() > 0 {
+	// If a room was specificed in opts.Rooms,
+	// we only use sockets in those rooms.
+	// Otherwise (within else), any socket will be used.
+	if opts.Rooms.Cardinality() > 0 {
 		ids := mapset.NewThreadUnsafeSet[string]()
-		rooms.Each(func(room string) bool {
+		opts.Rooms.Each(func(room string) bool {
 			r, ok := a.rooms[room]
 			if !ok {
 				return false
