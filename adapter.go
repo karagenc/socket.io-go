@@ -19,9 +19,13 @@ type Adapter interface {
 	// The return value 'rooms' is a thread safe mapset.Set.
 	SocketRooms(sid string) (rooms mapset.Set[string], ok bool)
 
-	FetchSockets(opts *BroadcastOptions) (sockets []*serverSocket)
+	FetchSockets(opts *BroadcastOptions) (sockets []AdapterSocket)
 
 	AddSockets(opts *BroadcastOptions, rooms ...string)
 	DelSockets(opts *BroadcastOptions, rooms ...string)
 	DisconnectSockets(opts *BroadcastOptions, close bool)
+}
+
+type AdapterSocket interface {
+	ServerSocket
 }

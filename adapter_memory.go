@@ -92,13 +92,13 @@ func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	a.apply(opts, func(socket *serverSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		a.sockets.SendBuffers(socket.ID(), buffers)
 	})
 }
 
 func (a *inMemoryAdapter) BroadcastWithAck(packetID string, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
-	a.apply(opts, func(socket *serverSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		a.sockets.SetAck(socket.ID(), ackHandler)
 		a.sockets.SendBuffers(socket.ID(), buffers)
 	})
@@ -113,7 +113,7 @@ func (a *inMemoryAdapter) Sockets(rooms mapset.Set[string]) (sids mapset.Set[str
 	opts := NewBroadcastOptions()
 	opts.Rooms = rooms
 
-	a.apply(opts, func(socket *serverSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		sids.Add(socket.ID())
 	})
 	return
@@ -137,21 +137,21 @@ func (a *inMemoryAdapter) SocketRooms(sid string) (rooms mapset.Set[string], ok 
 	return
 }
 
-func (a *inMemoryAdapter) FetchSockets(opts *BroadcastOptions) (sockets []*serverSocket) {
-	a.apply(opts, func(socket *serverSocket) {
+func (a *inMemoryAdapter) FetchSockets(opts *BroadcastOptions) (sockets []AdapterSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		sockets = append(sockets, socket)
 	})
 	return
 }
 
 func (a *inMemoryAdapter) AddSockets(opts *BroadcastOptions, rooms ...string) {
-	a.apply(opts, func(socket *serverSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		socket.Join(rooms...)
 	})
 }
 
 func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...string) {
-	a.apply(opts, func(socket *serverSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		for _, room := range rooms {
 			socket.Leave(room)
 		}
@@ -159,12 +159,12 @@ func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...string) {
 }
 
 func (a *inMemoryAdapter) DisconnectSockets(opts *BroadcastOptions, close bool) {
-	a.apply(opts, func(socket *serverSocket) {
+	a.apply(opts, func(socket AdapterSocket) {
 		socket.Disconnect(close)
 	})
 }
 
-func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket *serverSocket)) {
+func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket AdapterSocket)) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

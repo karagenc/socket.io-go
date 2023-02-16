@@ -37,6 +37,9 @@ type ServerSocket interface {
 	// Retrieves the Namespace this socket is connected to.
 	Namespace() *Namespace
 
+	Join(room ...string)
+	Leave(room string)
+
 	// Disconnect from namespace.
 	//
 	// If `close` is true, all namespaces are going to be disconnected (a DISCONNECT packet will be sent),

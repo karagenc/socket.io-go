@@ -11,6 +11,8 @@
 - Make sure to use `InternalError` for socket.io internal errors.
     - Use `wrapInternalError` when an error is this package's responsibility.
     - Internal server error vs bad request error
+- Make sure to use exported types on the `Adapter` interface.
+    - One exception is `ackHandler`; it doesn't need to be exported.
 
 And you're good to go.
 
