@@ -135,12 +135,13 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
 		handlers := s.emitter.GetHandlers(eventName)
 
-		for _, handler := range handlers {
-			s.onEvent(handler, header, decode)
-		}
-
+		go func() {
+			for _, handler := range handlers {
+				s.onEvent(handler, header, decode)
+			}
+		}()
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
-		s.onAck(header, decode)
+		go s.onAck(header, decode)
 
 	case parser.PacketTypeConnectError:
 		s.onConnectError(header, decode)
@@ -241,17 +242,15 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		return
 	}
 
-	go func() {
-		ret, err := handler.Call(values...)
-		if err != nil {
-			s.onError(wrapInternalError(err))
-			return
-		}
+	ret, err := handler.Call(values...)
+	if err != nil {
+		s.onError(wrapInternalError(err))
+		return
+	}
 
-		if header.ID != nil {
-			s.sendAckPacket(*header.ID, ret)
-		}
-	}()
+	if header.ID != nil {
+		s.sendAckPacket(*header.ID, ret)
+	}
 }
 
 func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
@@ -289,13 +288,11 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	go func() {
-		err := ack.Call(values...)
-		if err != nil {
-			s.onError(wrapInternalError(err))
-			return
-		}
-	}()
+	err = ack.Call(values...)
+	if err != nil {
+		s.onError(wrapInternalError(err))
+		return
+	}
 }
 
 // Convenience method for emitting events to the user.
@@ -306,15 +303,15 @@ func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
 		values[i] = reflect.ValueOf(v)
 	}
 
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
+	go func() {
+		for _, handler := range handlers {
 			_, err := handler.Call(values...)
 			if err != nil {
 				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
 				return
 			}
-		}(handler)
-	}
+		}
+	}()
 }
 
 func (s *clientSocket) onError(err error) {

@@ -217,6 +217,7 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 }
 
 func (c *serverConn) packet(packets ...*eioparser.Packet) {
+	// TODO: Should be async?
 	go c.eio.Send(packets...)
 }
 

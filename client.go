@@ -325,15 +325,15 @@ func (s *Client) emitReserved(eventName string, v ...interface{}) {
 		values[i] = reflect.ValueOf(v)
 	}
 
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
+	go func() {
+		for _, handler := range handlers {
 			_, err := handler.Call(values...)
 			if err != nil {
 				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
 				return
 			}
-		}(handler)
-	}
+		}
+	}()
 }
 
 func (c *Client) onError(err error) {
@@ -343,8 +343,8 @@ func (c *Client) onError(err error) {
 	errValue := reflect.ValueOf(err)
 
 	handlers := c.emitter.GetHandlers("error")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
+	go func() {
+		for _, handler := range handlers {
 			_, err := handler.Call(errValue)
 			if err != nil {
 				// This should panic.
@@ -352,8 +352,8 @@ func (c *Client) onError(err error) {
 				// then what option do you have?
 				panic(fmt.Errorf("sio: %w", err))
 			}
-		}(handler)
-	}
+		}
+	}()
 }
 
 func (c *Client) onClose(reason string, err error) {
@@ -378,6 +378,7 @@ func (c *Client) Close() {
 }
 
 func (c *Client) packet(packets ...*eioparser.Packet) {
+	// TODO: Should be async?
 	go func() {
 		c.eioMu.RLock()
 		eio := c.eio

@@ -156,12 +156,17 @@ func (n *Namespace) onSocket(socket ServerSocket) {
 		}
 	}
 
-	for _, handler := range connectHandlers {
-		go callHandler(handler)
-	}
-	for _, handler := range connectionHandlers {
-		go callHandler(handler)
-	}
+	go func() {
+		for _, handler := range connectHandlers {
+			callHandler(handler)
+		}
+	}()
+
+	go func() {
+		for _, handler := range connectionHandlers {
+			callHandler(handler)
+		}
+	}()
 }
 
 func (n *Namespace) remove(socket *serverSocket) {

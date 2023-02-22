@@ -46,11 +46,13 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
 		handlers := s.emitter.GetHandlers(eventName)
 
-		for _, handler := range handlers {
-			s.onEvent(handler, header, decode)
-		}
+		go func() {
+			for _, handler := range handlers {
+				s.onEvent(handler, header, decode)
+			}
+		}()
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
-		s.onAck(header, decode)
+		go s.onAck(header, decode)
 
 	case parser.PacketTypeDisconnect:
 		s.onDisconnect()
@@ -83,17 +85,15 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		return
 	}
 
-	go func() {
-		ret, err := handler.Call(values...)
-		if err != nil {
-			s.onError(wrapInternalError(err))
-			return
-		}
+	ret, err := handler.Call(values...)
+	if err != nil {
+		s.onError(wrapInternalError(err))
+		return
+	}
 
-		if header.ID != nil {
-			s.sendAckPacket(*header.ID, ret)
-		}
-	}()
+	if header.ID != nil {
+		s.sendAckPacket(*header.ID, ret)
+	}
 }
 
 func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {
@@ -131,13 +131,11 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	go func() {
-		err := ack.Call(values...)
-		if err != nil {
-			s.onError(wrapInternalError(err))
-			return
-		}
-	}()
+	err = ack.Call(values...)
+	if err != nil {
+		s.onError(wrapInternalError(err))
+		return
+	}
 }
 
 func (s *serverSocket) Join(room ...string) {
@@ -179,15 +177,15 @@ func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
 		values[i] = reflect.ValueOf(v)
 	}
 
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
+	go func() {
+		for _, handler := range handlers {
 			_, err := handler.Call(values...)
 			if err != nil {
 				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
 				return
 			}
-		}(handler)
-	}
+		}
+	}()
 }
 
 func (s *serverSocket) onError(err error) {
@@ -197,8 +195,8 @@ func (s *serverSocket) onError(err error) {
 	errValue := reflect.ValueOf(err)
 
 	handlers := s.emitter.GetHandlers("error")
-	for _, handler := range handlers {
-		go func(handler *eventHandler) {
+	go func() {
+		for _, handler := range handlers {
 			_, err := handler.Call(errValue)
 			if err != nil {
 				// This should panic.
@@ -206,8 +204,8 @@ func (s *serverSocket) onError(err error) {
 				// then what option do you have?
 				panic(fmt.Errorf("sio: %w", err))
 			}
-		}(handler)
-	}
+		}
+	}()
 }
 
 func (s *serverSocket) onClose(reason string) {
