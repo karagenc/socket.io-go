@@ -88,8 +88,8 @@ func (n *Namespace) Local() *broadcastOperator {
 }
 
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (n *Namespace) AllSockets() (sids mapset.Set[string]) {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).AllSockets()
+func (n *Namespace) FetchSockets() (sids mapset.Set[string]) {
+	return newBroadcastOperator(n.Name(), n.adapter, n.parser).FetchSockets()
 }
 
 // Makes the matching socket instances join the specified rooms.

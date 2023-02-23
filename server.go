@@ -67,6 +67,8 @@ func (s *Server) Of(namespace string) *Namespace {
 // Alias of: s.Of("/").Use(...)
 func (s *Server) Use(f MiddlewareFunction) {
 	s.Of("/").Use(f)
+
+	s.Of("/").Sockets()
 }
 
 // Alias of: s.Of("/").On(...)
@@ -114,9 +116,16 @@ func (s *Server) Local() *broadcastOperator {
 	return s.Of("/").Local()
 }
 
-// Alias of: s.Of("/").AllSockets(...)
-func (s *Server) AllSockets() (sids mapset.Set[string]) {
-	return s.Of("/").AllSockets()
+// Alias of: s.Of("/").Sockets(...)
+func (s *Server) Sockets() []ServerSocket {
+	return s.Of("/").Sockets()
+}
+
+// Alias of: s.Of("/").FetchSockets(...)
+//
+// Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
+func (s *Server) FetchSockets(room ...string) (sids mapset.Set[string]) {
+	return s.Of("/").FetchSockets()
 }
 
 // Alias of: s.Of("/").SocketsJoin(...)

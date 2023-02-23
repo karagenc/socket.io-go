@@ -136,8 +136,17 @@ func (b *broadcastOperator) Local() *broadcastOperator {
 }
 
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (b *broadcastOperator) AllSockets() (sids mapset.Set[string]) {
-	return b.adapter.Sockets(b.rooms)
+func (b *broadcastOperator) FetchSockets() (sids mapset.Set[string]) {
+	opts := NewBroadcastOptions()
+	opts.Rooms = b.rooms.Clone()
+	opts.Except = b.exceptRooms.Clone()
+	opts.Flags = b.flags
+	sids = mapset.NewSet[string]()
+
+	for _, socket := range b.adapter.FetchSockets(opts) {
+		sids.Add(socket.ID())
+	}
+	return
 }
 
 // Makes the matching socket instances join the specified rooms.
