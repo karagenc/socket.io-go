@@ -22,6 +22,11 @@ type serverSocket struct {
 	acks   map[uint64]*ackHandler
 	ackID  uint64
 	acksMu sync.Mutex
+
+	join   func(room ...string)
+	joinMu sync.Mutex
+
+	closeOnce sync.Once
 }
 
 func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser) (*serverSocket, error) {
@@ -37,6 +42,10 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 		nsp:     nsp,
 		parser:  parser,
 		emitter: newEventEmitter(),
+
+		join: func(room ...string) {
+			nsp.Adapter().AddAll(id, room)
+		},
 	}
 	return s, nil
 }
@@ -139,7 +148,10 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 }
 
 func (s *serverSocket) Join(room ...string) {
-	s.nsp.Adapter().AddAll(s.ID(), room)
+	s.joinMu.Lock()
+	join := s.join
+	s.joinMu.Unlock()
+	join(room...)
 }
 
 func (s *serverSocket) Leave(room string) {
@@ -209,11 +221,18 @@ func (s *serverSocket) onError(err error) {
 }
 
 func (s *serverSocket) onClose(reason string) {
-	s.emitReserved("disconnecting", reason)
-	s.nsp.remove(s)
-	s.leaveAll()
-	s.conn.sockets.Remove(s.ID())
-	s.emitReserved("disconnect", reason)
+	s.closeOnce.Do(func() {
+		s.emitReserved("disconnecting", reason)
+
+		s.joinMu.Lock()
+		s.join = func(room ...string) {}
+		s.joinMu.Unlock()
+		s.leaveAll()
+
+		s.nsp.remove(s)
+		s.conn.sockets.Remove(s.ID())
+		s.emitReserved("disconnect", reason)
+	})
 }
 
 func (s *serverSocket) leaveAll() {

@@ -190,5 +190,9 @@ func (s *Server) IsClosed() bool {
 }
 
 func (s *Server) Close() error {
+	for _, _socket := range s.Sockets() {
+		socket := _socket.(*serverSocket)
+		socket.onClose("server shutting down")
+	}
 	return s.eio.Close()
 }
