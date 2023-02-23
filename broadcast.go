@@ -21,11 +21,11 @@ func NewBroadcastOptions() *BroadcastOptions {
 	}
 }
 
-// These flags are unused at the moment, but for
-// compatibility with the socket.io API, these stay here.
 type BroadcastFlags struct {
+	// This flag is unused at the moment, but for compatibility with the socket.io API, it stays here.
 	Compress bool
-	Local    bool
+
+	Local bool
 }
 
 type broadcastOperator struct {

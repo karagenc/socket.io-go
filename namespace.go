@@ -47,8 +47,44 @@ func (n *Namespace) Adapter() Adapter {
 	return n.adapter
 }
 
-func (n *Namespace) Sockets() []ServerSocket {
-	return n.sockets.GetAll()
+type MiddlewareFunction func(socket ServerSocket, handshake *Handshake) error
+
+func (n *Namespace) Use(f MiddlewareFunction) {
+	n.middlewareFuncsMu.Lock()
+	defer n.middlewareFuncsMu.Unlock()
+	n.middlewareFuncs = append(n.middlewareFuncs, f)
+}
+
+func (n *Namespace) On(eventName string, handler interface{}) {
+	n.checkHandler(eventName, handler)
+	n.emitter.On(eventName, handler)
+}
+
+func (n *Namespace) Once(eventName string, handler interface{}) {
+	n.checkHandler(eventName, handler)
+	n.emitter.Once(eventName, handler)
+}
+
+func (n *Namespace) checkHandler(eventName string, handler interface{}) {
+	switch eventName {
+	case "":
+		fallthrough
+	case "connect":
+		fallthrough
+	case "connection":
+		err := checkNamespaceHandler(eventName, handler)
+		if err != nil {
+			panic(fmt.Errorf("sio: %w", err))
+		}
+	}
+}
+
+func (n *Namespace) Off(eventName string, handler interface{}) {
+	n.emitter.Off(eventName, handler)
+}
+
+func (n *Namespace) OffAll() {
+	n.emitter.OffAll()
 }
 
 // Emits an event to all connected clients in the given namespace.
@@ -59,7 +95,7 @@ func (n *Namespace) Emit(eventName string, v ...interface{}) {
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have joined the given room.
 //
-// To emit to multiple rooms, you can call To several times.
+// To emit to multiple rooms, you can call `To` several times.
 func (n *Namespace) To(room ...string) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).To(room...)
 }
@@ -87,6 +123,12 @@ func (n *Namespace) Local() *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Local()
 }
 
+// Gets the sockets of the namespace.
+// Beware that this is local to the current node. For sockets across all nodes, use FetchSockets
+func (n *Namespace) Sockets() []ServerSocket {
+	return n.sockets.GetAll()
+}
+
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
 func (n *Namespace) FetchSockets() (sids mapset.Set[string]) {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).FetchSockets()
@@ -107,14 +149,6 @@ func (n *Namespace) SocketsLeave(room ...string) {
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
 func (n *Namespace) DisconnectSockets(close bool) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).DisconnectSockets(close)
-}
-
-type MiddlewareFunction func(socket ServerSocket, handshake *Handshake) error
-
-func (n *Namespace) Use(f MiddlewareFunction) {
-	n.middlewareFuncsMu.Lock()
-	defer n.middlewareFuncsMu.Unlock()
-	n.middlewareFuncs = append(n.middlewareFuncs, f)
 }
 
 func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, error) {
@@ -171,36 +205,4 @@ func (n *Namespace) onSocket(socket ServerSocket) {
 
 func (n *Namespace) remove(socket *serverSocket) {
 	n.sockets.Remove(socket.ID())
-}
-
-func (n *Namespace) On(eventName string, handler interface{}) {
-	n.checkHandler(eventName, handler)
-	n.emitter.On(eventName, handler)
-}
-
-func (n *Namespace) Once(eventName string, handler interface{}) {
-	n.checkHandler(eventName, handler)
-	n.emitter.Once(eventName, handler)
-}
-
-func (n *Namespace) checkHandler(eventName string, handler interface{}) {
-	switch eventName {
-	case "":
-		fallthrough
-	case "connect":
-		fallthrough
-	case "connection":
-		err := checkNamespaceHandler(eventName, handler)
-		if err != nil {
-			panic(fmt.Errorf("sio: %w", err))
-		}
-	}
-}
-
-func (n *Namespace) Off(eventName string, handler interface{}) {
-	n.emitter.Off(eventName, handler)
-}
-
-func (n *Namespace) OffAll() {
-	n.emitter.OffAll()
 }

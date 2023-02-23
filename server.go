@@ -67,8 +67,6 @@ func (s *Server) Of(namespace string) *Namespace {
 // Alias of: s.Of("/").Use(...)
 func (s *Server) Use(f MiddlewareFunction) {
 	s.Of("/").Use(f)
-
-	s.Of("/").Sockets()
 }
 
 // Alias of: s.Of("/").On(...)
@@ -91,7 +89,15 @@ func (s *Server) OffAll() {
 	s.Of("/").OffAll()
 }
 
+func (s *Server) Emit(evetName string, v ...interface{}) {
+	s.Of("/").Emit(evetName, v...)
+}
+
 // Alias of: s.Of("/").To(...)
+// Sets a modifier for a subsequent event emission that the event
+// will only be broadcast to clients that have joined the given room.
+//
+// To emit to multiple rooms, you can call `To` several times.
 func (s *Server) To(room ...string) *broadcastOperator {
 	return s.Of("/").To(room...)
 }
@@ -102,21 +108,33 @@ func (s *Server) In(room ...string) *broadcastOperator {
 }
 
 // Alias of: s.Of("/").To(...)
+//
+// Sets a modifier for a subsequent event emission that the event
+// will only be broadcast to clients that have not joined the given rooms.
 func (s *Server) Except(room ...string) *broadcastOperator {
 	return s.Of("/").Except(room...)
 }
 
 // Alias of: s.Of("/").Compress(...)
+//
+// Compression flag is unused at the moment, thus setting this will have no effect on compression.
 func (s *Server) Compress(compress bool) *broadcastOperator {
 	return s.Of("/").Compress(compress)
 }
 
 // Alias of: s.Of("/").Local(...)
+//
+// Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
+//
+// See: https://socket.io/docs/v4/using-multiple-nodes
 func (s *Server) Local() *broadcastOperator {
 	return s.Of("/").Local()
 }
 
 // Alias of: s.Of("/").Sockets(...)
+//
+// Gets the sockets of the namespace.
+// Beware that this is local to the current node. For sockets across all nodes, use FetchSockets
 func (s *Server) Sockets() []ServerSocket {
 	return s.Of("/").Sockets()
 }
