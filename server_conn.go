@@ -72,7 +72,8 @@ func (s *serverSocketStore) Remove(sid string) {
 //
 // This is the equivalent of the Client class at: https://github.com/socketio/socket.io/blob/4.3.2/lib/client.ts#L21
 type serverConn struct {
-	eio eio.ServerSocket
+	eio            eio.ServerSocket
+	eioPacketQueue *packetQueue
 
 	server  *Server
 	sockets *serverSocketStore
@@ -88,7 +89,8 @@ type serverConn struct {
 
 func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
 	c := &serverConn{
-		eio: _eio,
+		eio:            _eio,
+		eioPacketQueue: newPacketQueue(),
 
 		server:  server,
 		sockets: newServerSocketStore(),
@@ -102,6 +104,8 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 		OnError:  c.onError,
 		OnClose:  c.onClose,
 	}
+
+	go pollAndSend(c.eio, c.eioPacketQueue)
 
 	return c, callbacks
 }
@@ -217,8 +221,7 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 }
 
 func (c *serverConn) packet(packets ...*eioparser.Packet) {
-	// TODO: Should be async?
-	go c.eio.Send(packets...)
+	c.eioPacketQueue.Add(packets...)
 }
 
 func (c *serverConn) onError(err error) {
@@ -251,5 +254,6 @@ func (c *serverConn) DisconnectAll() {
 
 func (c *serverConn) Close() {
 	c.eio.Close()
+	c.eioPacketQueue.Reset()
 	c.onClose("forced server close", nil)
 }

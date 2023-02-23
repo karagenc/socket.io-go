@@ -72,8 +72,9 @@ type Client struct {
 	emitter *eventEmitter
 	backoff *backoff
 
-	eio   eio.ClientSocket
-	eioMu sync.RWMutex
+	eio            eio.ClientSocket
+	eioPacketQueue *packetQueue
+	eioMu          sync.RWMutex
 }
 
 const (
@@ -107,6 +108,8 @@ func NewClient(url string, config *ClientConfig) *Client {
 
 		sockets: newClientSocketStore(),
 		emitter: newEventEmitter(),
+
+		eioPacketQueue: newPacketQueue(),
 	}
 
 	if config.ReconnectionDelay != nil {
@@ -228,12 +231,13 @@ func (c *Client) connect() (err error) {
 		OnClose:  c.onEIOClose,
 	}
 
-	eio, err := eio.Dial(c.url, callbacks, &c.eioConfig)
+	_eio, err := eio.Dial(c.url, callbacks, &c.eioConfig)
 	if err != nil {
 		c.emitReserved("error", err)
 		return err
 	}
-	c.eio = eio
+	c.eio = _eio
+	go pollAndSend(c.eio, c.eioPacketQueue)
 
 	sockets := c.sockets.GetAll()
 	for _, socket := range sockets {
@@ -370,7 +374,11 @@ func (c *Client) Close() {
 
 	c.backoff.Reset()
 	c.sockets.DisconnectAll()
+
+	c.eioMu.Lock()
+	defer c.eioMu.Unlock()
 	c.eio.Close()
+	c.eioPacketQueue.Reset()
 
 	c.parserMu.Lock()
 	defer c.parserMu.Unlock()
@@ -378,13 +386,9 @@ func (c *Client) Close() {
 }
 
 func (c *Client) packet(packets ...*eioparser.Packet) {
-	// TODO: Should be async?
-	go func() {
-		c.eioMu.RLock()
-		eio := c.eio
-		c.eioMu.RUnlock()
-		eio.Send(packets...)
-	}()
+	c.eioMu.RLock()
+	defer c.eioMu.RUnlock()
+	c.eioPacketQueue.Add(packets...)
 }
 
 type clientSocketStore struct {
