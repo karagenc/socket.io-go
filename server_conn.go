@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
@@ -42,7 +43,7 @@ func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
 	return
 }
 
-func (s *serverSocketStore) GetAllAndRemoveAll() (sockets []*serverSocket) {
+func (s *serverSocketStore) GetAndRemoveAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -106,6 +107,13 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 	}
 
 	go pollAndSend(c.eio, c.eioPacketQueue)
+
+	go func() {
+		time.Sleep(server.connectTimeout)
+		if c.nsps.Len() == 0 {
+			c.Close()
+		}
+	}()
 
 	return c, callbacks
 }
@@ -236,7 +244,7 @@ func (c *serverConn) onError(err error) {
 }
 
 func (c *serverConn) onClose(reason string, err error) {
-	sockets := c.sockets.GetAllAndRemoveAll()
+	sockets := c.sockets.GetAndRemoveAll()
 	for _, socket := range sockets {
 		socket.onClose(reason)
 	}
@@ -247,7 +255,7 @@ func (c *serverConn) onClose(reason string, err error) {
 }
 
 func (c *serverConn) DisconnectAll() {
-	for _, socket := range c.sockets.GetAllAndRemoveAll() {
+	for _, socket := range c.sockets.GetAndRemoveAll() {
 		socket.Disconnect(false)
 	}
 }

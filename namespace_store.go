@@ -19,6 +19,12 @@ func newNamespaceStore() *namespaceStore {
 	}
 }
 
+func (s *namespaceStore) Len() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.nsps)
+}
+
 func (s *namespaceStore) Set(nsp *Namespace) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

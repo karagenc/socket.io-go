@@ -11,11 +11,18 @@ import (
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
+const DefaultConnectTimeout = time.Second * 45
+
 type ServerConfig struct {
 	ParserCreator  parser.Creator
 	AdapterCreator AdapterCreator
 
 	EIO eio.ServerConfig
+
+	// Duration to wait before a client without namespace is closed.
+	//
+	// Default: 45 seconds
+	ConnectTimeout time.Duration
 }
 
 type Server struct {
@@ -25,6 +32,8 @@ type Server struct {
 	eio *eio.Server
 
 	namespaces *namespaceStore
+
+	connectTimeout time.Duration
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -47,6 +56,12 @@ func NewServer(config *ServerConfig) *Server {
 
 	if server.adapterCreator == nil {
 		server.adapterCreator = newInMemoryAdapter
+	}
+
+	if config.ConnectTimeout != 0 {
+		server.connectTimeout = config.ConnectTimeout
+	} else {
+		server.connectTimeout = DefaultConnectTimeout
 	}
 
 	return server
