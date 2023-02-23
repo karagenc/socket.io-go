@@ -12,63 +12,6 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type serverSocketStore struct {
-	sockets map[string]*serverSocket
-	mu      sync.Mutex
-}
-
-func newServerSocketStore() *serverSocketStore {
-	return &serverSocketStore{
-		sockets: make(map[string]*serverSocket),
-	}
-}
-
-func (s *serverSocketStore) Get(sid string) (socket *serverSocket, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	socket, ok = s.sockets[sid]
-	return
-}
-
-func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sockets = make([]*serverSocket, len(s.sockets))
-	i := 0
-	for _, socket := range s.sockets {
-		sockets[i] = socket
-		i++
-	}
-	return
-}
-
-func (s *serverSocketStore) GetAndRemoveAll() (sockets []*serverSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sockets = make([]*serverSocket, len(s.sockets))
-	i := 0
-	for _, socket := range s.sockets {
-		sockets[i] = socket
-		i++
-	}
-	s.sockets = make(map[string]*serverSocket)
-	return
-}
-
-func (s *serverSocketStore) Set(socket *serverSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sockets[socket.ID()] = socket
-}
-
-func (s *serverSocketStore) Remove(sid string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.sockets, sid)
-}
-
 // This struct represents a connection to the server.
 //
 // This is the equivalent of the Client class at: https://github.com/socketio/socket.io/blob/4.3.2/lib/client.ts#L21
