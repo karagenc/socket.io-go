@@ -47,7 +47,7 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 
 	callbacks := &eio.Callbacks{
 		OnPacket: c.onEIOPacket,
-		OnError:  c.onError,
+		OnError:  c.onFatalError,
 		OnClose:  c.onClose,
 	}
 
@@ -71,7 +71,7 @@ func (c *serverConn) onEIOPacket(packets ...*eioparser.Packet) {
 		if packet.Type == eioparser.PacketTypeMessage {
 			err := c.parser.Add(packet.Data, c.onFinishEIOPacket)
 			if err != nil {
-				c.onError(wrapInternalError(err))
+				c.onFatalError(wrapInternalError(err))
 				return
 			}
 		}
@@ -91,13 +91,13 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 			if socket.nsp.Name() == header.Namespace {
 				err := socket.onPacket(header, eventName, decode)
 				if err != nil {
-					c.onError(err)
+					c.onFatalError(err)
 				}
 				return
 			}
 		}
 
-		c.onError(wrapInternalError(fmt.Errorf("socket not found")))
+		c.onFatalError(wrapInternalError(fmt.Errorf("socket not found")))
 	}
 }
 
@@ -121,7 +121,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	at := reflect.TypeOf(&auth)
 	values, err := decode(at)
 	if err != nil {
-		c.onError(wrapInternalError(err))
+		c.onFatalError(wrapInternalError(err))
 		return
 	}
 
@@ -154,7 +154,7 @@ func (c *serverConn) connectError(err error, nsp string) {
 
 	buffers, err := c.parser.Encode(&header, e)
 	if err != nil {
-		c.onError(wrapInternalError(err))
+		c.onFatalError(wrapInternalError(err))
 		return
 	}
 
@@ -170,14 +170,14 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 		var err error
 		packets[0], err = eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
 		if err != nil {
-			c.onError(wrapInternalError(err))
+			c.onFatalError(wrapInternalError(err))
 			return
 		}
 
 		for i, attachment := range buffers {
 			packets[i+1], err = eioparser.NewPacket(eioparser.PacketTypeMessage, true, attachment)
 			if err != nil {
-				c.onError(wrapInternalError(err))
+				c.onFatalError(wrapInternalError(err))
 				return
 			}
 		}
@@ -190,15 +190,12 @@ func (c *serverConn) packet(packets ...*eioparser.Packet) {
 	c.eioPacketQueue.Add(packets...)
 }
 
-func (c *serverConn) onError(err error) {
+func (c *serverConn) onFatalError(err error) {
 	sockets := c.sockets.GetAll()
 	for _, socket := range sockets {
 		socket.onError(err)
 	}
-
-	// TODO: Close engine.io connection or not?
-	// We don't close the engine.io connection here
-	// (as opposed to the original socket.io) because...
+	c.eio.Close()
 }
 
 func (c *serverConn) onClose(reason string, err error) {
