@@ -10,11 +10,19 @@ type sessionWithTimestamp struct {
 	DisconnectedAt   time.Time
 }
 
+func (s *sessionWithTimestamp) hasExpired(maxDisconnectDuration time.Duration) bool {
+	return time.Now().Before(s.DisconnectedAt.Add(maxDisconnectDuration))
+}
+
 type persistedPacket struct {
 	ID        string
-	EmittedAt int
+	EmittedAt time.Time
 	Data      []byte
 	opts      *BroadcastOptions
+}
+
+func (p *persistedPacket) hasExpired(maxDisconnectDuration time.Duration) bool {
+	return time.Now().Before(p.EmittedAt.Add(maxDisconnectDuration))
 }
 
 type sessionAwareAdapter struct {
@@ -28,12 +36,33 @@ type sessionAwareAdapter struct {
 }
 
 func newSessionAwareAdapter(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter {
-	go func() {
-
-	}()
-	return &sessionAwareAdapter{
+	s := &sessionAwareAdapter{
 		maxDisconnectDuration: namespace.server.connectionStateRecovery.MaxDisconnectionDuration,
 		inMemoryAdapter:       newInMemoryAdapter(namespace, socketStore).(*inMemoryAdapter),
+	}
+	go s.cleaner()
+	return s
+}
+
+func (a *sessionAwareAdapter) cleaner() {
+	for {
+		time.Sleep(60 * time.Second)
+
+		a.mu.Lock()
+		for sessionID, session := range a.sessions {
+			if session.hasExpired(a.maxDisconnectDuration) {
+				delete(a.sessions, sessionID)
+			}
+		}
+
+		for i := len(a.packets) - 1; i >= 0; i-- {
+			packet := a.packets[i]
+			if packet.hasExpired(a.maxDisconnectDuration) {
+				a.packets = append(a.packets[:i], a.packets[i+1:]...)
+				break
+			}
+		}
+		a.mu.Unlock()
 	}
 }
 
@@ -55,8 +84,7 @@ func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string
 		return nil
 	}
 
-	hasExpired := time.Now().Before(session.DisconnectedAt.Add(a.maxDisconnectDuration))
-	if hasExpired {
+	if session.hasExpired(a.maxDisconnectDuration) {
 		delete(a.sessions, pid)
 		return nil
 	}
