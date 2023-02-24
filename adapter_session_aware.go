@@ -165,6 +165,7 @@ type yeaster struct {
 
 	seed float64
 	prev string
+	mu   sync.Mutex
 }
 
 func newYeaster() *yeaster {
@@ -181,6 +182,8 @@ func newYeaster() *yeaster {
 }
 
 func (y *yeaster) yeast() string {
+	y.mu.Lock()
+	defer y.mu.Unlock()
 	now := y.encode(float64(time.Now().Unix()))
 
 	if now != y.prev {
@@ -212,5 +215,3 @@ func (y *yeaster) decode(s string) int {
 	}
 	return decoded
 }
-
-var alphabet = []string{"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"}
