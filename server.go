@@ -23,17 +23,26 @@ type ServerConfig struct {
 	//
 	// Default: 45 seconds
 	ConnectTimeout time.Duration
+
+	// In order for a client to make a connection to a namespace,
+	// the namespace must be created on server via `Server.of`.
+	//
+	// This option permits the client to create the namespace if it is not already created on server.
+	// If this option is disabled, only namespaces created on the server can be connected.
+	//
+	// Default: false
+	AcceptAnyNamespace bool
 }
 
 type Server struct {
 	parserCreator  parser.Creator
 	adapterCreator AdapterCreator
 
-	eio *eio.Server
-
+	eio        *eio.Server
 	namespaces *namespaceStore
 
-	connectTimeout time.Duration
+	connectTimeout     time.Duration
+	acceptAnyNamespace bool
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -42,9 +51,10 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	server := &Server{
-		parserCreator:  config.ParserCreator,
-		adapterCreator: config.AdapterCreator,
-		namespaces:     newNamespaceStore(),
+		parserCreator:      config.ParserCreator,
+		adapterCreator:     config.AdapterCreator,
+		namespaces:         newNamespaceStore(),
+		acceptAnyNamespace: config.AcceptAnyNamespace,
 	}
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)

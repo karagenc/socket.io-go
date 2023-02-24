@@ -98,6 +98,21 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 }
 
 func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) {
+	var (
+		nsp *Namespace
+		ok  bool
+	)
+
+	if c.server.acceptAnyNamespace {
+		nsp = c.nsps.GetOrCreate(header.Namespace, c.server, c.server.adapterCreator, c.server.parserCreator)
+	} else {
+		nsp, ok = c.nsps.Get(header.Namespace)
+		if !ok {
+			c.connectError(fmt.Errorf("namespace '%s' was not created and AcceptAnyNamespace was not set", header.Namespace), header.Namespace)
+			return
+		}
+	}
+
 	var auth json.RawMessage
 
 	at := reflect.TypeOf(&auth)
@@ -114,7 +129,6 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 		}
 	}
 
-	nsp := c.server.Of(header.Namespace)
 	socket, err := nsp.add(c, auth)
 	if err != nil {
 		c.connectError(err, nsp.Name())
