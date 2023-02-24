@@ -10,8 +10,8 @@ import (
 // Have a look at: https://github.com/socketio/socket.io-adapter
 type inMemoryAdapter struct {
 	mu    sync.Mutex
-	rooms map[string]mapset.Set[string]
-	sids  map[string]mapset.Set[string]
+	rooms map[Room]mapset.Set[SocketID]
+	sids  map[SocketID]mapset.Set[Room]
 
 	namespace *Namespace
 	sockets   *NamespaceSocketStore
@@ -19,8 +19,8 @@ type inMemoryAdapter struct {
 
 func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter {
 	return &inMemoryAdapter{
-		rooms:     make(map[string]mapset.Set[string]),
-		sids:      make(map[string]mapset.Set[string]),
+		rooms:     make(map[Room]mapset.Set[SocketID]),
+		sids:      make(map[SocketID]mapset.Set[Room]),
 		namespace: namespace,
 		sockets:   socketStore,
 	}
@@ -28,7 +28,7 @@ func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore)
 
 func (a *inMemoryAdapter) Close() {}
 
-func (a *inMemoryAdapter) AddAll(sid string, rooms []string) {
+func (a *inMemoryAdapter) AddAll(sid SocketID, rooms []Room) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -40,7 +40,7 @@ func (a *inMemoryAdapter) AddAll(sid string, rooms []string) {
 
 		r, ok := a.rooms[room]
 		if !ok {
-			r = mapset.NewThreadUnsafeSet[string]()
+			r = mapset.NewThreadUnsafeSet[SocketID]()
 			a.rooms[room] = r
 		}
 		if !r.Contains(sid) {
@@ -49,7 +49,7 @@ func (a *inMemoryAdapter) AddAll(sid string, rooms []string) {
 	}
 }
 
-func (a *inMemoryAdapter) Delete(sid string, room string) {
+func (a *inMemoryAdapter) Delete(sid SocketID, room Room) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (a *inMemoryAdapter) Delete(sid string, room string) {
 	a.delete(sid, room)
 }
 
-func (a *inMemoryAdapter) delete(sid string, room string) {
+func (a *inMemoryAdapter) delete(sid SocketID, room Room) {
 	r, ok := a.rooms[room]
 	if ok {
 		r.Remove(sid)
@@ -71,7 +71,7 @@ func (a *inMemoryAdapter) delete(sid string, room string) {
 	}
 }
 
-func (a *inMemoryAdapter) DeleteAll(sid string) {
+func (a *inMemoryAdapter) DeleteAll(sid SocketID) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -80,7 +80,7 @@ func (a *inMemoryAdapter) DeleteAll(sid string) {
 		return
 	}
 
-	s.Each(func(room string) bool {
+	s.Each(func(room Room) bool {
 		a.delete(sid, room)
 		return false
 	})
@@ -105,22 +105,22 @@ func (a *inMemoryAdapter) BroadcastWithAck(packetID string, buffers [][]byte, op
 }
 
 // The return value 'sids' must be a thread safe mapset.Set.
-func (a *inMemoryAdapter) Sockets(rooms mapset.Set[string]) (sids mapset.Set[string]) {
+func (a *inMemoryAdapter) Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID]) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	sids = mapset.NewSet[string]()
+	sids = mapset.NewSet[SocketID]()
 	opts := NewBroadcastOptions()
 	opts.Rooms = rooms
 
 	a.apply(opts, func(socket AdapterSocket) {
-		sids.Add(socket.ID())
+		sids.Add(SocketID(socket.ID()))
 	})
 	return
 }
 
 // The return value 'rooms' must be a thread safe mapset.Set.
-func (a *inMemoryAdapter) SocketRooms(sid string) (rooms mapset.Set[string], ok bool) {
+func (a *inMemoryAdapter) SocketRooms(sid SocketID) (rooms mapset.Set[Room], ok bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -129,8 +129,8 @@ func (a *inMemoryAdapter) SocketRooms(sid string) (rooms mapset.Set[string], ok 
 		return nil, false
 	}
 
-	rooms = mapset.NewSet[string]()
-	s.Each(func(room string) bool {
+	rooms = mapset.NewSet[Room]()
+	s.Each(func(room Room) bool {
 		rooms.Add(room)
 		return false
 	})
@@ -144,13 +144,13 @@ func (a *inMemoryAdapter) FetchSockets(opts *BroadcastOptions) (sockets []Adapte
 	return
 }
 
-func (a *inMemoryAdapter) AddSockets(opts *BroadcastOptions, rooms ...string) {
+func (a *inMemoryAdapter) AddSockets(opts *BroadcastOptions, rooms ...Room) {
 	a.apply(opts, func(socket AdapterSocket) {
 		socket.Join(rooms...)
 	})
 }
 
-func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...string) {
+func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...Room) {
 	a.apply(opts, func(socket AdapterSocket) {
 		for _, room := range rooms {
 			socket.Leave(room)
@@ -174,18 +174,18 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Ada
 	// we only use sockets in those rooms.
 	// Otherwise (within else), any socket will be used.
 	if opts.Rooms.Cardinality() > 0 {
-		ids := mapset.NewThreadUnsafeSet[string]()
-		opts.Rooms.Each(func(room string) bool {
+		ids := mapset.NewThreadUnsafeSet[SocketID]()
+		opts.Rooms.Each(func(room Room) bool {
 			r, ok := a.rooms[room]
 			if !ok {
 				return false
 			}
 
-			r.Each(func(sid string) bool {
+			r.Each(func(sid SocketID) bool {
 				if ids.Contains(sid) || exceptSids.Contains(sid) {
 					return false
 				}
-				socket, ok := a.sockets.Get(sid)
+				socket, ok := a.sockets.Get(string(sid))
 				if ok {
 					callback(socket)
 					ids.Add(sid)
@@ -199,7 +199,7 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Ada
 			if exceptSids.Contains(sid) {
 				continue
 			}
-			socket, ok := a.sockets.Get(sid)
+			socket, ok := a.sockets.Get(string(sid))
 			if ok {
 				callback(socket)
 			}
@@ -208,13 +208,14 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Ada
 }
 
 // Beware that the return value 'exceptSids' is thread unsafe.
-func (a *inMemoryAdapter) computeExceptSids(exceptRooms mapset.Set[string]) (exceptSids mapset.Set[string]) {
-	exceptSids = mapset.NewThreadUnsafeSet[string]()
+func (a *inMemoryAdapter) computeExceptSids(exceptRooms mapset.Set[Room]) (exceptSids mapset.Set[SocketID]) {
+	exceptSids = mapset.NewThreadUnsafeSet[SocketID]()
+
 	if exceptRooms.Cardinality() > 0 {
-		exceptRooms.Each(func(room string) bool {
+		exceptRooms.Each(func(room Room) bool {
 			r, ok := a.rooms[room]
 			if ok {
-				r.Each(func(sid string) bool {
+				r.Each(func(sid SocketID) bool {
 					exceptSids.Add(sid)
 					return false
 				})

@@ -9,15 +9,15 @@ import (
 )
 
 type BroadcastOptions struct {
-	Rooms  mapset.Set[string]
-	Except mapset.Set[string]
+	Rooms  mapset.Set[Room]
+	Except mapset.Set[Room]
 	Flags  BroadcastFlags
 }
 
 func NewBroadcastOptions() *BroadcastOptions {
 	return &BroadcastOptions{
-		Rooms:  mapset.NewSet[string](),
-		Except: mapset.NewSet[string](),
+		Rooms:  mapset.NewSet[Room](),
+		Except: mapset.NewSet[Room](),
 	}
 }
 
@@ -32,8 +32,8 @@ type broadcastOperator struct {
 	nsp         string
 	adapter     Adapter
 	parser      parser.Parser
-	rooms       mapset.Set[string]
-	exceptRooms mapset.Set[string]
+	rooms       mapset.Set[Room]
+	exceptRooms mapset.Set[Room]
 	flags       BroadcastFlags
 }
 
@@ -42,8 +42,8 @@ func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *br
 		nsp:         nsp,
 		adapter:     adapter,
 		parser:      parser,
-		rooms:       mapset.NewSet[string](),
-		exceptRooms: mapset.NewSet[string](),
+		rooms:       mapset.NewSet[Room](),
+		exceptRooms: mapset.NewSet[Room](),
 	}
 }
 
@@ -96,7 +96,7 @@ func (b *broadcastOperator) To(room ...string) *broadcastOperator {
 	n := *b
 	rooms := b.rooms.Clone()
 	for _, r := range room {
-		rooms.Add(r)
+		rooms.Add(Room(r))
 	}
 	n.rooms = rooms
 	return &n
@@ -113,7 +113,7 @@ func (b *broadcastOperator) Except(room ...string) *broadcastOperator {
 	n := *b
 	exceptRooms := b.exceptRooms.Clone()
 	for _, r := range room {
-		n.exceptRooms.Add(r)
+		n.exceptRooms.Add(Room(r))
 	}
 	n.exceptRooms = exceptRooms
 	return &n
@@ -136,21 +136,21 @@ func (b *broadcastOperator) Local() *broadcastOperator {
 }
 
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (b *broadcastOperator) FetchSockets() (sids mapset.Set[string]) {
+func (b *broadcastOperator) FetchSockets() (sids mapset.Set[SocketID]) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
 	opts.Flags = b.flags
-	sids = mapset.NewSet[string]()
+	sids = mapset.NewSet[SocketID]()
 
 	for _, socket := range b.adapter.FetchSockets(opts) {
-		sids.Add(socket.ID())
+		sids.Add(SocketID(socket.ID()))
 	}
 	return
 }
 
 // Makes the matching socket instances join the specified rooms.
-func (b *broadcastOperator) SocketsJoin(room ...string) {
+func (b *broadcastOperator) SocketsJoin(room ...Room) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
@@ -160,7 +160,7 @@ func (b *broadcastOperator) SocketsJoin(room ...string) {
 }
 
 // Makes the matching socket instances leave the specified rooms.
-func (b *broadcastOperator) SocketsLeave(room ...string) {
+func (b *broadcastOperator) SocketsLeave(room ...Room) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()

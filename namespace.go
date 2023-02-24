@@ -130,17 +130,17 @@ func (n *Namespace) Sockets() []ServerSocket {
 }
 
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (n *Namespace) FetchSockets() (sids mapset.Set[string]) {
+func (n *Namespace) FetchSockets() (sids mapset.Set[SocketID]) {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).FetchSockets()
 }
 
 // Makes the matching socket instances join the specified rooms.
-func (n *Namespace) SocketsJoin(room ...string) {
+func (n *Namespace) SocketsJoin(room ...Room) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).SocketsJoin(room...)
 }
 
 // Makes the matching socket instances leave the specified rooms.
-func (n *Namespace) SocketsLeave(room ...string) {
+func (n *Namespace) SocketsLeave(room ...Room) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).SocketsLeave(room...)
 }
 
@@ -172,7 +172,9 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 		}
 	}
 
-	n.adapter.AddAll(socket.ID(), []string{socket.ID()})
+	// Add socket ID as room. Socket ID is the default room a socket joins to.
+	n.adapter.AddAll(SocketID(socket.ID()), []Room{Room(socket.ID())})
+
 	n.sockets.Set(socket)
 	n.onSocket(socket)
 

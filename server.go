@@ -167,21 +167,21 @@ func (s *Server) Sockets() []ServerSocket {
 // Alias of: s.Of("/").FetchSockets(...)
 //
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (s *Server) FetchSockets(room ...string) (sids mapset.Set[string]) {
+func (s *Server) FetchSockets(room ...string) (sids mapset.Set[SocketID]) {
 	return s.Of("/").FetchSockets()
 }
 
 // Alias of: s.Of("/").SocketsJoin(...)
 //
 // Makes the matching socket instances leave the specified rooms.
-func (s *Server) SocketsJoin(room ...string) {
+func (s *Server) SocketsJoin(room ...Room) {
 	s.Of("/").SocketsJoin(room...)
 }
 
 // Alias of: s.Of("/").SocketsLeave(...)
 //
 // Makes the matching socket instances leave the specified rooms.
-func (s *Server) SocketsLeave(room ...string) {
+func (s *Server) SocketsLeave(room ...Room) {
 	s.Of("/").SocketsLeave(room...)
 }
 

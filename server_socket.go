@@ -23,7 +23,7 @@ type serverSocket struct {
 	ackID  uint64
 	acksMu sync.Mutex
 
-	join   func(room ...string)
+	join   func(room ...Room)
 	joinMu sync.Mutex
 
 	closeOnce sync.Once
@@ -43,8 +43,8 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 		parser:  parser,
 		emitter: newEventEmitter(),
 
-		join: func(room ...string) {
-			nsp.Adapter().AddAll(id, room)
+		join: func(room ...Room) {
+			nsp.Adapter().AddAll(SocketID(id), room)
 		},
 	}
 	return s, nil
@@ -147,15 +147,15 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	}
 }
 
-func (s *serverSocket) Join(room ...string) {
+func (s *serverSocket) Join(room ...Room) {
 	s.joinMu.Lock()
 	join := s.join
 	s.joinMu.Unlock()
 	join(room...)
 }
 
-func (s *serverSocket) Leave(room string) {
-	s.nsp.Adapter().Delete(s.ID(), room)
+func (s *serverSocket) Leave(room Room) {
+	s.nsp.Adapter().Delete(SocketID(s.ID()), room)
 }
 
 type sidInfo struct {
@@ -224,7 +224,7 @@ func (s *serverSocket) onClose(reason string) {
 		s.emitReserved("disconnecting", reason)
 
 		s.joinMu.Lock()
-		s.join = func(room ...string) {}
+		s.join = func(room ...Room) {}
 		s.joinMu.Unlock()
 		s.leaveAll()
 
@@ -235,7 +235,7 @@ func (s *serverSocket) onClose(reason string) {
 }
 
 func (s *serverSocket) leaveAll() {
-	s.nsp.adapter.DeleteAll(s.ID())
+	s.nsp.adapter.DeleteAll(SocketID(s.ID()))
 }
 
 func (s *serverSocket) ID() string {
