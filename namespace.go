@@ -180,6 +180,12 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 }
 
 func (n *Namespace) onSocket(socket ServerSocket) {
+	// It is paramount that the internal `onconnect` logic
+	// fires before user-set events to prevent state order
+	// violations (such as a disconnection before the connection
+	// logic is complete)
+	socket.(*serverSocket).onConnect()
+
 	connectHandlers := n.emitter.GetHandlers("connect")
 	connectionHandlers := n.emitter.GetHandlers("connection")
 

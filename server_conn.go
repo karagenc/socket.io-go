@@ -114,7 +114,6 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	}
 
 	var auth json.RawMessage
-
 	at := reflect.TypeOf(&auth)
 	values, err := decode(at)
 	if err != nil {
@@ -137,8 +136,6 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 
 	c.sockets.Set(socket)
 	c.nsps.Set(nsp)
-
-	socket.onConnect()
 }
 
 func (c *serverConn) connectError(err error, nsp string) {
