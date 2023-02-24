@@ -229,7 +229,7 @@ func (s *serverSocket) onClose(reason string) {
 		s.leaveAll()
 
 		s.nsp.remove(s)
-		s.conn.sockets.Remove(s.ID())
+		s.conn.Remove(s)
 		s.emitReserved("disconnect", reason)
 	})
 }
