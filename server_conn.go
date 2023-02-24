@@ -29,6 +29,8 @@ type serverConn struct {
 	// the parser's Add method from multiple goroutines.
 	parserMu sync.Mutex
 	parser   parser.Parser
+
+	closeOnce sync.Once
 }
 
 func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
@@ -198,14 +200,16 @@ func (c *serverConn) onError(err error) {
 }
 
 func (c *serverConn) onClose(reason string, err error) {
-	sockets := c.sockets.GetAndRemoveAll()
-	for _, socket := range sockets {
-		socket.onClose(reason)
-	}
+	c.closeOnce.Do(func() {
+		sockets := c.sockets.GetAndRemoveAll()
+		for _, socket := range sockets {
+			socket.onClose(reason)
+		}
 
-	c.parserMu.Lock()
-	defer c.parserMu.Unlock()
-	c.parser.Reset()
+		c.parserMu.Lock()
+		defer c.parserMu.Unlock()
+		c.parser.Reset()
+	})
 }
 
 func (c *serverConn) DisconnectAll() {
