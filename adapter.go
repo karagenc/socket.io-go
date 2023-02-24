@@ -8,13 +8,10 @@ type AdapterCreator func(namespace *Namespace, socketStore *NamespaceSocketStore
 // the Socket.IO session and which can be used for private messaging.
 type SocketID string
 
-// A private ID, sent by the server at the beginning of
-// the Socket.IO session and used for connection state recovery upon reconnection.
-type PrivateSessionID string
-
 type Room string
 
 type Adapter interface {
+	ServerCount() int
 	Close()
 
 	AddAll(sid SocketID, rooms []Room)
@@ -34,8 +31,27 @@ type Adapter interface {
 	AddSockets(opts *BroadcastOptions, rooms ...Room)
 	DelSockets(opts *BroadcastOptions, rooms ...Room)
 	DisconnectSockets(opts *BroadcastOptions, close bool)
+
+	// Save the client session in order to restore it upon reconnection.
+	// TODO: Keep this pointer or not?
+	PersistSession(session *SessionToPersist)
+
+	// Restore the session and find the packets that were missed by the client.
+	//
+	// This returns nil by inMemoryAdapter
+	RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist
 }
 
 type AdapterSocket interface {
 	ServerSocket
+}
+
+// A private ID, sent by the server at the beginning of
+// the Socket.IO session and used for connection state recovery upon reconnection.
+type PrivateSessionID string
+
+type SessionToPersist struct {
+	SID   SocketID
+	PID   PrivateSessionID
+	Rooms []Room
 }

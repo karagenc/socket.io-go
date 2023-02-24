@@ -26,6 +26,8 @@ func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore)
 	}
 }
 
+func (a *inMemoryAdapter) ServerCount() int { return 1 }
+
 func (a *inMemoryAdapter) Close() {}
 
 func (a *inMemoryAdapter) AddAll(sid SocketID, rooms []Room) {
@@ -224,4 +226,10 @@ func (a *inMemoryAdapter) computeExceptSids(exceptRooms mapset.Set[Room]) (excep
 		})
 	}
 	return
+}
+
+func (a *inMemoryAdapter) PersistSession(session *SessionToPersist) {}
+
+func (a *inMemoryAdapter) RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist {
+	return nil
 }
