@@ -38,7 +38,7 @@ type Adapter interface {
 
 	// Restore the session and find the packets that were missed by the client.
 	//
-	// This returns nil by inMemoryAdapter
+	// Returns nil if there is no session or session has expired.
 	RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist
 }
 
