@@ -90,8 +90,10 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 		for _, socket := range sockets {
 			if socket.nsp.Name() == header.Namespace {
 				err := socket.onPacket(header, eventName, decode)
-				c.onError(err)
-				break
+				if err != nil {
+					c.onError(err)
+				}
+				return
 			}
 		}
 
