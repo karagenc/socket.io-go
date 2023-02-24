@@ -174,8 +174,7 @@ func (s *serverSocket) onConnect() {
 
 	buffers, err := s.parser.Encode(header, c)
 	if err != nil {
-		s.onError(wrapInternalError(err))
-		return
+		panic(wrapInternalError(err))
 	}
 
 	s.conn.sendBuffers(buffers...)

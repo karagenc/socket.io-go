@@ -174,7 +174,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 
 	n.adapter.AddAll(socket.ID(), []string{socket.ID()})
 	n.sockets.Set(socket)
-	go n.onSocket(socket)
+	n.onSocket(socket)
 
 	return socket, nil
 }
