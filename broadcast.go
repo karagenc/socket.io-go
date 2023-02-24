@@ -49,7 +49,7 @@ func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *br
 
 // Emits an event to all choosen clients.
 func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
-	header := parser.PacketHeader{
+	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: b.nsp,
 	}
@@ -69,7 +69,7 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 		}
 	}
 
-	buffers, err := b.parser.Encode(&header, &v)
+	buffers, err := b.parser.Encode(header, &v)
 	if err != nil {
 		panic(fmt.Errorf("sio: %w", err))
 	}
@@ -79,13 +79,13 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 
 	// Instead of s.conn.sendBuffers(buffers...)
 	// we use:
-	b.adapter.Broadcast(buffers, opts)
+	b.adapter.Broadcast(header, buffers, opts)
 
 	a := newAckHandler(func(msg string) {
 		// TODO: Implement this
 	})
 
-	b.adapter.BroadcastWithAck("TODO: packetID", buffers, opts, a)
+	b.adapter.BroadcastWithAck("TODO: packetID", header, buffers, opts, a)
 }
 
 // Sets a modifier for a subsequent event emission that the event

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/tomruk/socket.io-go/parser"
 )
 
 // This is the equivalent of the default in-memory adapter of Socket.IO.
@@ -90,7 +91,7 @@ func (a *inMemoryAdapter) DeleteAll(sid SocketID) {
 	delete(a.sids, sid)
 }
 
-func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
+func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -99,7 +100,7 @@ func (a *inMemoryAdapter) Broadcast(buffers [][]byte, opts *BroadcastOptions) {
 	})
 }
 
-func (a *inMemoryAdapter) BroadcastWithAck(packetID string, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
+func (a *inMemoryAdapter) BroadcastWithAck(packetID string, header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
 	a.apply(opts, func(socket AdapterSocket) {
 		a.sockets.SetAck(socket.ID(), ackHandler)
 		a.sockets.SendBuffers(socket.ID(), buffers)

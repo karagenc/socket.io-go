@@ -1,8 +1,11 @@
 package sio
 
 import (
+	"math"
 	"sync"
 	"time"
+
+	"github.com/tomruk/socket.io-go/parser"
 )
 
 type sessionWithTimestamp struct {
@@ -17,7 +20,7 @@ func (s *sessionWithTimestamp) hasExpired(maxDisconnectDuration time.Duration) b
 type persistedPacket struct {
 	ID        string
 	EmittedAt time.Time
-	Data      []byte
+	Buffers   [][]byte
 	opts      *BroadcastOptions
 }
 
@@ -29,6 +32,7 @@ type sessionAwareAdapter struct {
 	*inMemoryAdapter
 
 	maxDisconnectDuration time.Duration
+	yeaster               *yeaster
 
 	sessions map[PrivateSessionID]*sessionWithTimestamp
 	packets  []*persistedPacket
@@ -37,8 +41,9 @@ type sessionAwareAdapter struct {
 
 func newSessionAwareAdapter(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter {
 	s := &sessionAwareAdapter{
-		maxDisconnectDuration: namespace.server.connectionStateRecovery.MaxDisconnectionDuration,
 		inMemoryAdapter:       newInMemoryAdapter(namespace, socketStore).(*inMemoryAdapter),
+		maxDisconnectDuration: namespace.server.connectionStateRecovery.MaxDisconnectionDuration,
+		yeaster:               newYeaster(),
 	}
 	go s.cleaner()
 	return s
@@ -133,3 +138,79 @@ func shouldIncludePacket(sessionRooms []Room, opts *BroadcastOptions) bool {
 	}
 	return included && notExcluded
 }
+
+func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions) {
+	isEventPacket := header.Type == parser.PacketTypeEvent
+	withoutAcknowledgement := header.ID == nil
+	if isEventPacket && withoutAcknowledgement {
+		a.mu.Lock()
+		id := a.yeaster.yeast()
+		// TODO: modify buffers
+		packet := &persistedPacket{
+			ID:        id,
+			opts:      opts,
+			EmittedAt: time.Now(),
+			Buffers:   buffers,
+		}
+		a.packets = append(a.packets, packet)
+		a.mu.Unlock()
+	}
+	a.inMemoryAdapter.Broadcast(header, buffers, opts)
+}
+
+type yeaster struct {
+	alphabet string
+	length   int
+	m        map[rune]int
+
+	seed float64
+	prev string
+}
+
+func newYeaster() *yeaster {
+	const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
+	y := &yeaster{
+		alphabet: alphabet,
+		length:   len(alphabet),
+		m:        make(map[rune]int),
+	}
+	for i, c := range y.alphabet {
+		y.m[c] = i
+	}
+	return y
+}
+
+func (y *yeaster) yeast() string {
+	now := y.encode(float64(time.Now().Unix()))
+
+	if now != y.prev {
+		y.seed = 0
+		y.prev = now
+		return now
+	}
+
+	y.seed += 1
+	return now + "." + y.encode(y.seed)
+}
+
+func (y *yeaster) encode(num float64) string {
+	encoded := ""
+	for {
+		encoded = string(y.alphabet[int(num)%y.length]) + encoded
+		num = math.Floor(num / float64(y.length))
+		if num <= 0 {
+			break
+		}
+	}
+	return encoded
+}
+
+func (y *yeaster) decode(s string) int {
+	decoded := 0
+	for _, c := range s {
+		decoded = decoded*y.length + y.m[c]
+	}
+	return decoded
+}
+
+var alphabet = []string{"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"}

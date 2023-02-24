@@ -1,6 +1,9 @@
 package sio
 
-import mapset "github.com/deckarep/golang-set/v2"
+import (
+	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/tomruk/socket.io-go/parser"
+)
 
 type AdapterCreator func(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter
 
@@ -18,8 +21,11 @@ type Adapter interface {
 	Delete(sid SocketID, room Room)
 	DeleteAll(sid SocketID)
 
-	Broadcast(buffers [][]byte, opts *BroadcastOptions)
-	BroadcastWithAck(packetID string, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler)
+	// header must not be modified.
+	Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions)
+
+	// header must not be modified.
+	BroadcastWithAck(packetID string, header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler)
 
 	// The return value 'sids' is a thread safe mapset.Set.
 	Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID])
