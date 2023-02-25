@@ -35,7 +35,7 @@ func newNamespace(name string, server *Server, adapterCreator AdapterCreator, pa
 		parser:  parserCreator(),
 		emitter: newEventEmitter(),
 	}
-	nsp.adapter = adapterCreator(nsp, socketStore)
+	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
 	return nsp
 }
 

@@ -1,7 +1,6 @@
 package sio
 
 import (
-	"fmt"
 	"reflect"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -48,7 +47,7 @@ func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *br
 }
 
 // Emits an event to all choosen clients.
-func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
+func (b *broadcastOperator) Emit(eventName string, _v ...interface{}) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: b.nsp,
@@ -58,20 +57,17 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 		panic("sio: broadcastOperator.Emit: attempted to emit to a reserved event")
 	}
 
-	v = append([]interface{}{eventName}, v...)
+	// One extra space for eventName,
+	// the other for ID (see the Broadcast method of sessionAwareAdapter)
+	v := make([]interface{}, 0, len(_v)+2)
+	v = append(v, eventName)
+	v = append(v, v...)
 
-	if len(v) > 0 {
-		f := v[len(v)-1]
-		rt := reflect.TypeOf(f)
+	f := v[len(v)-1]
+	rt := reflect.TypeOf(f)
 
-		if rt.Kind() == reflect.Func {
-			panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
-		}
-	}
-
-	buffers, err := b.parser.Encode(header, &v)
-	if err != nil {
-		panic(fmt.Errorf("sio: %w", err))
+	if rt.Kind() == reflect.Func {
+		panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
 	}
 
 	opts := NewBroadcastOptions()
@@ -79,13 +75,13 @@ func (b *broadcastOperator) Emit(eventName string, v ...interface{}) {
 
 	// Instead of s.conn.sendBuffers(buffers...)
 	// we use:
-	b.adapter.Broadcast(header, buffers, opts)
+	b.adapter.Broadcast(header, v, opts)
 
-	a := newAckHandler(func(msg string) {
+	/* a := newAckHandler(func(msg string) {
 		// TODO: Implement this
 	})
 
-	b.adapter.BroadcastWithAck("TODO: packetID", header, buffers, opts, a)
+	b.adapter.BroadcastWithAck("TODO: packetID", header, buffers, opts, a) */
 }
 
 // Sets a modifier for a subsequent event emission that the event

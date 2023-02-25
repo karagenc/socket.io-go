@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"fmt"
 	"sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -16,14 +17,16 @@ type inMemoryAdapter struct {
 
 	namespace *Namespace
 	sockets   *NamespaceSocketStore
+	parser    parser.Parser
 }
 
-func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter {
+func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore, parserCreator parser.Creator) Adapter {
 	return &inMemoryAdapter{
 		rooms:     make(map[Room]mapset.Set[SocketID]),
 		sids:      make(map[SocketID]mapset.Set[Room]),
 		namespace: namespace,
 		sockets:   socketStore,
+		parser:    parserCreator(),
 	}
 }
 
@@ -91,16 +94,26 @@ func (a *inMemoryAdapter) DeleteAll(sid SocketID) {
 	delete(a.sids, sid)
 }
 
-func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions) {
+func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	buffers, err := a.parser.Encode(header, &v)
+	if err != nil {
+		panic(fmt.Errorf("sio: %w", err))
+	}
 
 	a.apply(opts, func(socket AdapterSocket) {
 		a.sockets.SendBuffers(socket.ID(), buffers)
 	})
 }
 
-func (a *inMemoryAdapter) BroadcastWithAck(packetID string, header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler) {
+func (a *inMemoryAdapter) BroadcastWithAck(packetID string, header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions, ackHandler *ackHandler) {
+	buffers, err := a.parser.Encode(header, &v)
+	if err != nil {
+		panic(fmt.Errorf("sio: %w", err))
+	}
+
 	a.apply(opts, func(socket AdapterSocket) {
 		a.sockets.SetAck(socket.ID(), ackHandler)
 		a.sockets.SendBuffers(socket.ID(), buffers)

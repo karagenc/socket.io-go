@@ -1,11 +1,13 @@
 package sio
 
 import (
+	"time"
+
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type AdapterCreator func(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter
+type AdapterCreator func(namespace *Namespace, socketStore *NamespaceSocketStore, parserCreator parser.Creator) Adapter
 
 // A public ID, sent by the server at the beginning of
 // the Socket.IO session and which can be used for private messaging.
@@ -21,9 +23,9 @@ type Adapter interface {
 	Delete(sid SocketID, room Room)
 	DeleteAll(sid SocketID)
 
-	Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions)
+	Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions)
 
-	BroadcastWithAck(packetID string, header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler)
+	BroadcastWithAck(packetID string, header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions, ackHandler *ackHandler)
 
 	// The return value 'sids' is a thread safe mapset.Set.
 	Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID])
@@ -37,7 +39,6 @@ type Adapter interface {
 	DisconnectSockets(opts *BroadcastOptions, close bool)
 
 	// Save the client session in order to restore it upon reconnection.
-	// TODO: Keep this pointer or not?
 	PersistSession(session *SessionToPersist)
 
 	// Restore the session and find the packets that were missed by the client.
@@ -60,5 +61,18 @@ type SessionToPersist struct {
 
 	Rooms []Room
 
-	Data [][][]byte
+	Packets []*PersistedPacket
+}
+
+type PersistedPacket struct {
+	ID        string
+	EmittedAt time.Time
+	Opts      *BroadcastOptions
+
+	Header *parser.PacketHeader
+	Data   []interface{}
+}
+
+func (p *PersistedPacket) HasExpired(maxDisconnectDuration time.Duration) bool {
+	return time.Now().Before(p.EmittedAt.Add(maxDisconnectDuration))
 }

@@ -17,17 +17,6 @@ func (s *sessionWithTimestamp) hasExpired(maxDisconnectDuration time.Duration) b
 	return time.Now().Before(s.DisconnectedAt.Add(maxDisconnectDuration))
 }
 
-type persistedPacket struct {
-	ID        string
-	EmittedAt time.Time
-	Buffers   [][]byte
-	opts      *BroadcastOptions
-}
-
-func (p *persistedPacket) hasExpired(maxDisconnectDuration time.Duration) bool {
-	return time.Now().Before(p.EmittedAt.Add(maxDisconnectDuration))
-}
-
 type sessionAwareAdapter struct {
 	*inMemoryAdapter
 
@@ -35,13 +24,13 @@ type sessionAwareAdapter struct {
 	yeaster               *yeast.Yeaster
 
 	sessions map[PrivateSessionID]*sessionWithTimestamp
-	packets  []*persistedPacket
+	packets  []*PersistedPacket
 	mu       sync.Mutex
 }
 
-func newSessionAwareAdapter(namespace *Namespace, socketStore *NamespaceSocketStore) Adapter {
+func newSessionAwareAdapter(namespace *Namespace, socketStore *NamespaceSocketStore, parserCreator parser.Creator) Adapter {
 	s := &sessionAwareAdapter{
-		inMemoryAdapter:       newInMemoryAdapter(namespace, socketStore).(*inMemoryAdapter),
+		inMemoryAdapter:       newInMemoryAdapter(namespace, socketStore, parserCreator).(*inMemoryAdapter),
 		maxDisconnectDuration: namespace.server.connectionStateRecovery.MaxDisconnectionDuration,
 		yeaster:               yeast.New(),
 	}
@@ -62,7 +51,7 @@ func (a *sessionAwareAdapter) cleaner() {
 
 		for i := len(a.packets) - 1; i >= 0; i-- {
 			packet := a.packets[i]
-			if packet.hasExpired(a.maxDisconnectDuration) {
+			if packet.HasExpired(a.maxDisconnectDuration) {
 				a.packets = append(a.packets[:i], a.packets[i+1:]...)
 				break
 			}
@@ -105,17 +94,17 @@ func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string
 		return nil
 	}
 
-	var missedPackets [][][]byte
+	var missedPackets []*PersistedPacket
 	for i := index + 1; i < len(a.packets); i++ {
 		packet := a.packets[i]
-		if shouldIncludePacket(session.SessionToPersist.Rooms, packet.opts) {
-			missedPackets = append(missedPackets, packet.Buffers)
+		if shouldIncludePacket(session.SessionToPersist.Rooms, packet.Opts) {
+			missedPackets = append(missedPackets, packet)
 		}
 	}
 
 	// Return a copy to prevent race conditions.
 	sp := session.SessionToPersist
-	sp.Data = missedPackets
+	sp.Packets = missedPackets
 	return &sp
 }
 
@@ -140,31 +129,22 @@ func shouldIncludePacket(sessionRooms []Room, opts *BroadcastOptions) bool {
 	return included && notExcluded
 }
 
-func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions) {
+func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions) {
 	isEventPacket := header.Type == parser.PacketTypeEvent
 	withoutAcknowledgement := header.ID == nil
 	if isEventPacket && withoutAcknowledgement {
 		a.mu.Lock()
 		id := a.yeaster.Yeast()
+		v = append(v, id)
 
-		// TODO: Check if this works
-		buffers = append(buffers, []byte(id))
-		header.Attachments += 1
-		buffers[0] = modifyAttachmentNumber(buffers[0])
-
-		packet := &persistedPacket{
+		packet := &PersistedPacket{
 			ID:        id,
-			opts:      opts,
+			Opts:      opts,
 			EmittedAt: time.Now(),
-			Buffers:   buffers,
+			Data:      v,
 		}
 		a.packets = append(a.packets, packet)
 		a.mu.Unlock()
 	}
-	a.inMemoryAdapter.Broadcast(header, buffers, opts)
-}
-
-func modifyAttachmentNumber(buf []byte) []byte {
-	// TODO: Implement this.
-	return nil
+	a.inMemoryAdapter.Broadcast(header, v, opts)
 }
