@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/parser"
+	"github.com/tomruk/yeast"
 )
 
 type sessionWithTimestamp struct {
@@ -31,7 +32,7 @@ type sessionAwareAdapter struct {
 	*inMemoryAdapter
 
 	maxDisconnectDuration time.Duration
-	yeaster               *yeaster
+	yeaster               *yeast.Yeaster
 
 	sessions map[PrivateSessionID]*sessionWithTimestamp
 	packets  []*persistedPacket
@@ -42,7 +43,7 @@ func newSessionAwareAdapter(namespace *Namespace, socketStore *NamespaceSocketSt
 	s := &sessionAwareAdapter{
 		inMemoryAdapter:       newInMemoryAdapter(namespace, socketStore).(*inMemoryAdapter),
 		maxDisconnectDuration: namespace.server.connectionStateRecovery.MaxDisconnectionDuration,
-		yeaster:               newYeaster(),
+		yeaster:               yeast.New(),
 	}
 	go s.cleaner()
 	return s
@@ -143,7 +144,7 @@ func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, buffers [][
 	withoutAcknowledgement := header.ID == nil
 	if isEventPacket && withoutAcknowledgement {
 		a.mu.Lock()
-		id := a.yeaster.yeast()
+		id := a.yeaster.Yeast()
 		// TODO: modify buffers
 		packet := &persistedPacket{
 			ID:        id,

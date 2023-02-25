@@ -8,7 +8,8 @@ require (
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/gin-gonic/gin v1.7.1
 	github.com/goccy/go-json v0.10.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
+	github.com/tomruk/yeast v0.0.0-20230225201012-b18b0b9bd07a
 	nhooyr.io/websocket v1.8.7
 )
 
