@@ -130,7 +130,7 @@ func (a *inMemoryAdapter) Sockets(rooms mapset.Set[Room]) (sids mapset.Set[Socke
 	opts.Rooms = rooms
 
 	a.apply(opts, func(socket AdapterSocket) {
-		sids.Add(SocketID(socket.ID()))
+		sids.Add(socket.ID())
 	})
 	return
 }

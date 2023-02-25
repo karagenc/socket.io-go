@@ -188,7 +188,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	}
 
 	// Add socket ID as room. Socket ID is the default room a socket joins to.
-	n.adapter.AddAll(SocketID(socket.ID()), []Room{Room(socket.ID())})
+	n.adapter.AddAll(socket.ID(), []Room{Room(socket.ID())})
 
 	n.sockets.Set(socket)
 	n.onSocket(socket)

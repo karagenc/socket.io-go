@@ -140,7 +140,7 @@ func (b *broadcastOperator) FetchSockets() (sids mapset.Set[SocketID]) {
 	sids = mapset.NewSet[SocketID]()
 
 	for _, socket := range b.adapter.FetchSockets(opts) {
-		sids.Add(SocketID(socket.ID()))
+		sids.Add(socket.ID())
 	}
 	return
 }

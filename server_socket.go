@@ -160,7 +160,7 @@ func (s *serverSocket) Join(room ...Room) {
 }
 
 func (s *serverSocket) Leave(room Room) {
-	s.adapter.Delete(SocketID(s.ID()), room)
+	s.adapter.Delete(s.ID(), room)
 }
 
 type sidInfo struct {
