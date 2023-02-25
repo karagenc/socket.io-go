@@ -151,10 +151,25 @@ func (n *Namespace) DisconnectSockets(close bool) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).DisconnectSockets(close)
 }
 
+type authRecoveryFields struct {
+	SessionID string
+	Offset    string
+}
+
 func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, error) {
 	handshake := &Handshake{
 		Time: time.Now(),
 		Auth: auth,
+	}
+
+	var authRecoveryFields authRecoveryFields
+	err := json.Unmarshal(auth, &authRecoveryFields)
+	if err != nil {
+		return nil, err
+	}
+
+	if n.server.connectionStateRecovery.Enabled {
+		// TODO: adapter restore session etc.
 	}
 
 	socket, err := newServerSocket(n.server, c, n, c.parser)

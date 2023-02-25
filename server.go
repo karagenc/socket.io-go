@@ -32,6 +32,25 @@ type ServerConfig struct {
 	//
 	// Default: false
 	AcceptAnyNamespace bool
+
+	ServerConnectionStateRecovery ServerConnectionStateRecovery
+}
+
+type ServerConnectionStateRecovery struct {
+	// Enable connection state recovery
+	//
+	// Default: false
+	Enabled bool
+
+	// The backup duration of the sessions and the packets
+	//
+	// Default: 2 minutes
+	MaxDisconnectionDuration time.Duration
+
+	// Whether to execute middlewares upon successful connection state recovery.
+	//
+	// Default: false
+	UseMiddlewares bool
 }
 
 type Server struct {
@@ -43,6 +62,8 @@ type Server struct {
 
 	connectTimeout     time.Duration
 	acceptAnyNamespace bool
+
+	connectionStateRecovery ServerConnectionStateRecovery
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -51,10 +72,11 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	server := &Server{
-		parserCreator:      config.ParserCreator,
-		adapterCreator:     config.AdapterCreator,
-		namespaces:         newNamespaceStore(),
-		acceptAnyNamespace: config.AcceptAnyNamespace,
+		parserCreator:           config.ParserCreator,
+		adapterCreator:          config.AdapterCreator,
+		namespaces:              newNamespaceStore(),
+		acceptAnyNamespace:      config.AcceptAnyNamespace,
+		connectionStateRecovery: config.ServerConnectionStateRecovery,
 	}
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
