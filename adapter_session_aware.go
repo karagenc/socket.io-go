@@ -105,17 +105,18 @@ func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string
 		return nil
 	}
 
-	// TODO: Implement this
-	/* var missedPackets []byte
+	var missedPackets [][][]byte
 	for i := index + 1; i < len(a.packets); i++ {
 		packet := a.packets[i]
 		if shouldIncludePacket(session.SessionToPersist.Rooms, packet.opts) {
-
+			missedPackets = append(missedPackets, packet.Buffers)
 		}
-	} */
+	}
 
 	// Return a copy to prevent race conditions.
-	return &*&session.SessionToPersist
+	sp := session.SessionToPersist
+	sp.Data = missedPackets
+	return &sp
 }
 
 func shouldIncludePacket(sessionRooms []Room, opts *BroadcastOptions) bool {
@@ -145,7 +146,12 @@ func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, buffers [][
 	if isEventPacket && withoutAcknowledgement {
 		a.mu.Lock()
 		id := a.yeaster.Yeast()
-		// TODO: modify buffers
+
+		// TODO: Check if this works
+		buffers = append(buffers, []byte(id))
+		header.Attachments += 1
+		buffers[0] = modifyAttachmentNumber(buffers[0])
+
 		packet := &persistedPacket{
 			ID:        id,
 			opts:      opts,
@@ -156,4 +162,9 @@ func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, buffers [][
 		a.mu.Unlock()
 	}
 	a.inMemoryAdapter.Broadcast(header, buffers, opts)
+}
+
+func modifyAttachmentNumber(buf []byte) []byte {
+	// TODO: Implement this.
+	return nil
 }

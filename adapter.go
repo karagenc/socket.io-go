@@ -21,10 +21,8 @@ type Adapter interface {
 	Delete(sid SocketID, room Room)
 	DeleteAll(sid SocketID)
 
-	// header must not be modified.
 	Broadcast(header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions)
 
-	// header must not be modified.
 	BroadcastWithAck(packetID string, header *parser.PacketHeader, buffers [][]byte, opts *BroadcastOptions, ackHandler *ackHandler)
 
 	// The return value 'sids' is a thread safe mapset.Set.
@@ -57,7 +55,10 @@ type AdapterSocket interface {
 type PrivateSessionID string
 
 type SessionToPersist struct {
-	SID   SocketID
-	PID   PrivateSessionID
+	SID SocketID
+	PID PrivateSessionID
+
 	Rooms []Room
+
+	Data [][][]byte
 }
