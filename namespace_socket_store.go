@@ -3,17 +3,17 @@ package sio
 import "sync"
 
 type NamespaceSocketStore struct {
-	sockets map[string]*serverSocket
+	sockets map[SocketID]*serverSocket
 	mu      sync.Mutex
 }
 
 func newNamespaceSocketStore() *NamespaceSocketStore {
 	return &NamespaceSocketStore{
-		sockets: make(map[string]*serverSocket),
+		sockets: make(map[SocketID]*serverSocket),
 	}
 }
 
-func (s *NamespaceSocketStore) Get(sid string) (so *serverSocket, ok bool) {
+func (s *NamespaceSocketStore) Get(sid SocketID) (so *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	so, ok = s.sockets[sid]
@@ -21,7 +21,7 @@ func (s *NamespaceSocketStore) Get(sid string) (so *serverSocket, ok bool) {
 }
 
 // Send Engine.IO packets to a specific socket.
-func (s *NamespaceSocketStore) SendBuffers(sid string, buffers [][]byte) (ok bool) {
+func (s *NamespaceSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
 	socket, ok := s.Get(sid)
 	if !ok {
 		return false
@@ -30,7 +30,7 @@ func (s *NamespaceSocketStore) SendBuffers(sid string, buffers [][]byte) (ok boo
 	return true
 }
 
-func (s *NamespaceSocketStore) SetAck(sid string, ackHandler *ackHandler) (ok bool) {
+func (s *NamespaceSocketStore) SetAck(sid SocketID, ackHandler *ackHandler) (ok bool) {
 	socket, ok := s.Get(sid)
 	if !ok {
 		return false
@@ -58,7 +58,7 @@ func (s *NamespaceSocketStore) Set(so *serverSocket) {
 	s.sockets[so.ID()] = so
 }
 
-func (s *NamespaceSocketStore) Remove(sid string) {
+func (s *NamespaceSocketStore) Remove(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)

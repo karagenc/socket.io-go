@@ -2,7 +2,7 @@ package sio
 
 type Socket interface {
 	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.
-	ID() string
+	ID() SocketID
 
 	// Register an event handler.
 	On(eventName string, handler interface{})

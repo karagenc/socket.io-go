@@ -3,17 +3,17 @@ package sio
 import "sync"
 
 type serverSocketStore struct {
-	sockets map[string]*serverSocket
+	sockets map[SocketID]*serverSocket
 	mu      sync.Mutex
 }
 
 func newServerSocketStore() *serverSocketStore {
 	return &serverSocketStore{
-		sockets: make(map[string]*serverSocket),
+		sockets: make(map[SocketID]*serverSocket),
 	}
 }
 
-func (s *serverSocketStore) Get(sid string) (socket *serverSocket, ok bool) {
+func (s *serverSocketStore) Get(sid SocketID) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	socket, ok = s.sockets[sid]
@@ -43,7 +43,7 @@ func (s *serverSocketStore) GetAndRemoveAll() (sockets []*serverSocket) {
 		sockets[i] = socket
 		i++
 	}
-	s.sockets = make(map[string]*serverSocket)
+	s.sockets = make(map[SocketID]*serverSocket)
 	return
 }
 
@@ -53,7 +53,7 @@ func (s *serverSocketStore) Set(socket *serverSocket) {
 	s.sockets[socket.ID()] = socket
 }
 
-func (s *serverSocketStore) Remove(sid string) {
+func (s *serverSocketStore) Remove(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)

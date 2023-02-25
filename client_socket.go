@@ -43,12 +43,12 @@ func newClientSocket(client *Client, namespace string, parser parser.Parser) *cl
 	}
 }
 
-func (s *clientSocket) ID() string {
-	id, _ := s.id.Load().(string)
+func (s *clientSocket) ID() SocketID {
+	id, _ := s.id.Load().(SocketID)
 	return id
 }
 
-func (s *clientSocket) setID(id string) {
+func (s *clientSocket) setID(id SocketID) {
 	s.id.Store(id)
 }
 
@@ -178,7 +178,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 		return
 	}
 
-	s.setID(v.SID)
+	s.setID(SocketID(v.SID))
 
 	s.connectedMu.Lock()
 	s.connected = true

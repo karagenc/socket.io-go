@@ -201,7 +201,7 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Ada
 				if ids.Contains(sid) || exceptSids.Contains(sid) {
 					return false
 				}
-				socket, ok := a.sockets.Get(string(sid))
+				socket, ok := a.sockets.Get(sid)
 				if ok {
 					callback(socket)
 					ids.Add(sid)
@@ -215,7 +215,7 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Ada
 			if exceptSids.Contains(sid) {
 				continue
 			}
-			socket, ok := a.sockets.Get(string(sid))
+			socket, ok := a.sockets.Get(sid)
 			if ok {
 				callback(socket)
 			}

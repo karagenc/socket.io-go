@@ -5,16 +5,19 @@ import (
 	"reflect"
 	"sync"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
 type serverSocket struct {
-	id string
+	id  SocketID
+	pid PrivateSessionID
 
-	server *Server
-	conn   *serverConn
-	nsp    *Namespace
+	server  *Server
+	conn    *serverConn
+	nsp     *Namespace
+	adapter Adapter
 
 	emitter *eventEmitter
 	parser  parser.Parser
@@ -34,17 +37,19 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 	if err != nil {
 		return nil, err
 	}
+	adapter := nsp.Adapter()
 
 	s := &serverSocket{
-		id:      id,
+		id:      SocketID(id),
 		server:  server,
 		conn:    c,
 		nsp:     nsp,
+		adapter: adapter,
 		parser:  parser,
 		emitter: newEventEmitter(),
 
 		join: func(room ...Room) {
-			nsp.Adapter().AddAll(SocketID(id), room)
+			adapter.AddAll(SocketID(id), room)
 		},
 	}
 	return s, nil
@@ -155,7 +160,7 @@ func (s *serverSocket) Join(room ...Room) {
 }
 
 func (s *serverSocket) Leave(room Room) {
-	s.nsp.Adapter().Delete(SocketID(s.ID()), room)
+	s.adapter.Delete(SocketID(s.ID()), room)
 }
 
 type sidInfo struct {
@@ -169,7 +174,7 @@ func (s *serverSocket) onConnect() {
 	}
 
 	c := &sidInfo{
-		SID: s.ID(),
+		SID: string(s.ID()),
 	}
 
 	buffers, err := s.parser.Encode(header, c)
@@ -219,9 +224,31 @@ func (s *serverSocket) onError(err error) {
 	}()
 }
 
+// TODO: Check these
+var recoverableDisconnectReasons = mapset.NewThreadUnsafeSet(
+	"transport error",
+	"transport close",
+	"forced close",
+	"ping timeout",
+	"server shutting down",
+	"forced server close",
+)
+
 func (s *serverSocket) onClose(reason string) {
 	s.closeOnce.Do(func() {
 		s.emitReserved("disconnecting", reason)
+
+		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
+			rooms, ok := s.adapter.SocketRooms(s.ID())
+			if !ok {
+				rooms = mapset.NewThreadUnsafeSet[Room]()
+			}
+			s.adapter.PersistSession(&SessionToPersist{
+				SID:   s.ID(),
+				PID:   s.pid,
+				Rooms: rooms.ToSlice(),
+			})
+		}
 
 		s.joinMu.Lock()
 		s.join = func(room ...Room) {}
@@ -235,10 +262,10 @@ func (s *serverSocket) onClose(reason string) {
 }
 
 func (s *serverSocket) leaveAll() {
-	s.nsp.adapter.DeleteAll(SocketID(s.ID()))
+	s.adapter.DeleteAll(s.ID())
 }
 
-func (s *serverSocket) ID() string {
+func (s *serverSocket) ID() SocketID {
 	return s.id
 }
 
