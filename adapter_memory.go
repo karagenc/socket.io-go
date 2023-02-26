@@ -242,6 +242,8 @@ func (a *inMemoryAdapter) computeExceptSids(exceptRooms mapset.Set[Room]) (excep
 	return
 }
 
+func (a *inMemoryAdapter) ServerSideEmit(header *parser.PacketHeader, v []interface{}) {}
+
 func (a *inMemoryAdapter) PersistSession(session *SessionToPersist) {}
 
 func (a *inMemoryAdapter) RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist {

@@ -38,6 +38,8 @@ type Adapter interface {
 	DelSockets(opts *BroadcastOptions, rooms ...Room)
 	DisconnectSockets(opts *BroadcastOptions, close bool)
 
+	ServerSideEmit(header *parser.PacketHeader, v []interface{})
+
 	// Save the client session in order to restore it upon reconnection.
 	PersistSession(session *SessionToPersist)
 

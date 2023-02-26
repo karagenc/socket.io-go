@@ -91,6 +91,26 @@ func (n *Namespace) Emit(eventName string, v ...interface{}) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
 }
 
+// Emits an event to all connected clients in the given namespace.
+func (n *Namespace) ServerSideEmit(eventName string, _v ...interface{}) {
+	header := &parser.PacketHeader{
+		Type:      parser.PacketTypeEvent,
+		Namespace: n.Name(),
+	}
+
+	if IsEventReservedForServer(eventName) {
+		panic("sio: broadcastOperator.Emit: attempted to emit to a reserved event")
+	}
+
+	// One extra space for eventName,
+	// the other for ID (see the Broadcast method of sessionAwareAdapter)
+	v := make([]interface{}, 0, len(_v)+1)
+	v = append(v, eventName)
+	v = append(v, v...)
+
+	n.adapter.ServerSideEmit(header, v)
+}
+
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have joined the given room.
 //
