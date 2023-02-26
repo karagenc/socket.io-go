@@ -86,7 +86,7 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 
 	if header.Type == parser.PacketTypeConnect && !ok {
 		c.connect(header, decode)
-	} else if ok {
+	} else if ok && header.Type != parser.PacketTypeConnect && header.Type != parser.PacketTypeConnectError {
 		err := socket.onPacket(header, eventName, decode)
 		if err != nil {
 			c.onFatalError(err)
