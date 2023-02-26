@@ -24,7 +24,6 @@ type serverSocket struct {
 	parser  parser.Parser
 
 	acks   map[uint64]*ackHandler
-	ackID  uint64
 	acksMu sync.Mutex
 
 	join   func(room ...Room)
@@ -339,10 +338,9 @@ func (s *serverSocket) ID() SocketID {
 }
 
 func (s *serverSocket) setAck(handler *ackHandler) (id uint64) {
+	id = s.nsp.nextAckID()
 	s.acksMu.Lock()
-	id = s.ackID
 	s.acks[id] = handler
-	s.ackID++
 	s.acksMu.Unlock()
 	return
 }

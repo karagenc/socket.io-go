@@ -23,6 +23,9 @@ type Namespace struct {
 	adapter Adapter
 	parser  parser.Parser
 
+	ackID uint64
+	ackMu sync.Mutex
+
 	emitter *eventEmitter
 }
 
@@ -249,4 +252,12 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 
 func (n *Namespace) remove(socket *serverSocket) {
 	n.sockets.Remove(socket.ID())
+}
+
+func (n *Namespace) nextAckID() uint64 {
+	n.ackMu.Lock()
+	defer n.ackMu.Unlock()
+	id := n.ackID
+	n.ackID++
+	return id
 }
