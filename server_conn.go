@@ -82,22 +82,17 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 	if header.Namespace == "" {
 		header.Namespace = "/"
 	}
+	socket, ok := c.sockets.GetByNsp(header.Namespace)
 
-	if header.Type == parser.PacketTypeConnect {
+	if header.Type == parser.PacketTypeConnect && !ok {
 		c.connect(header, decode)
-	} else {
-		sockets := c.sockets.GetAll()
-		for _, socket := range sockets {
-			if socket.nsp.Name() == header.Namespace {
-				err := socket.onPacket(header, eventName, decode)
-				if err != nil {
-					c.onFatalError(err)
-				}
-				return
-			}
+	} else if ok {
+		err := socket.onPacket(header, eventName, decode)
+		if err != nil {
+			c.onFatalError(err)
 		}
-
-		c.onFatalError(wrapInternalError(fmt.Errorf("socket not found")))
+	} else {
+		c.Close()
 	}
 }
 
