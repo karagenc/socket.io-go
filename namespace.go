@@ -157,24 +157,37 @@ type authRecoveryFields struct {
 }
 
 func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, error) {
-	handshake := &Handshake{
-		Time: time.Now(),
-		Auth: auth,
-	}
+	var (
+		handshake = &Handshake{
+			Time: time.Now(),
+			Auth: auth,
+		}
+		authRecoveryFields authRecoveryFields
+		socket             *serverSocket
+	)
 
-	var authRecoveryFields authRecoveryFields
 	err := json.Unmarshal(auth, &authRecoveryFields)
 	if err != nil {
 		return nil, err
 	}
 
 	if n.server.connectionStateRecovery.Enabled {
-		// TODO: adapter restore session etc.
+		session := n.adapter.RestoreSession(PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
+		if session != nil {
+			socket, err = newServerSocket(n.server, c, n, c.parser, session)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	socket, err := newServerSocket(n.server, c, n, c.parser)
-	if err != nil {
-		return nil, err
+	// If connection state recovery is disabled
+	// or for some reason socket couldn't be retrieved
+	if socket == nil {
+		socket, err = newServerSocket(n.server, c, n, c.parser, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	n.middlewareFuncsMu.RLock()

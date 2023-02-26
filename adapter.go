@@ -61,7 +61,7 @@ type SessionToPersist struct {
 
 	Rooms []Room
 
-	Packets []*PersistedPacket
+	MissedPackets []*PersistedPacket
 }
 
 type PersistedPacket struct {

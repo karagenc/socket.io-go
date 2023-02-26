@@ -11,8 +11,9 @@ import (
 )
 
 type serverSocket struct {
-	id  SocketID
-	pid PrivateSessionID
+	id        SocketID
+	pid       PrivateSessionID
+	recovered bool
 
 	server  *Server
 	conn    *serverConn
@@ -32,25 +33,49 @@ type serverSocket struct {
 	closeOnce sync.Once
 }
 
-func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser) (*serverSocket, error) {
-	id, err := eio.GenerateBase64ID(eio.Base64IDSize)
-	if err != nil {
-		return nil, err
-	}
+// previousSession can be nil
+func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
 	adapter := nsp.Adapter()
-
 	s := &serverSocket{
-		id:      SocketID(id),
 		server:  server,
 		conn:    c,
 		nsp:     nsp,
 		adapter: adapter,
 		parser:  parser,
 		emitter: newEventEmitter(),
+	}
 
-		join: func(room ...Room) {
-			adapter.AddAll(SocketID(id), room)
-		},
+	s.join = func(room ...Room) {
+		adapter.AddAll(s.ID(), room)
+	}
+
+	if previousSession != nil {
+		s.id = previousSession.SID
+		s.pid = previousSession.PID
+		s.recovered = true
+		s.Join(previousSession.Rooms...)
+		for _, missedPacket := range previousSession.MissedPackets {
+			buffers, err := s.parser.Encode(missedPacket.Header, missedPacket.Data)
+			if err != nil {
+				return nil, err
+			}
+			s.conn.sendBuffers(buffers...)
+		}
+	} else {
+		id, err := eio.GenerateBase64ID(eio.Base64IDSize)
+		if err != nil {
+			return nil, err
+		}
+		s.id = SocketID(id)
+		s.recovered = false
+
+		if server.connectionStateRecovery.Enabled {
+			id, err := eio.GenerateBase64ID(eio.Base64IDSize)
+			if err != nil {
+				return nil, err
+			}
+			s.pid = PrivateSessionID(id)
+		}
 	}
 	return s, nil
 }

@@ -104,7 +104,7 @@ func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string
 
 	// Return a copy to prevent race conditions.
 	sp := session.SessionToPersist
-	sp.Packets = missedPackets
+	sp.MissedPackets = missedPackets
 	return &sp
 }
 
