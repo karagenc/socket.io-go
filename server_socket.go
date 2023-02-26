@@ -231,7 +231,8 @@ type sidInfo struct {
 	PID string `json:"pid"`
 }
 
-func (s *serverSocket) onConnect() {
+func (s *serverSocket) onConnect() error {
+	// Socket ID is the default room a socket joins to.
 	s.Join(Room(s.ID()))
 
 	header := &parser.PacketHeader{
@@ -246,10 +247,11 @@ func (s *serverSocket) onConnect() {
 
 	buffers, err := s.parser.Encode(header, c)
 	if err != nil {
-		panic(wrapInternalError(err))
+		return wrapInternalError(err)
 	}
 
 	s.conn.sendBuffers(buffers...)
+	return nil
 }
 
 // Convenience method for emitting events to the user.

@@ -186,31 +186,42 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 		}
 	}
 
+	if n.server.connectionStateRecovery.Enabled && !n.server.connectionStateRecovery.UseMiddlewares && socket.Recovered() {
+		return socket, n.doConnect(socket)
+	}
+
+	err = n.runMiddlewares(socket, handshake)
+	if err != nil {
+		return nil, err
+	}
+
+	return socket, n.doConnect(socket)
+}
+
+func (n *Namespace) runMiddlewares(socket *serverSocket, handshake *Handshake) error {
 	n.middlewareFuncsMu.RLock()
 	defer n.middlewareFuncsMu.RUnlock()
 
 	for _, f := range n.middlewareFuncs {
 		err := f(socket, handshake)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-
-	// Add socket ID as room. Socket ID is the default room a socket joins to.
-	n.adapter.AddAll(socket.ID(), []Room{Room(socket.ID())})
-
-	n.sockets.Set(socket)
-	n.onSocket(socket)
-
-	return socket, nil
+	return nil
 }
 
-func (n *Namespace) onSocket(socket ServerSocket) {
+func (n *Namespace) doConnect(socket *serverSocket) error {
+	n.sockets.Set(socket)
+
 	// It is paramount that the internal `onconnect` logic
 	// fires before user-set events to prevent state order
 	// violations (such as a disconnection before the connection
 	// logic is complete)
-	socket.(*serverSocket).onConnect()
+	err := socket.onConnect()
+	if err != nil {
+		return err
+	}
 
 	connectHandlers := n.emitter.GetHandlers("connect")
 	connectionHandlers := n.emitter.GetHandlers("connection")
@@ -233,6 +244,7 @@ func (n *Namespace) onSocket(socket ServerSocket) {
 			callHandler(handler)
 		}
 	}()
+	return nil
 }
 
 func (n *Namespace) remove(socket *serverSocket) {
