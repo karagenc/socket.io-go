@@ -3,20 +3,29 @@ package sio
 import "sync"
 
 type serverSocketStore struct {
-	sockets map[SocketID]*serverSocket
-	mu      sync.Mutex
+	socketsByID        map[SocketID]*serverSocket
+	socketsByNamespace map[string]*serverSocket
+	mu                 sync.Mutex
 }
 
 func newServerSocketStore() *serverSocketStore {
 	return &serverSocketStore{
-		sockets: make(map[SocketID]*serverSocket),
+		socketsByID:        make(map[SocketID]*serverSocket),
+		socketsByNamespace: make(map[string]*serverSocket),
 	}
 }
 
-func (s *serverSocketStore) Get(sid SocketID) (socket *serverSocket, ok bool) {
+func (s *serverSocketStore) GetByID(sid SocketID) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	socket, ok = s.sockets[sid]
+	socket, ok = s.socketsByID[sid]
+	return
+}
+
+func (s *serverSocketStore) GetByNsp(nsp string) (socket *serverSocket, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	socket, ok = s.socketsByNamespace[nsp]
 	return
 }
 
@@ -24,9 +33,9 @@ func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sockets = make([]*serverSocket, len(s.sockets))
+	sockets = make([]*serverSocket, len(s.socketsByID))
 	i := 0
-	for _, socket := range s.sockets {
+	for _, socket := range s.socketsByID {
 		sockets[i] = socket
 		i++
 	}
@@ -37,24 +46,30 @@ func (s *serverSocketStore) GetAndRemoveAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sockets = make([]*serverSocket, len(s.sockets))
+	sockets = make([]*serverSocket, len(s.socketsByID))
 	i := 0
-	for _, socket := range s.sockets {
+	for _, socket := range s.socketsByID {
 		sockets[i] = socket
 		i++
 	}
-	s.sockets = make(map[SocketID]*serverSocket)
+	s.socketsByID = make(map[SocketID]*serverSocket)
+	s.socketsByNamespace = make(map[string]*serverSocket)
 	return
 }
 
 func (s *serverSocketStore) Set(socket *serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.sockets[socket.ID()] = socket
+	s.socketsByID[socket.ID()] = socket
+	s.socketsByNamespace[socket.nsp.Name()] = socket
 }
 
-func (s *serverSocketStore) Remove(sid SocketID) {
+func (s *serverSocketStore) RemoveByID(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.sockets, sid)
+	socket, ok := s.socketsByID[sid]
+	if ok {
+		delete(s.socketsByID, sid)
+		delete(s.socketsByNamespace, socket.nsp.Name())
+	}
 }

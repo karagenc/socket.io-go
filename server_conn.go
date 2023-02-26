@@ -213,7 +213,7 @@ func (c *serverConn) onClose(reason string, err error) {
 
 func (c *serverConn) Remove(socket *serverSocket) {
 	c.nsps.Remove(socket.Namespace().Name())
-	c.sockets.Remove(socket.ID())
+	c.sockets.RemoveByID(socket.ID())
 }
 
 func (c *serverConn) DisconnectAll() {
