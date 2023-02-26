@@ -108,9 +108,9 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	)
 
 	if c.server.acceptAnyNamespace {
-		nsp = c.nsps.GetOrCreate(header.Namespace, c.server, c.server.adapterCreator, c.server.parserCreator)
+		nsp = c.server.namespaces.GetOrCreate(header.Namespace, c.server, c.server.adapterCreator, c.server.parserCreator)
 	} else {
-		nsp, ok = c.nsps.Get(header.Namespace)
+		nsp, ok = c.server.namespaces.Get(header.Namespace)
 		if !ok {
 			c.connectError(fmt.Errorf("namespace '%s' was not created and AcceptAnyNamespace was not set", header.Namespace), header.Namespace)
 			return
