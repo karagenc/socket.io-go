@@ -88,7 +88,7 @@ func (b *broadcastOperator) Emit(eventName string, _v ...interface{}) {
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call To several times.
-func (b *broadcastOperator) To(room ...string) *broadcastOperator {
+func (b *broadcastOperator) To(room ...Room) *broadcastOperator {
 	n := *b
 	rooms := b.rooms.Clone()
 	for _, r := range room {
@@ -99,13 +99,13 @@ func (b *broadcastOperator) To(room ...string) *broadcastOperator {
 }
 
 // Alias of To(...)
-func (b *broadcastOperator) In(room ...string) *broadcastOperator {
+func (b *broadcastOperator) In(room ...Room) *broadcastOperator {
 	return b.To(room...)
 }
 
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
-func (b *broadcastOperator) Except(room ...string) *broadcastOperator {
+func (b *broadcastOperator) Except(room ...Room) *broadcastOperator {
 	n := *b
 	exceptRooms := b.exceptRooms.Clone()
 	for _, r := range room {

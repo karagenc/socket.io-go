@@ -188,6 +188,38 @@ func (s *serverSocket) Leave(room Room) {
 	s.adapter.Delete(s.ID(), room)
 }
 
+func (s *serverSocket) Rooms() mapset.Set[Room] {
+	rooms, ok := s.adapter.SocketRooms(s.ID())
+	if !ok {
+		return mapset.NewSet[Room]()
+	}
+	return rooms
+}
+
+func (s *serverSocket) To(room ...Room) *broadcastOperator {
+	return s.newBroadcastOperator().To(room...)
+}
+
+func (s *serverSocket) In(room ...Room) *broadcastOperator {
+	return s.To(room...)
+}
+
+func (s *serverSocket) Except(room ...Room) *broadcastOperator {
+	return s.newBroadcastOperator().Except(room...)
+}
+
+func (s *serverSocket) Local() *broadcastOperator {
+	return s.newBroadcastOperator().Local()
+}
+
+func (s *serverSocket) Broadcast() *broadcastOperator {
+	return s.newBroadcastOperator()
+}
+
+func (s *serverSocket) newBroadcastOperator() *broadcastOperator {
+	return newBroadcastOperator(s.nsp.Name(), s.adapter, s.parser).Except(Room(s.ID()))
+}
+
 type sidInfo struct {
 	SID string `json:"sid"`
 }

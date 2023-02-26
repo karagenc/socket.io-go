@@ -1,5 +1,7 @@
 package sio
 
+import mapset "github.com/deckarep/golang-set/v2"
+
 type Socket interface {
 	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.
 	ID() SocketID
@@ -37,8 +39,29 @@ type ServerSocket interface {
 	// Retrieves the Namespace this socket is connected to.
 	Namespace() *Namespace
 
+	// Join room(s)
 	Join(room ...Room)
+	// Leave a room
 	Leave(room Room)
+	// Get a set of all rooms socket was joined to.
+	Rooms() mapset.Set[Room]
+
+	// Sets a modifier for a subsequent event emission that the event
+	// will only be broadcast to clients that have joined the given room.
+	//
+	// To emit to multiple rooms, you can call To several times.
+	To(room ...Room) *broadcastOperator
+
+	// Alias of To(...)
+	In(room ...Room) *broadcastOperator
+
+	// Sets a modifier for a subsequent event emission that the event
+	// will only be broadcast to clients that have not joined the given rooms.
+	Except(room ...Room) *broadcastOperator
+
+	Local() *broadcastOperator
+
+	Broadcast() *broadcastOperator
 
 	// Disconnect from namespace.
 	//

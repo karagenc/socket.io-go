@@ -96,18 +96,18 @@ func (n *Namespace) Emit(eventName string, v ...interface{}) {
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call `To` several times.
-func (n *Namespace) To(room ...string) *broadcastOperator {
+func (n *Namespace) To(room ...Room) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).To(room...)
 }
 
 // Alias of To(...)
-func (n *Namespace) In(room ...string) *broadcastOperator {
+func (n *Namespace) In(room ...Room) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).In(room...)
 }
 
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
-func (n *Namespace) Except(room ...string) *broadcastOperator {
+func (n *Namespace) Except(room ...Room) *broadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Except(room...)
 }
 

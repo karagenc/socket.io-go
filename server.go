@@ -145,12 +145,12 @@ func (s *Server) Emit(evetName string, v ...interface{}) {
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call `To` several times.
-func (s *Server) To(room ...string) *broadcastOperator {
+func (s *Server) To(room ...Room) *broadcastOperator {
 	return s.Of("/").To(room...)
 }
 
 // Alias of: s.Of("/").In(...)
-func (s *Server) In(room ...string) *broadcastOperator {
+func (s *Server) In(room ...Room) *broadcastOperator {
 	return s.Of("/").In(room...)
 }
 
@@ -158,7 +158,7 @@ func (s *Server) In(room ...string) *broadcastOperator {
 //
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
-func (s *Server) Except(room ...string) *broadcastOperator {
+func (s *Server) Except(room ...Room) *broadcastOperator {
 	return s.Of("/").Except(room...)
 }
 
