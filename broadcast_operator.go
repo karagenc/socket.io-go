@@ -90,11 +90,10 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...interface{}) {
 // To emit to multiple rooms, you can call To several times.
 func (b *BroadcastOperator) To(room ...Room) *BroadcastOperator {
 	n := *b
-	rooms := b.rooms.Clone()
+	n.rooms = b.rooms.Clone()
 	for _, r := range room {
-		rooms.Add(Room(r))
+		n.rooms.Add(Room(r))
 	}
-	n.rooms = rooms
 	return &n
 }
 
@@ -107,11 +106,10 @@ func (b *BroadcastOperator) In(room ...Room) *BroadcastOperator {
 // will only be broadcast to clients that have not joined the given rooms.
 func (b *BroadcastOperator) Except(room ...Room) *BroadcastOperator {
 	n := *b
-	exceptRooms := b.exceptRooms.Clone()
+	n.exceptRooms = b.exceptRooms.Clone()
 	for _, r := range room {
 		n.exceptRooms.Add(Room(r))
 	}
-	n.exceptRooms = exceptRooms
 	return &n
 }
 
