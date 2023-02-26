@@ -39,6 +39,12 @@ type ServerSocket interface {
 	// Retrieves the Namespace this socket is connected to.
 	Namespace() *Namespace
 
+	// Whether the connection state was recovered after a
+	// temporary disconnection. In that case, any missed packets
+	// will be transmitted to the client, the data attribute
+	// and the rooms will be restored.
+	Recovered() bool
+
 	// Join room(s)
 	Join(room ...Room)
 	// Leave a room

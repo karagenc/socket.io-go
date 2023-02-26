@@ -80,6 +80,8 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 	return s, nil
 }
 
+func (s *serverSocket) Recovered() bool { return s.recovered }
+
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
