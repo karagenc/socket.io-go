@@ -221,7 +221,8 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 }
 
 func (s *clientSocket) onDisconnect() {
-	s.emitReserved("disconnect")
+	s.destroy()
+	s.onClose("io server disconnect")
 }
 
 func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
@@ -317,6 +318,14 @@ func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
 func (s *clientSocket) onError(err error) {
 	// In original socket.io, errors are handled on `Manager` (`Client` in this implementation).
 	s.client.onError(err)
+}
+
+func (s *clientSocket) destroy() {
+	s.client.destroy(s)
+}
+
+func (s *clientSocket) onClose(reason string) {
+	s.emitReserved("disconnect")
 }
 
 func (s *clientSocket) On(eventName string, handler interface{}) {

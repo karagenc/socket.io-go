@@ -105,7 +105,7 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 }
 
 func (s *serverSocket) onDisconnect() {
-	s.onClose("server namespace disconnect")
+	s.onClose("client namespace disconnect")
 }
 
 func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
@@ -224,9 +224,12 @@ func (s *serverSocket) newBroadcastOperator() *BroadcastOperator {
 
 type sidInfo struct {
 	SID string `json:"sid"`
+	PID string `json:"pid"`
 }
 
 func (s *serverSocket) onConnect() {
+	s.Join(Room(s.ID()))
+
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.nsp.Name(),
@@ -234,6 +237,7 @@ func (s *serverSocket) onConnect() {
 
 	c := &sidInfo{
 		SID: string(s.ID()),
+		PID: string(s.pid),
 	}
 
 	buffers, err := s.parser.Encode(header, c)

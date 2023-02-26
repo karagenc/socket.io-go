@@ -360,6 +360,10 @@ func (c *Client) onError(err error) {
 	}()
 }
 
+func (c *Client) destroy(socket *clientSocket) {
+	// TODO: Implement this.
+}
+
 func (c *Client) onClose(reason string, err error) {
 	c.emitReserved("close", reason, err)
 
