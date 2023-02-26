@@ -69,6 +69,16 @@ func (s *clientSocket) Connect() {
 	}
 }
 
+func (s *clientSocket) Disconnect() {
+	s.connectedMu.Lock()
+	if s.connected {
+		go s.sendControlPacket(parser.PacketTypeDisconnect)
+	}
+	s.connectedMu.Unlock()
+
+	s.client.onClose("io client disconnect", nil)
+}
+
 func (s *clientSocket) Client() *Client { return s.client }
 
 func (s *clientSocket) Auth() any { return s.auth.Get() }
@@ -78,16 +88,6 @@ func (s *clientSocket) SetAuth(v any) {
 	if err != nil {
 		panic(fmt.Errorf("sio: %w", err))
 	}
-}
-
-func (s *clientSocket) Disconnect() {
-	s.connectedMu.Lock()
-	if s.connected {
-		go s.sendControlPacket(parser.PacketTypeDisconnect)
-	}
-	s.connectedMu.Unlock()
-
-	s.client.onClose("io client disconnect", nil)
 }
 
 func (s *clientSocket) sendConnectPacket() {

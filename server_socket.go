@@ -27,6 +27,9 @@ type serverSocket struct {
 	ackID  uint64
 	acksMu sync.Mutex
 
+	middlewareFuncs   []MiddlewareFunction
+	middlewareFuncsMu sync.RWMutex
+
 	join   func(room ...Room)
 	joinMu sync.Mutex
 
@@ -80,7 +83,27 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 	return s, nil
 }
 
+func (s *serverSocket) Server() *Server { return s.server }
+
+func (s *serverSocket) Namespace() *Namespace { return s.nsp }
+
 func (s *serverSocket) Recovered() bool { return s.recovered }
+
+func (s *serverSocket) Use(f MiddlewareFunction) {
+	s.middlewareFuncsMu.Lock()
+	defer s.middlewareFuncsMu.Unlock()
+	s.middlewareFuncs = append(s.middlewareFuncs, f)
+}
+
+func (s *serverSocket) runMiddleware() error {
+	for _, f := range s.middlewareFuncs {
+		err := f(s, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
@@ -427,10 +450,6 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 
 	s.conn.sendBuffers(buffers...)
 }
-
-func (s *serverSocket) Server() *Server { return s.server }
-
-func (s *serverSocket) Namespace() *Namespace { return s.nsp }
 
 func (s *serverSocket) On(eventName string, handler interface{}) {
 	s.checkHandler(eventName, handler)

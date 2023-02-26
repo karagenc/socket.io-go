@@ -86,7 +86,11 @@ type ServerSocket interface {
 type ClientSocket interface {
 	Socket
 
+	// Connect the socket.
 	Connect()
+
+	// Disconnect the socket (a DISCONNECT packet will be sent).
+	Disconnect()
 
 	// Retrieves the underlying Client.
 	//
@@ -99,7 +103,4 @@ type ClientSocket interface {
 	// Get the authentication data that was set by `SetAuth`.
 	// As you might have guessed, returns nil if authentication data was not set before.
 	Auth() (v any)
-
-	// Disconnect the Socket (a DISCONNECT packet will be sent).
-	Disconnect()
 }
