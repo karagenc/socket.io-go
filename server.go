@@ -136,8 +136,8 @@ func (s *Server) OffAll() {
 	s.Of("/").OffAll()
 }
 
-func (s *Server) Emit(evetName string, v ...interface{}) {
-	s.Of("/").Emit(evetName, v...)
+func (s *Server) Emit(eventName string, v ...interface{}) {
+	s.Of("/").Emit(eventName, v...)
 }
 
 // Alias of: s.Of("/").To(...)
@@ -214,6 +214,11 @@ func (s *Server) SocketsLeave(room ...Room) {
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
 func (s *Server) DisconnectSockets(close bool) {
 	s.Of("/").DisconnectSockets(close)
+}
+
+// Sends a message to the other Socket.IO servers of the cluster.
+func (s *Server) ServerSideEmit(eventName string, v ...interface{}) {
+	s.Of("/").ServerSideEmit(eventName, v...)
 }
 
 func (s *Server) Run() error {

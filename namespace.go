@@ -91,7 +91,7 @@ func (n *Namespace) Emit(eventName string, v ...interface{}) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
 }
 
-// Emits an event to all connected clients in the given namespace.
+// Sends a message to the other Socket.IO servers of the cluster.
 func (n *Namespace) ServerSideEmit(eventName string, _v ...interface{}) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
