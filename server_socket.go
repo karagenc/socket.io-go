@@ -307,8 +307,8 @@ func (s *serverSocket) Emit(eventName string, v ...interface{}) {
 	s.sendDataPacket(parser.PacketTypeEvent, eventName, v...)
 }
 
-func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v ...interface{}) {
-	header := parser.PacketHeader{
+func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, _v ...interface{}) {
+	header := &parser.PacketHeader{
 		Type:      typ,
 		Namespace: s.nsp.Name(),
 	}
@@ -317,7 +317,11 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 		panic(fmt.Errorf("sio: Emit: attempted to emit a reserved event"))
 	}
 
-	v = append([]interface{}{eventName}, v...)
+	// One extra space for eventName,
+	// the other for ID (see the Broadcast method of sessionAwareAdapter)
+	v := make([]interface{}, 0, len(_v)+2)
+	v = append(v, eventName)
+	v = append(v, v...)
 
 	if len(v) > 0 {
 		f := v[len(v)-1]
@@ -330,13 +334,18 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 		}
 	}
 
-	buffers, err := s.parser.Encode(&header, &v)
-	if err != nil {
-		s.onError(wrapInternalError(err))
-		return
+	if s.server.connectionStateRecovery.Enabled {
+		opts := NewBroadcastOptions()
+		opts.Rooms.Add(Room(s.id))
+		s.adapter.Broadcast(header, v, opts)
+	} else {
+		buffers, err := s.parser.Encode(header, &v)
+		if err != nil {
+			s.onError(wrapInternalError(err))
+			return
+		}
+		s.conn.sendBuffers(buffers...)
 	}
-
-	s.conn.sendBuffers(buffers...)
 }
 
 func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...interface{}) {
