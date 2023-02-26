@@ -112,7 +112,7 @@ func (s *Server) Of(namespace string) *Namespace {
 }
 
 // Alias of: s.Of("/").Use(...)
-func (s *Server) Use(f MiddlewareFunction) {
+func (s *Server) Use(f NspMiddlewareFunc) {
 	s.Of("/").Use(f)
 }
 

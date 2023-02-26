@@ -17,7 +17,7 @@ type Namespace struct {
 
 	sockets *NamespaceSocketStore
 
-	middlewareFuncs   []MiddlewareFunction
+	middlewareFuncs   []NspMiddlewareFunc
 	middlewareFuncsMu sync.RWMutex
 
 	adapter Adapter
@@ -39,17 +39,13 @@ func newNamespace(name string, server *Server, adapterCreator AdapterCreator, pa
 	return nsp
 }
 
-func (n *Namespace) Name() string {
-	return n.name
-}
+func (n *Namespace) Name() string { return n.name }
 
-func (n *Namespace) Adapter() Adapter {
-	return n.adapter
-}
+func (n *Namespace) Adapter() Adapter { return n.adapter }
 
-type MiddlewareFunction func(socket ServerSocket, handshake *Handshake) error
+type NspMiddlewareFunc func(socket ServerSocket, handshake *Handshake) error
 
-func (n *Namespace) Use(f MiddlewareFunction) {
+func (n *Namespace) Use(f NspMiddlewareFunc) {
 	n.middlewareFuncsMu.Lock()
 	defer n.middlewareFuncsMu.Unlock()
 	n.middlewareFuncs = append(n.middlewareFuncs, f)
