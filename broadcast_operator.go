@@ -27,7 +27,7 @@ type BroadcastFlags struct {
 	Local bool
 }
 
-type broadcastOperator struct {
+type BroadcastOperator struct {
 	nsp         string
 	adapter     Adapter
 	parser      parser.Parser
@@ -36,8 +36,8 @@ type broadcastOperator struct {
 	flags       BroadcastFlags
 }
 
-func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *broadcastOperator {
-	return &broadcastOperator{
+func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *BroadcastOperator {
+	return &BroadcastOperator{
 		nsp:         nsp,
 		adapter:     adapter,
 		parser:      parser,
@@ -47,7 +47,7 @@ func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *br
 }
 
 // Emits an event to all choosen clients.
-func (b *broadcastOperator) Emit(eventName string, _v ...interface{}) {
+func (b *BroadcastOperator) Emit(eventName string, _v ...interface{}) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: b.nsp,
@@ -88,7 +88,7 @@ func (b *broadcastOperator) Emit(eventName string, _v ...interface{}) {
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call To several times.
-func (b *broadcastOperator) To(room ...Room) *broadcastOperator {
+func (b *BroadcastOperator) To(room ...Room) *BroadcastOperator {
 	n := *b
 	rooms := b.rooms.Clone()
 	for _, r := range room {
@@ -99,13 +99,13 @@ func (b *broadcastOperator) To(room ...Room) *broadcastOperator {
 }
 
 // Alias of To(...)
-func (b *broadcastOperator) In(room ...Room) *broadcastOperator {
+func (b *BroadcastOperator) In(room ...Room) *BroadcastOperator {
 	return b.To(room...)
 }
 
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
-func (b *broadcastOperator) Except(room ...Room) *broadcastOperator {
+func (b *BroadcastOperator) Except(room ...Room) *BroadcastOperator {
 	n := *b
 	exceptRooms := b.exceptRooms.Clone()
 	for _, r := range room {
@@ -116,7 +116,7 @@ func (b *broadcastOperator) Except(room ...Room) *broadcastOperator {
 }
 
 // Compression flag is unused at the moment, thus setting this will have no effect on compression.
-func (b *broadcastOperator) Compress(compress bool) *broadcastOperator {
+func (b *BroadcastOperator) Compress(compress bool) *BroadcastOperator {
 	n := *b
 	n.flags.Compress = compress
 	return &n
@@ -125,14 +125,14 @@ func (b *broadcastOperator) Compress(compress bool) *broadcastOperator {
 // Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
 //
 // See: https://socket.io/docs/v4/using-multiple-nodes
-func (b *broadcastOperator) Local() *broadcastOperator {
+func (b *BroadcastOperator) Local() *BroadcastOperator {
 	n := *b
 	n.flags.Local = true
 	return &n
 }
 
 // Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (b *broadcastOperator) FetchSockets() (sids mapset.Set[SocketID]) {
+func (b *BroadcastOperator) FetchSockets() (sids mapset.Set[SocketID]) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
@@ -146,7 +146,7 @@ func (b *broadcastOperator) FetchSockets() (sids mapset.Set[SocketID]) {
 }
 
 // Makes the matching socket instances join the specified rooms.
-func (b *broadcastOperator) SocketsJoin(room ...Room) {
+func (b *BroadcastOperator) SocketsJoin(room ...Room) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
@@ -156,7 +156,7 @@ func (b *broadcastOperator) SocketsJoin(room ...Room) {
 }
 
 // Makes the matching socket instances leave the specified rooms.
-func (b *broadcastOperator) SocketsLeave(room ...Room) {
+func (b *BroadcastOperator) SocketsLeave(room ...Room) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
@@ -168,7 +168,7 @@ func (b *broadcastOperator) SocketsLeave(room ...Room) {
 // Makes the matching socket instances disconnect from the namespace.
 //
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
-func (b *broadcastOperator) DisconnectSockets(close bool) {
+func (b *BroadcastOperator) DisconnectSockets(close bool) {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()

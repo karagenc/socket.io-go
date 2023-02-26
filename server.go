@@ -145,12 +145,12 @@ func (s *Server) Emit(evetName string, v ...interface{}) {
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call `To` several times.
-func (s *Server) To(room ...Room) *broadcastOperator {
+func (s *Server) To(room ...Room) *BroadcastOperator {
 	return s.Of("/").To(room...)
 }
 
 // Alias of: s.Of("/").In(...)
-func (s *Server) In(room ...Room) *broadcastOperator {
+func (s *Server) In(room ...Room) *BroadcastOperator {
 	return s.Of("/").In(room...)
 }
 
@@ -158,14 +158,14 @@ func (s *Server) In(room ...Room) *broadcastOperator {
 //
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
-func (s *Server) Except(room ...Room) *broadcastOperator {
+func (s *Server) Except(room ...Room) *BroadcastOperator {
 	return s.Of("/").Except(room...)
 }
 
 // Alias of: s.Of("/").Compress(...)
 //
 // Compression flag is unused at the moment, thus setting this will have no effect on compression.
-func (s *Server) Compress(compress bool) *broadcastOperator {
+func (s *Server) Compress(compress bool) *BroadcastOperator {
 	return s.Of("/").Compress(compress)
 }
 
@@ -174,7 +174,7 @@ func (s *Server) Compress(compress bool) *broadcastOperator {
 // Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
 //
 // See: https://socket.io/docs/v4/using-multiple-nodes
-func (s *Server) Local() *broadcastOperator {
+func (s *Server) Local() *BroadcastOperator {
 	return s.Of("/").Local()
 }
 

@@ -96,30 +96,30 @@ func (n *Namespace) Emit(eventName string, v ...interface{}) {
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call `To` several times.
-func (n *Namespace) To(room ...Room) *broadcastOperator {
+func (n *Namespace) To(room ...Room) *BroadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).To(room...)
 }
 
 // Alias of To(...)
-func (n *Namespace) In(room ...Room) *broadcastOperator {
+func (n *Namespace) In(room ...Room) *BroadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).In(room...)
 }
 
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
-func (n *Namespace) Except(room ...Room) *broadcastOperator {
+func (n *Namespace) Except(room ...Room) *BroadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Except(room...)
 }
 
 // Compression flag is unused at the moment, thus setting this will have no effect on compression.
-func (n *Namespace) Compress(compress bool) *broadcastOperator {
+func (n *Namespace) Compress(compress bool) *BroadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Compress(compress)
 }
 
 // Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
 //
 // See: https://socket.io/docs/v4/using-multiple-nodes
-func (n *Namespace) Local() *broadcastOperator {
+func (n *Namespace) Local() *BroadcastOperator {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Local()
 }
 

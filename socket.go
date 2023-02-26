@@ -50,18 +50,22 @@ type ServerSocket interface {
 	// will only be broadcast to clients that have joined the given room.
 	//
 	// To emit to multiple rooms, you can call To several times.
-	To(room ...Room) *broadcastOperator
+	To(room ...Room) *BroadcastOperator
 
 	// Alias of To(...)
-	In(room ...Room) *broadcastOperator
+	In(room ...Room) *BroadcastOperator
 
 	// Sets a modifier for a subsequent event emission that the event
 	// will only be broadcast to clients that have not joined the given rooms.
-	Except(room ...Room) *broadcastOperator
+	Except(room ...Room) *BroadcastOperator
 
-	Local() *broadcastOperator
+	// Sets a modifier for a subsequent event emission that
+	// the event data will only be broadcast to the current node.
+	Local() *BroadcastOperator
 
-	Broadcast() *broadcastOperator
+	// Sets a modifier for a subsequent event emission that
+	// the event data will only be broadcast to every sockets but the sender.
+	Broadcast() *BroadcastOperator
 
 	// Disconnect from namespace.
 	//

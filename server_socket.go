@@ -196,27 +196,27 @@ func (s *serverSocket) Rooms() mapset.Set[Room] {
 	return rooms
 }
 
-func (s *serverSocket) To(room ...Room) *broadcastOperator {
+func (s *serverSocket) To(room ...Room) *BroadcastOperator {
 	return s.newBroadcastOperator().To(room...)
 }
 
-func (s *serverSocket) In(room ...Room) *broadcastOperator {
+func (s *serverSocket) In(room ...Room) *BroadcastOperator {
 	return s.To(room...)
 }
 
-func (s *serverSocket) Except(room ...Room) *broadcastOperator {
+func (s *serverSocket) Except(room ...Room) *BroadcastOperator {
 	return s.newBroadcastOperator().Except(room...)
 }
 
-func (s *serverSocket) Local() *broadcastOperator {
+func (s *serverSocket) Local() *BroadcastOperator {
 	return s.newBroadcastOperator().Local()
 }
 
-func (s *serverSocket) Broadcast() *broadcastOperator {
+func (s *serverSocket) Broadcast() *BroadcastOperator {
 	return s.newBroadcastOperator()
 }
 
-func (s *serverSocket) newBroadcastOperator() *broadcastOperator {
+func (s *serverSocket) newBroadcastOperator() *BroadcastOperator {
 	return newBroadcastOperator(s.nsp.Name(), s.adapter, s.parser).Except(Room(s.ID()))
 }
 
