@@ -2,6 +2,7 @@ package sio
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
 	"time"
@@ -281,8 +282,11 @@ func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string
 
 func (c *Client) reconnect() {
 	attempts := c.backoff.Attempts()
+	didAttemptsReachedMaxAttempts := c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts
+	// Just in case
+	didAttemptsReachedMaxInt := c.reconnectionAttempts == 0 && attempts == math.MaxUint32
 
-	if c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts {
+	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
 		c.backoff.Reset()
 		c.emitReserved("reconnect_failed")
 		return
