@@ -25,8 +25,11 @@ type ClientConfig struct {
 	// Configuration for the Engine.IO.
 	EIO eio.ClientConfig
 
-	// Prevent the initial connection.
-	PreventAutoConnect bool
+	// The NewClient function automatically connects to the server.
+	//
+	// If you enable this, no connection will be made, and you will
+	// need to use the Connect method to make connection.
+	NoAutoConnection bool
 
 	// Should we disallow reconnections?
 	// Default: false (allow reconnections)
@@ -62,7 +65,7 @@ type Client struct {
 	parserMu sync.Mutex
 	parser   parser.Parser
 
-	preventAutoConnect   bool
+	noAutoConnection     bool
 	noReconnection       bool
 	reconnectionAttempts uint32
 	reconnectionDelay    time.Duration
@@ -103,7 +106,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 		url:       url,
 		eioConfig: config.EIO,
 
-		preventAutoConnect:   config.PreventAutoConnect,
+		noAutoConnection:     config.NoAutoConnection,
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
@@ -140,7 +143,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 	}
 	io.parser = parserCreator()
 
-	if !io.preventAutoConnect {
+	if !io.noAutoConnection {
 		go func() {
 			err := io.connect()
 			if err != nil && io.noReconnection == false {
@@ -163,7 +166,7 @@ func (c *Client) Socket(namespace string) ClientSocket {
 	if !ok {
 		socket = newClientSocket(c, namespace, c.parser)
 
-		if !c.preventAutoConnect {
+		if !c.noAutoConnection {
 			c.eioMu.RLock()
 			defer c.eioMu.RUnlock()
 			connected := c.eio != nil
