@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
@@ -172,8 +171,8 @@ func (n *Namespace) Sockets() []ServerSocket {
 	return n.sockets.GetAll()
 }
 
-// Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (n *Namespace) FetchSockets() (sids mapset.Set[SocketID]) {
+// Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
+func (n *Namespace) FetchSockets() []AdapterSocket {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).FetchSockets()
 }
 

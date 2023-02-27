@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	mapset "github.com/deckarep/golang-set/v2"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
@@ -188,8 +187,8 @@ func (s *Server) Sockets() []ServerSocket {
 
 // Alias of: s.Of("/").FetchSockets(...)
 //
-// Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (s *Server) FetchSockets(room ...string) (sids mapset.Set[SocketID]) {
+// Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
+func (s *Server) FetchSockets(room ...string) []AdapterSocket {
 	return s.Of("/").FetchSockets()
 }
 

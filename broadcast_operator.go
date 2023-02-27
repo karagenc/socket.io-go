@@ -129,18 +129,13 @@ func (b *BroadcastOperator) Local() *BroadcastOperator {
 	return &n
 }
 
-// Gets a list of socket IDs connected to this namespace (across all nodes if applicable).
-func (b *BroadcastOperator) FetchSockets() (sids mapset.Set[SocketID]) {
+// Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
+func (b *BroadcastOperator) FetchSockets() []AdapterSocket {
 	opts := NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
 	opts.Flags = b.flags
-	sids = mapset.NewSet[SocketID]()
-
-	for _, socket := range b.adapter.FetchSockets(opts) {
-		sids.Add(socket.ID())
-	}
-	return
+	return b.adapter.FetchSockets(opts)
 }
 
 // Makes the matching socket instances join the specified rooms.
