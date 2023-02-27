@@ -61,27 +61,19 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...interface{}) {
 	// the other for ID (see the Broadcast method of sessionAwareAdapter)
 	v := make([]interface{}, 0, len(_v)+2)
 	v = append(v, eventName)
-	v = append(v, v...)
+	v = append(v, _v...)
 
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
-
 	if rt.Kind() == reflect.Func {
 		panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
 	}
 
 	opts := NewBroadcastOptions()
+	opts.Rooms = b.rooms
+	opts.Except = b.exceptRooms
 	opts.Flags = b.flags
-
-	// Instead of s.conn.sendBuffers(buffers...)
-	// we use:
 	b.adapter.Broadcast(header, v, opts)
-
-	/* a := newAckHandler(func(msg string) {
-		// TODO: Implement this
-	})
-
-	b.adapter.BroadcastWithAck("TODO: packetID", header, buffers, opts, a) */
 }
 
 // Sets a modifier for a subsequent event emission that the event

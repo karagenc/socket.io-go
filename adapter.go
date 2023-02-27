@@ -25,8 +25,6 @@ type Adapter interface {
 
 	Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions)
 
-	BroadcastWithAck(packetID string, header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions, ackHandler *ackHandler)
-
 	// The return value 'sids' is a thread safe mapset.Set.
 	Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID])
 	// The return value 'rooms' is a thread safe mapset.Set.

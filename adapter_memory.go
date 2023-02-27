@@ -108,18 +108,6 @@ func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []interface{}
 	})
 }
 
-func (a *inMemoryAdapter) BroadcastWithAck(packetID string, header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions, ackHandler *ackHandler) {
-	buffers, err := a.parser.Encode(header, &v)
-	if err != nil {
-		panic(fmt.Errorf("sio: %w", err))
-	}
-
-	a.apply(opts, func(socket ServerSocket) {
-		a.sockets.SetAck(socket.ID(), ackHandler)
-		a.sockets.SendBuffers(socket.ID(), buffers)
-	})
-}
-
 // The return value 'sids' must be a thread safe mapset.Set.
 func (a *inMemoryAdapter) Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID]) {
 	a.mu.Lock()
