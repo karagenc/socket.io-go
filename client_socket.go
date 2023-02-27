@@ -378,23 +378,21 @@ func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v
 
 	v = append([]interface{}{eventName}, v...)
 
-	if len(v) > 0 {
-		f := v[len(v)-1]
-		rt := reflect.TypeOf(f)
+	f := v[len(v)-1]
+	rt := reflect.TypeOf(f)
 
-		if rt.Kind() == reflect.Func {
-			ackHandler := newAckHandler(f)
+	if rt.Kind() == reflect.Func {
+		ackHandler := newAckHandler(f)
 
-			s.acksMu.Lock()
-			id := s.ackID
-			s.acks[id] = ackHandler
-			s.ackID++
-			s.acksMu.Unlock()
+		s.acksMu.Lock()
+		id := s.ackID
+		s.acks[id] = ackHandler
+		s.ackID++
+		s.acksMu.Unlock()
 
-			header.ID = &id
+		header.ID = &id
 
-			v = v[:len(v)-1]
-		}
+		v = v[:len(v)-1]
 	}
 
 	buffers, err := s.parser.Encode(&header, &v)

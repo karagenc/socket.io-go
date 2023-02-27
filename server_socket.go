@@ -365,15 +365,13 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, _
 	v = append(v, eventName)
 	v = append(v, v...)
 
-	if len(v) > 0 {
-		f := v[len(v)-1]
-		rt := reflect.TypeOf(f)
+	f := v[len(v)-1]
+	rt := reflect.TypeOf(f)
 
-		if rt.Kind() == reflect.Func {
-			ackID := s.setAck(newAckHandler(f))
-			header.ID = &ackID
-			v = v[:len(v)-1]
-		}
+	if rt.Kind() == reflect.Func {
+		ackID := s.setAck(newAckHandler(f))
+		header.ID = &ackID
+		v = v[:len(v)-1]
 	}
 
 	if s.server.connectionStateRecovery.Enabled {
