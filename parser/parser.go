@@ -2,6 +2,8 @@ package parser
 
 import "reflect"
 
+const ProtocolVersion = 5
+
 type Creator func() Parser
 
 type Finish func(header *PacketHeader, eventName string, decode Decode)
