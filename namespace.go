@@ -111,6 +111,30 @@ func (n *Namespace) ServerSideEmit(eventName string, _v ...interface{}) {
 	n.adapter.ServerSideEmit(header, v)
 }
 
+func (n *Namespace) OnServerSideEmit(eventName string, _v ...interface{}) {
+	values := make([]reflect.Value, len(_v))
+	for i, v := range _v {
+		values[i] = reflect.ValueOf(v)
+	}
+	handlers := n.emitter.GetHandlers(eventName)
+
+	go func() {
+		for _, handler := range handlers {
+			if len(values) == len(handler.inputArgs) {
+				for i, v := range values {
+					if handler.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+						values[i] = v.Elem()
+					}
+				}
+			} else {
+				// TODO: Error?
+				return
+			}
+			handler.Call(values...)
+		}
+	}()
+}
+
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have joined the given room.
 //
