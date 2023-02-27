@@ -105,7 +105,7 @@ func (n *Namespace) ServerSideEmit(eventName string, _v ...interface{}) {
 	// the other for ID (see the Broadcast method of sessionAwareAdapter)
 	v := make([]interface{}, 0, len(_v)+1)
 	v = append(v, eventName)
-	v = append(v, v...)
+	v = append(v, _v...)
 
 	n.adapter.ServerSideEmit(header, v)
 }

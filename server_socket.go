@@ -363,7 +363,7 @@ func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, _
 	// the other for ID (see the Broadcast method of sessionAwareAdapter)
 	v := make([]interface{}, 0, len(_v)+2)
 	v = append(v, eventName)
-	v = append(v, v...)
+	v = append(v, _v...)
 
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
