@@ -10,10 +10,10 @@ import (
 type backoff struct {
 	min    time.Duration
 	max    time.Duration
-	factor int
-	jitter float32
+	factor int64
+	jitter float64
 
-	attempts   int
+	attempts   uint32
 	attemptsMu sync.Mutex
 }
 
@@ -26,11 +26,11 @@ func newBackoff(min time.Duration, max time.Duration, jitter float32) *backoff {
 		min:    min,
 		max:    max,
 		factor: 2,
-		jitter: jitter,
+		jitter: float64(jitter),
 	}
 }
 
-func (b *backoff) Attempts() int {
+func (b *backoff) Attempts() uint32 {
 	b.attemptsMu.Lock()
 	attempts := b.attempts
 	b.attemptsMu.Unlock()
@@ -45,9 +45,9 @@ func (b *backoff) Duration() time.Duration {
 
 	if b.jitter > 0 {
 		r := rand.Float64()
-		deviation := math.Floor(float64(r) * float64(b.jitter) * float64(ms))
+		deviation := math.Floor(r * b.jitter * float64(ms))
 
-		t := int64(math.Floor(float64(r*10))) & 1
+		t := int64(math.Floor(r*10)) & 1
 		if t == 0 {
 			ms = ms - int64(deviation)
 		} else {

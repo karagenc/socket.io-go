@@ -33,7 +33,7 @@ type ClientConfig struct {
 
 	// How many reconnection attempts should we try?
 	// Default: 0 (Infinite)
-	ReconnectionAttempts int
+	ReconnectionAttempts uint32
 
 	// The time delay between reconnection attempts.
 	// Default: 1 second
@@ -63,7 +63,7 @@ type Client struct {
 
 	preventAutoConnect   bool
 	noReconnection       bool
-	reconnectionAttempts int
+	reconnectionAttempts uint32
 	reconnectionDelay    time.Duration
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
