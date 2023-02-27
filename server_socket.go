@@ -98,6 +98,22 @@ func (s *serverSocket) Use(f interface{}) {
 	if rv.Kind() != reflect.Func {
 		panic("sio: function expected")
 	}
+	rt := rv.Type()
+	if rt.NumIn() != 2 {
+		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+	}
+	if rt.In(0).Kind() != reflect.String {
+		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+	}
+	if rt.In(1).Kind() != reflect.Slice || rt.In(1).Elem().Kind() != reflect.Interface {
+		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+	}
+	if rt.NumOut() != 1 {
+		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+	}
+	if rt.Out(0).Kind() != reflect.Interface || !rt.Out(0).Implements(reflectError) {
+		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+	}
 	s.middlewareFuncs = append(s.middlewareFuncs, rv)
 }
 
