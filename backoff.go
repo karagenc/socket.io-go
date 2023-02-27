@@ -18,7 +18,7 @@ type backoff struct {
 }
 
 func newBackoff(min time.Duration, max time.Duration, jitter float32) *backoff {
-	if jitter < 0 || jitter > 1 {
+	if jitter <= 0 || jitter > 1 {
 		jitter = 0
 	}
 
