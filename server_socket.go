@@ -203,6 +203,9 @@ func (s *serverSocket) callMiddlewareFunc(rv reflect.Value, values []reflect.Val
 	}()
 	rets := rv.Call(values)
 	ret := rets[0]
+	if ret.IsNil() {
+		return nil
+	}
 	err = ret.Interface().(error)
 	return
 }
