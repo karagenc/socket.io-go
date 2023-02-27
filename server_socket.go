@@ -26,6 +26,9 @@ type serverSocket struct {
 	acks   map[uint64]*ackHandler
 	acksMu sync.Mutex
 
+	middlewareFuncs   []reflect.Value
+	middlewareFuncsMu sync.RWMutex
+
 	join   func(room ...Room)
 	joinMu sync.Mutex
 
@@ -85,6 +88,19 @@ func (s *serverSocket) Namespace() *Namespace { return s.nsp }
 
 func (s *serverSocket) Recovered() bool { return s.recovered }
 
+var _emptyError error
+var reflectError = reflect.TypeOf(&_emptyError).Elem()
+
+func (s *serverSocket) Use(f interface{}) {
+	s.middlewareFuncsMu.Lock()
+	defer s.middlewareFuncsMu.Unlock()
+	rv := reflect.ValueOf(f)
+	if rv.Kind() != reflect.Func {
+		panic("sio: function expected")
+	}
+	s.middlewareFuncs = append(s.middlewareFuncs, rv)
+}
+
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
@@ -129,6 +145,12 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		return
 	}
 
+	err = s.callMiddlewares(values)
+	if err != nil {
+		s.onError(err)
+		return
+	}
+
 	ret, err := handler.Call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -138,6 +160,35 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	if header.ID != nil {
 		s.sendAckPacket(*header.ID, ret)
 	}
+}
+
+func (s *serverSocket) callMiddlewares(values []reflect.Value) error {
+	s.middlewareFuncsMu.RLock()
+	defer s.middlewareFuncsMu.RUnlock()
+
+	for _, f := range s.middlewareFuncs {
+		err := s.callMiddlewareFunc(f, values)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *serverSocket) callMiddlewareFunc(rv reflect.Value, values []reflect.Value) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("sio: middleware error: %v", r)
+			}
+		}
+	}()
+	rets := rv.Call(values)
+	ret := rets[0]
+	err = ret.Interface().(error)
+	return
 }
 
 func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) {

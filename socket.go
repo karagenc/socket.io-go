@@ -45,6 +45,12 @@ type ServerSocket interface {
 	// and the rooms will be restored.
 	Recovered() bool
 
+	// Register a middleware for events.
+	//
+	// Function signature must be same as with On and Once:
+	// func(eventName string, v ...interface{}) error
+	Use(f interface{})
+
 	// Join room(s)
 	Join(room ...Room)
 	// Leave a room
