@@ -165,18 +165,17 @@ func (c *Client) Socket(namespace string) ClientSocket {
 	socket, ok := c.sockets.Get(namespace)
 	if !ok {
 		socket = newClientSocket(c, namespace, c.parser)
-
-		if !c.noAutoConnection {
-			c.eioMu.RLock()
-			defer c.eioMu.RUnlock()
-			connected := c.eio != nil
-
-			if connected {
-				socket.sendConnectPacket()
-			}
-		}
-
 		c.sockets.Set(socket)
+	}
+
+	if !c.noAutoConnection {
+		c.eioMu.RLock()
+		defer c.eioMu.RUnlock()
+		connected := c.eio != nil
+
+		if !connected {
+			socket.sendConnectPacket()
+		}
 	}
 	return socket
 }
