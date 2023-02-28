@@ -283,7 +283,7 @@ func (c *Client) maybeReconnectOnOpen() {
 	reconnect := !(c.connState == clientConnStateReconnecting) && c.backoff.Attempts() == 0
 	c.connStateMu.RUnlock()
 	if reconnect {
-		c.reconnect()
+		c.reconnect(true)
 	}
 }
 
@@ -318,7 +318,18 @@ func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string
 	socket.onPacket(header, eventName, decode)
 }
 
-func (c *Client) reconnect() {
+func (c *Client) reconnect(again bool) {
+	// Is this the first time we're doing reconnect?
+	// In other words: are we recursing?
+	if !again {
+		c.connStateMu.Lock()
+		defer c.connStateMu.Unlock()
+	}
+	if c.connState == clientConnStateReconnecting {
+		return
+	}
+	c.connState = clientConnStateReconnecting
+
 	attempts := c.backoff.Attempts()
 	didAttemptsReachedMaxAttempts := c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts
 	// Just in case
@@ -327,6 +338,7 @@ func (c *Client) reconnect() {
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
 		c.backoff.Reset()
 		c.emitReserved("reconnect_failed")
+		c.connState = clientConnStateDisconnected
 		return
 	}
 
@@ -339,13 +351,13 @@ func (c *Client) reconnect() {
 	err := c.connect()
 	if err != nil {
 		c.emitReserved("reconnect", err)
-		c.reconnect()
+		c.connState = clientConnStateDisconnected
+		c.reconnect(true)
 		return
 	}
 
 	attempts = c.backoff.Attempts()
 	c.backoff.Reset()
-
 	c.emitReserved("reconnect", attempts)
 }
 
@@ -354,12 +366,10 @@ func (c *Client) onEIOError(err error) {
 }
 
 func (c *Client) onEIOClose(reason string, err error) {
-	go c.onClose(reason, err)
+	c.onClose(reason, err)
 
 	if err != nil && c.noReconnection == false {
-		go c.reconnect()
-		// TODO: Which one should handle this error, Client or clientSocket?
-		c.onError(err)
+		go c.reconnect(true)
 	}
 }
 
@@ -414,7 +424,7 @@ func (c *Client) onClose(reason string, err error) {
 	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {
-		c.reconnect()
+		go c.reconnect(true)
 	}
 }
 

@@ -74,9 +74,7 @@ func (s *clientSocket) Connect() {
 	} else {
 		err := s.client.connect()
 		if err != nil && s.client.noReconnection == false {
-			go s.client.reconnect()
-			// TODO: Which one should handle this error, Client or clientSocket?
-			s.Client().onError(err)
+			s.client.reconnect(true)
 		}
 	}
 }

@@ -26,6 +26,10 @@ func main() {
 
 	io.On("connect", func(socket sio.ServerSocket) {
 		fmt.Printf("New socket: %s\n", socket.ID())
+		socket.On("echo", func(message string) string {
+			fmt.Printf("Message: %s\n", message)
+			return "HEYYO!"
+		})
 	})
 
 	err := io.Run()
