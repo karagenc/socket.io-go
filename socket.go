@@ -6,6 +6,9 @@ type Socket interface {
 	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.
 	ID() SocketID
 
+	// Is the socket (currently) connected?
+	IsConnected() bool
+
 	// Register an event handler.
 	On(eventName string, handler interface{})
 

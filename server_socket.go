@@ -15,6 +15,9 @@ type serverSocket struct {
 	pid       PrivateSessionID
 	recovered bool
 
+	connected   bool
+	connectedMu sync.RWMutex
+
 	server  *Server
 	conn    *serverConn
 	nsp     *Namespace
@@ -87,6 +90,12 @@ func (s *serverSocket) Server() *Server { return s.server }
 func (s *serverSocket) Namespace() *Namespace { return s.nsp }
 
 func (s *serverSocket) Recovered() bool { return s.recovered }
+
+func (s *serverSocket) IsConnected() bool {
+	s.connectedMu.RLock()
+	defer s.connectedMu.RUnlock()
+	return s.connected
+}
 
 var _emptyError error
 var reflectError = reflect.TypeOf(&_emptyError).Elem()
@@ -164,6 +173,10 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	err = s.callMiddlewares(values)
 	if err != nil {
 		s.onError(err)
+		return
+	}
+
+	if !s.IsConnected() {
 		return
 	}
 
@@ -301,6 +314,9 @@ type sidInfo struct {
 }
 
 func (s *serverSocket) onConnect() error {
+	s.connectedMu.Lock()
+	defer s.connectedMu.Unlock()
+
 	// Socket ID is the default room a socket joins to.
 	s.Join(Room(s.ID()))
 
@@ -320,6 +336,7 @@ func (s *serverSocket) onConnect() error {
 	}
 
 	s.conn.sendBuffers(buffers...)
+	s.connected = true
 	return nil
 }
 
@@ -374,6 +391,9 @@ var recoverableDisconnectReasons = mapset.NewThreadUnsafeSet(
 
 func (s *serverSocket) onClose(reason string) {
 	s.closeOnce.Do(func() {
+		if !s.IsConnected() {
+			return
+		}
 		s.emitReserved("disconnecting", reason)
 
 		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
@@ -395,6 +415,10 @@ func (s *serverSocket) onClose(reason string) {
 
 		s.nsp.remove(s)
 		s.conn.Remove(s)
+
+		s.connectedMu.Lock()
+		s.connected = false
+		s.connectedMu.Unlock()
 		s.emitReserved("disconnect", reason)
 	})
 }
@@ -537,6 +561,9 @@ func (s *serverSocket) OffAll() {
 }
 
 func (s *serverSocket) Disconnect(close bool) {
+	if !s.IsConnected() {
+		return
+	}
 	if close {
 		s.conn.DisconnectAll()
 		s.conn.Close()
