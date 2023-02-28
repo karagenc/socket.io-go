@@ -82,13 +82,10 @@ func (s *clientSocket) Connect() {
 }
 
 func (s *clientSocket) Disconnect() {
-	s.connectedMu.Lock()
-	if s.connected {
+	if s.IsConnected() {
 		go s.sendControlPacket(parser.PacketTypeDisconnect)
+		s.client.onClose("io client disconnect", nil)
 	}
-	s.connectedMu.Unlock()
-
-	s.client.onClose("io client disconnect", nil)
 }
 
 func (s *clientSocket) Client() *Client { return s.client }
