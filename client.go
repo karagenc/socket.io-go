@@ -159,9 +159,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 		go func() {
 			err := io.connect()
 			if err != nil && io.noReconnection == false {
-				go io.reconnect()
-				// TODO: Which one should handle this error, Client or clientSocket?
-				io.onError(err)
+				io.maybeReconnectOnOpen()
 			}
 		}()
 	}
@@ -237,6 +235,13 @@ func (c *Client) OffAll() {
 }
 
 func (c *Client) connect() (err error) {
+	c.connStateMu.Lock()
+	defer c.connStateMu.Unlock()
+	if c.connState == clientConnStateConnected {
+		return nil
+	}
+	c.connState = clientConnStateConnecting
+
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
 
@@ -248,10 +253,20 @@ func (c *Client) connect() (err error) {
 
 	_eio, err := eio.Dial(c.url, callbacks, &c.eioConfig)
 	if err != nil {
+		c.parserMu.Lock()
+		defer c.parserMu.Unlock()
+		c.parser.Reset()
+
+		c.connState = clientConnStateDisconnected
 		c.emitReserved("error", err)
 		return err
 	}
 	c.eio = _eio
+
+	c.parserMu.Lock()
+	defer c.parserMu.Unlock()
+	c.parser.Reset()
+
 	go pollAndSend(c.eio, c.eioPacketQueue)
 
 	sockets := c.sockets.GetAll()
@@ -261,6 +276,15 @@ func (c *Client) connect() (err error) {
 
 	c.emitReserved("open")
 	return
+}
+
+func (c *Client) maybeReconnectOnOpen() {
+	c.connStateMu.RLock()
+	reconnect := !(c.connState == clientConnStateReconnecting) && c.backoff.Attempts() == 0
+	c.connStateMu.RUnlock()
+	if reconnect {
+		c.reconnect()
+	}
 }
 
 func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
