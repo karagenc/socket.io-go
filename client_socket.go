@@ -20,10 +20,13 @@ type clientSocket struct {
 	auth *Auth
 
 	connected   bool
-	connectedMu sync.Mutex
+	connectedMu sync.RWMutex
 
 	sendBuffer   []*eioparser.Packet
 	sendBufferMu sync.Mutex
+
+	receiveBuffer   []*clientEvent
+	receiveBufferMu sync.Mutex
 
 	emitter *eventEmitter
 
@@ -49,8 +52,8 @@ func (s *clientSocket) ID() SocketID {
 }
 
 func (c *clientSocket) IsConnected() bool {
-	c.connectedMu.Lock()
-	defer c.connectedMu.Unlock()
+	c.connectedMu.RLock()
+	defer c.connectedMu.RUnlock()
 	c.client.connStateMu.RLock()
 	defer c.client.connStateMu.RUnlock()
 
@@ -193,7 +196,18 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.connected = true
 	s.connectedMu.Unlock()
 
+	s.emitBuffered()
 	s.emitReserved("connect")
+
+}
+
+func (s *clientSocket) emitBuffered() {
+	s.receiveBufferMu.Lock()
+	defer s.receiveBufferMu.Unlock()
+	for _, event := range s.receiveBuffer {
+		s.callEvent(event.handler, event.header, event.values)
+	}
+	s.receiveBuffer = nil
 
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
@@ -234,6 +248,12 @@ func (s *clientSocket) onDisconnect() {
 	s.onClose("io server disconnect")
 }
 
+type clientEvent struct {
+	handler *eventHandler
+	header  *parser.PacketHeader
+	values  []reflect.Value
+}
+
 func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
@@ -252,6 +272,22 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		return
 	}
 
+	s.connectedMu.RLock()
+	defer s.connectedMu.RUnlock()
+	if s.connected {
+		s.callEvent(handler, header, values)
+	} else {
+		s.receiveBufferMu.Lock()
+		defer s.receiveBufferMu.Unlock()
+		s.receiveBuffer = append(s.receiveBuffer, &clientEvent{
+			handler: handler,
+			header:  header,
+			values:  values,
+		})
+	}
+}
+
+func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value) {
 	ret, err := handler.Call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -334,6 +370,9 @@ func (s *clientSocket) destroy() {
 }
 
 func (s *clientSocket) onClose(reason string) {
+	s.connectedMu.Lock()
+	s.connected = false
+	s.connectedMu.Unlock()
 	s.emitReserved("disconnect")
 }
 

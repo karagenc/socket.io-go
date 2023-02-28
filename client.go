@@ -412,5 +412,6 @@ func (c *Client) Close() {
 func (c *Client) packet(packets ...*eioparser.Packet) {
 	c.eioMu.RLock()
 	defer c.eioMu.RUnlock()
+	// TODO: Check if eio connected
 	c.eioPacketQueue.Add(packets...)
 }
