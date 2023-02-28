@@ -89,7 +89,7 @@ func (s *serverSocket) Server() *Server { return s.server }
 
 func (s *serverSocket) Namespace() *Namespace { return s.nsp }
 
-func (s *serverSocket) Recovered() bool { return s.recovered }
+func (s *serverSocket) WasRecovered() bool { return s.recovered }
 
 func (s *serverSocket) IsConnected() bool {
 	s.connectedMu.RLock()

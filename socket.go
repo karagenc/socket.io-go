@@ -46,7 +46,7 @@ type ServerSocket interface {
 	// temporary disconnection. In that case, any missed packets
 	// will be transmitted to the client, the data attribute
 	// and the rooms will be restored.
-	Recovered() bool
+	WasRecovered() bool
 
 	// Register a middleware for events.
 	//
