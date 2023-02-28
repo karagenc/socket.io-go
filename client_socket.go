@@ -48,6 +48,15 @@ func (s *clientSocket) ID() SocketID {
 	return id
 }
 
+func (c *clientSocket) IsConnected() bool {
+	c.connectedMu.Lock()
+	defer c.connectedMu.Unlock()
+	c.client.connStateMu.RLock()
+	defer c.client.connStateMu.RUnlock()
+
+	return c.client.connState == clientConnStateConnected && c.connected
+}
+
 func (s *clientSocket) setID(id SocketID) {
 	s.id.Store(id)
 }
