@@ -14,6 +14,15 @@ import (
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
+type clientConnectionState int
+
+const (
+	clientConnStateConnecting clientConnectionState = iota
+	clientConnStateConnected
+	clientConnStateReconnecting
+	clientConnStateDisconnected
+)
+
 type ClientConfig struct {
 	// A creator function for the Socket.IO parser.
 	// This function is used for creating a parser.Parser object.
@@ -79,6 +88,9 @@ type Client struct {
 	eio            eio.ClientSocket
 	eioPacketQueue *packetQueue
 	eioMu          sync.RWMutex
+
+	connState   clientConnectionState
+	connStateMu sync.RWMutex
 }
 
 const (
@@ -371,6 +383,10 @@ func (c *Client) destroy(socket *clientSocket) {
 }
 
 func (c *Client) onClose(reason string, err error) {
+	c.parserMu.Lock()
+	defer c.parserMu.Unlock()
+	c.parser.Reset()
+	c.backoff.Reset()
 	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {
@@ -378,21 +394,19 @@ func (c *Client) onClose(reason string, err error) {
 	}
 }
 
-func (c *Client) Close() {
-	c.eioMu.Lock()
-	defer c.eioMu.Unlock()
-
-	c.backoff.Reset()
-	c.sockets.DisconnectAll()
-
+func (c *Client) close() {
+	c.connStateMu.Lock()
+	defer c.connStateMu.Unlock()
+	c.connState = clientConnStateDisconnected
+	c.onClose("forced close", nil)
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
 	c.eio.Close()
 	c.eioPacketQueue.Reset()
+}
 
-	c.parserMu.Lock()
-	defer c.parserMu.Unlock()
-	c.parser.Reset()
+func (c *Client) Close() {
+	c.close()
 }
 
 func (c *Client) packet(packets ...*eioparser.Packet) {
