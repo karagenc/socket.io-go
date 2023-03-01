@@ -74,7 +74,7 @@ func (s *clientSocket) Connect() {
 	} else {
 		err := s.client.connect()
 		if err != nil && s.client.noReconnection == false {
-			s.client.reconnect(true)
+			s.client.reconnect(false)
 		}
 	}
 }

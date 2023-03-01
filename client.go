@@ -271,7 +271,7 @@ func (c *Client) maybeReconnectOnOpen() {
 	reconnect := !(c.connState == clientConnStateReconnecting) && c.backoff.Attempts() == 0
 	c.connStateMu.RUnlock()
 	if reconnect {
-		c.reconnect(true)
+		c.reconnect(false)
 	}
 }
 
@@ -357,7 +357,7 @@ func (c *Client) onEIOClose(reason string, err error) {
 	c.onClose(reason, err)
 
 	if err != nil && c.noReconnection == false {
-		go c.reconnect(true)
+		go c.reconnect(false)
 	}
 }
 
@@ -412,7 +412,7 @@ func (c *Client) onClose(reason string, err error) {
 	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {
-		go c.reconnect(true)
+		go c.reconnect(false)
 	}
 }
 
