@@ -147,14 +147,16 @@ func NewClient(url string, config *ClientConfig) *Client {
 	}
 	io.parser = parserCreator()
 
+	return io
+}
+
+func (c *Client) Connect() {
 	go func() {
-		err := io.connect()
-		if err != nil && io.noReconnection == false {
-			io.maybeReconnectOnOpen()
+		err := c.connect()
+		if err != nil && c.noReconnection == false {
+			c.maybeReconnectOnOpen()
 		}
 	}()
-
-	return io
 }
 
 func (c *Client) Socket(namespace string) ClientSocket {
@@ -427,7 +429,7 @@ func (c *Client) close() {
 	c.eioPacketQueue.Reset()
 }
 
-func (c *Client) Close() {
+func (c *Client) Disconnect() {
 	c.close()
 }
 
