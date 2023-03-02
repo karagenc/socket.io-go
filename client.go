@@ -2,7 +2,6 @@ package sio
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"sync"
 	"time"
@@ -12,15 +11,6 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
-)
-
-type clientConnectionState int
-
-const (
-	clientConnStateConnecting clientConnectionState = iota
-	clientConnStateConnected
-	clientConnStateReconnecting
-	clientConnStateDisconnected
 )
 
 type ClientConfig struct {
@@ -77,13 +67,7 @@ type Client struct {
 	sockets *clientSocketStore
 	emitter *eventEmitter
 	backoff *backoff
-
-	eio            eio.ClientSocket
-	eioPacketQueue *packetQueue
-	eioMu          sync.RWMutex
-
-	connState   clientConnectionState
-	connStateMu sync.RWMutex
+	conn    *clientConn
 }
 
 const (
@@ -116,8 +100,6 @@ func NewClient(url string, config *ClientConfig) *Client {
 
 		sockets: newClientSocketStore(),
 		emitter: newEventEmitter(),
-
-		eioPacketQueue: newPacketQueue(),
 	}
 
 	if config.ReconnectionDelay != nil {
@@ -146,15 +128,15 @@ func NewClient(url string, config *ClientConfig) *Client {
 		parserCreator = jsonparser.NewCreator(0, json)
 	}
 	io.parser = parserCreator()
-
+	io.conn = newClientConn(io)
 	return io
 }
 
 func (c *Client) Connect() {
 	go func() {
-		err := c.connect()
+		err := c.conn.Connect()
 		if err != nil {
-			c.maybeReconnect()
+			c.conn.MaybeReconnectOnOpen()
 		}
 	}()
 }
@@ -170,11 +152,7 @@ func (c *Client) Socket(namespace string) ClientSocket {
 		c.sockets.Set(socket)
 	}
 
-	c.eioMu.RLock()
-	defer c.eioMu.RUnlock()
-	connected := c.eio != nil
-
-	if !connected {
+	if !c.conn.IsConnected() {
 		socket.sendConnectPacket()
 	}
 	return socket
@@ -224,59 +202,6 @@ func (c *Client) OffAll() {
 	c.emitter.OffAll()
 }
 
-func (c *Client) connect() (err error) {
-	c.connStateMu.Lock()
-	defer c.connStateMu.Unlock()
-	if c.connState == clientConnStateConnected {
-		return nil
-	}
-	c.connState = clientConnStateConnecting
-
-	c.eioMu.Lock()
-	defer c.eioMu.Unlock()
-
-	callbacks := &eio.Callbacks{
-		OnPacket: c.onEIOPacket,
-		OnError:  c.onEIOError,
-		OnClose:  c.onEIOClose,
-	}
-
-	_eio, err := eio.Dial(c.url, callbacks, &c.eioConfig)
-	if err != nil {
-		c.parserMu.Lock()
-		defer c.parserMu.Unlock()
-		c.parser.Reset()
-
-		c.connState = clientConnStateDisconnected
-		c.emitReserved("error", err)
-		return err
-	}
-	c.eio = _eio
-
-	c.parserMu.Lock()
-	defer c.parserMu.Unlock()
-	c.parser.Reset()
-
-	go pollAndSend(c.eio, c.eioPacketQueue)
-
-	sockets := c.sockets.GetAll()
-	for _, socket := range sockets {
-		go socket.sendConnectPacket()
-	}
-
-	c.emitReserved("open")
-	return
-}
-
-func (c *Client) maybeReconnectOnOpen() {
-	c.connStateMu.RLock()
-	reconnect := !(c.connState == clientConnStateReconnecting) && c.backoff.Attempts() == 0 && !c.noReconnection
-	c.connStateMu.RUnlock()
-	if reconnect {
-		c.reconnect(false)
-	}
-}
-
 func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
 	c.parserMu.Lock()
 	defer c.parserMu.Unlock()
@@ -308,50 +233,6 @@ func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string
 	socket.onPacket(header, eventName, decode)
 }
 
-func (c *Client) reconnect(again bool) {
-	// again = Is this the first time we're doing reconnect?
-	// In other words: are we recursing?
-
-	if !again {
-		c.connStateMu.Lock()
-		defer c.connStateMu.Unlock()
-	}
-	if c.connState == clientConnStateReconnecting {
-		return
-	}
-	c.connState = clientConnStateReconnecting
-
-	attempts := c.backoff.Attempts()
-	didAttemptsReachedMaxAttempts := c.reconnectionAttempts > 0 && attempts >= c.reconnectionAttempts
-	// Just in case
-	didAttemptsReachedMaxInt := c.reconnectionAttempts == 0 && attempts == math.MaxUint32
-
-	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
-		c.backoff.Reset()
-		c.emitReserved("reconnect_failed")
-		c.connState = clientConnStateDisconnected
-		return
-	}
-
-	backoffDuration := c.backoff.Duration()
-	time.Sleep(backoffDuration)
-
-	attempts = c.backoff.Attempts()
-	c.emitReserved("reconnect_attempt", attempts)
-
-	err := c.connect()
-	if err != nil {
-		c.emitReserved("reconnect", err)
-		c.connState = clientConnStateDisconnected
-		c.reconnect(true)
-		return
-	}
-
-	attempts = c.backoff.Attempts()
-	c.backoff.Reset()
-	c.emitReserved("reconnect", attempts)
-}
-
 func (c *Client) onEIOError(err error) {
 	c.onError(err)
 }
@@ -360,7 +241,7 @@ func (c *Client) onEIOClose(reason string, err error) {
 	c.onClose(reason, err)
 
 	if err != nil && c.noReconnection == false {
-		go c.reconnect(false)
+		go c.conn.Reconnect(false)
 	}
 }
 
@@ -415,28 +296,10 @@ func (c *Client) onClose(reason string, err error) {
 	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {
-		go c.reconnect(false)
+		go c.conn.Reconnect(false)
 	}
 }
 
-func (c *Client) close() {
-	c.connStateMu.Lock()
-	defer c.connStateMu.Unlock()
-	c.connState = clientConnStateDisconnected
-	c.onClose("forced close", nil)
-	c.eioMu.Lock()
-	defer c.eioMu.Unlock()
-	c.eio.Close()
-	c.eioPacketQueue.Reset()
-}
-
 func (c *Client) Disconnect() {
-	c.close()
-}
-
-func (c *Client) packet(packets ...*eioparser.Packet) {
-	c.eioMu.RLock()
-	defer c.eioMu.RUnlock()
-	// TODO: Check if eio connected
-	c.eioPacketQueue.Add(packets...)
+	c.conn.Disconnect()
 }
