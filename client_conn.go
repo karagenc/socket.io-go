@@ -19,8 +19,8 @@ const (
 )
 
 type clientConn struct {
-	connState   clientConnectionState
-	connStateMu sync.RWMutex
+	state   clientConnectionState
+	stateMu sync.RWMutex
 
 	eio            eio.ClientSocket
 	eioPacketQueue *packetQueue
@@ -37,18 +37,18 @@ func newClientConn(client *Client) *clientConn {
 }
 
 func (c *clientConn) IsConnected() bool {
-	c.connStateMu.RLock()
-	defer c.connStateMu.RUnlock()
-	return c.connState == clientConnStateConnected
+	c.stateMu.RLock()
+	defer c.stateMu.RUnlock()
+	return c.state == clientConnStateConnected
 }
 
 func (c *clientConn) Connect() (err error) {
-	c.connStateMu.Lock()
-	defer c.connStateMu.Unlock()
-	if c.connState == clientConnStateConnected {
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+	if c.state == clientConnStateConnected {
 		return nil
 	}
-	c.connState = clientConnStateConnecting
+	c.state = clientConnStateConnecting
 
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
@@ -65,7 +65,7 @@ func (c *clientConn) Connect() (err error) {
 		defer c.client.parserMu.Unlock()
 		c.client.parser.Reset()
 
-		c.connState = clientConnStateDisconnected
+		c.state = clientConnStateDisconnected
 		c.client.emitReserved("error", err)
 		return err
 	}
@@ -87,9 +87,9 @@ func (c *clientConn) Connect() (err error) {
 }
 
 func (c *clientConn) MaybeReconnectOnOpen() {
-	c.connStateMu.RLock()
-	reconnect := c.connState != clientConnStateReconnecting && c.client.backoff.Attempts() == 0 && !c.client.noReconnection
-	c.connStateMu.RUnlock()
+	c.stateMu.RLock()
+	reconnect := c.state != clientConnStateReconnecting && c.client.backoff.Attempts() == 0 && !c.client.noReconnection
+	c.stateMu.RUnlock()
 	if reconnect {
 		c.Reconnect(false)
 	}
@@ -100,13 +100,13 @@ func (c *clientConn) Reconnect(again bool) {
 	// In other words: are we recursing?
 
 	if !again {
-		c.connStateMu.Lock()
-		defer c.connStateMu.Unlock()
+		c.stateMu.Lock()
+		defer c.stateMu.Unlock()
 	}
-	if c.connState == clientConnStateReconnecting {
+	if c.state == clientConnStateReconnecting {
 		return
 	}
-	c.connState = clientConnStateReconnecting
+	c.state = clientConnStateReconnecting
 
 	attempts := c.client.backoff.Attempts()
 	didAttemptsReachedMaxAttempts := c.client.reconnectionAttempts > 0 && attempts >= c.client.reconnectionAttempts
@@ -116,7 +116,7 @@ func (c *clientConn) Reconnect(again bool) {
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
 		c.client.backoff.Reset()
 		c.client.emitReserved("reconnect_failed")
-		c.connState = clientConnStateDisconnected
+		c.state = clientConnStateDisconnected
 		return
 	}
 
@@ -129,7 +129,7 @@ func (c *clientConn) Reconnect(again bool) {
 	err := c.Connect()
 	if err != nil {
 		c.client.emitReserved("reconnect", err)
-		c.connState = clientConnStateDisconnected
+		c.state = clientConnStateDisconnected
 		c.Reconnect(true)
 		return
 	}
@@ -147,9 +147,9 @@ func (c *clientConn) packet(packets ...*eioparser.Packet) {
 }
 
 func (c *clientConn) Disconnect() {
-	c.connStateMu.Lock()
-	defer c.connStateMu.Unlock()
-	c.connState = clientConnStateDisconnected
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+	c.state = clientConnStateDisconnected
 	c.client.onClose("forced close", nil)
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()

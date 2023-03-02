@@ -73,19 +73,19 @@ func (s *clientSocket) Connect() {
 	// TODO: subevents
 
 	go func() {
-		s.client.connStateMu.RLock()
-		isReconnecting := s.client.connState != clientConnStateReconnecting
-		s.client.connStateMu.RUnlock()
+		s.client.conn.stateMu.RLock()
+		isReconnecting := s.client.conn.state != clientConnStateReconnecting
+		s.client.conn.stateMu.RUnlock()
 		if isReconnecting {
-			err := s.client.connect()
+			err := s.client.conn.Connect()
 			if err != nil && !s.client.noReconnection {
-				s.client.reconnect(false)
+				s.client.conn.MaybeReconnectOnOpen()
 			}
 		}
 
-		s.client.connStateMu.RLock()
-		isConnected := s.client.connState == clientConnStateConnected
-		s.client.connStateMu.RUnlock()
+		s.client.conn.stateMu.RLock()
+		isConnected := s.client.conn.state == clientConnStateConnected
+		s.client.conn.stateMu.RUnlock()
 		if isConnected {
 			s.sendConnectPacket()
 		}
