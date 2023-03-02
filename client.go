@@ -239,10 +239,6 @@ func (c *Client) onEIOError(err error) {
 
 func (c *Client) onEIOClose(reason string, err error) {
 	c.onClose(reason, err)
-
-	if err != nil && c.noReconnection == false {
-		go c.conn.Reconnect(false)
-	}
 }
 
 // Convenience method for emitting events to the user.

@@ -139,7 +139,7 @@ func (c *clientConn) Reconnect(again bool) {
 	c.client.emitReserved("reconnect", attempts)
 }
 
-func (c *clientConn) packet(packets ...*eioparser.Packet) {
+func (c *clientConn) Packet(packets ...*eioparser.Packet) {
 	c.eioMu.RLock()
 	defer c.eioMu.RUnlock()
 	// TODO: Check if eio connected

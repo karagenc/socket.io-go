@@ -144,7 +144,7 @@ func (s *clientSocket) sendConnectPacket() {
 		s.onError(wrapInternalError(err))
 		return
 	}
-	s.client.conn.packet(packet)
+	s.client.conn.Packet(packet)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -220,7 +220,7 @@ func (s *clientSocket) emitBuffered() {
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
 	if len(s.sendBuffer) != 0 {
-		s.client.conn.packet(s.sendBuffer...)
+		s.client.conn.Packet(s.sendBuffer...)
 		s.sendBuffer = nil
 	}
 }
@@ -526,7 +526,7 @@ func (s *clientSocket) sendBuffers(buffers ...[]byte) {
 		s.connectedMu.Lock()
 		defer s.connectedMu.Unlock()
 		if s.connected {
-			s.client.conn.packet(packets...)
+			s.client.conn.Packet(packets...)
 		} else {
 			s.sendBufferMu.Lock()
 			s.sendBuffer = append(s.sendBuffer, packets...)
