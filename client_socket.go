@@ -71,12 +71,14 @@ func (s *clientSocket) Connect() {
 
 	if connected {
 		return
-	} else {
+	}
+
+	go func() {
 		err := s.client.connect()
 		if err != nil && s.client.noReconnection == false {
 			s.client.reconnect(false)
 		}
-	}
+	}()
 }
 
 func (s *clientSocket) Disconnect() {

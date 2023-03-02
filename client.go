@@ -151,12 +151,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 }
 
 func (c *Client) Connect() {
-	go func() {
-		err := c.connect()
-		if err != nil && c.noReconnection == false {
-			c.maybeReconnectOnOpen()
-		}
-	}()
+	go c.connect()
 }
 
 func (c *Client) Socket(namespace string) ClientSocket {
