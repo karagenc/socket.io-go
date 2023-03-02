@@ -88,7 +88,7 @@ func (c *clientConn) Connect() (err error) {
 
 func (c *clientConn) MaybeReconnectOnOpen() {
 	c.connStateMu.RLock()
-	reconnect := !(c.connState == clientConnStateReconnecting) && c.client.backoff.Attempts() == 0 && !c.client.noReconnection
+	reconnect := c.connState != clientConnStateReconnecting && c.client.backoff.Attempts() == 0 && !c.client.noReconnection
 	c.connStateMu.RUnlock()
 	if reconnect {
 		c.Reconnect(false)
