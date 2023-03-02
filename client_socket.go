@@ -73,13 +73,15 @@ func (s *clientSocket) Connect() {
 		return
 	}
 
+	// TODO: subevents
+
 	go func() {
 		s.client.connStateMu.RLock()
 		isReconnecting := s.client.connState != clientConnStateReconnecting
 		s.client.connStateMu.RUnlock()
 		if isReconnecting {
 			err := s.client.connect()
-			if err != nil && s.client.noReconnection == false {
+			if err != nil && !s.client.noReconnection {
 				s.client.reconnect(false)
 			}
 		}

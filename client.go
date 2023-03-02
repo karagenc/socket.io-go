@@ -151,7 +151,12 @@ func NewClient(url string, config *ClientConfig) *Client {
 }
 
 func (c *Client) Connect() {
-	go c.connect()
+	go func() {
+		err := c.connect()
+		if err != nil {
+			c.maybeReconnect()
+		}
+	}()
 }
 
 func (c *Client) Socket(namespace string) ClientSocket {
@@ -265,7 +270,7 @@ func (c *Client) connect() (err error) {
 
 func (c *Client) maybeReconnectOnOpen() {
 	c.connStateMu.RLock()
-	reconnect := !(c.connState == clientConnStateReconnecting) && c.backoff.Attempts() == 0
+	reconnect := !(c.connState == clientConnStateReconnecting) && c.backoff.Attempts() == 0 && !c.noReconnection
 	c.connStateMu.RUnlock()
 	if reconnect {
 		c.reconnect(false)
@@ -304,8 +309,9 @@ func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string
 }
 
 func (c *Client) reconnect(again bool) {
-	// Is this the first time we're doing reconnect?
+	// again = Is this the first time we're doing reconnect?
 	// In other words: are we recursing?
+
 	if !again {
 		c.connStateMu.Lock()
 		defer c.connStateMu.Unlock()
