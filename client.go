@@ -290,9 +290,11 @@ func (c *Client) onError(err error) {
 }
 
 func (c *Client) destroy(socket *clientSocket) {
-	/* for _, socket := range s.sockets.GetAll() {
-		TODO: Active?
-	} */
+	for _, socket := range c.sockets.GetAll() {
+		if socket.IsActive() {
+			return
+		}
+	}
 	c.Disconnect()
 }
 

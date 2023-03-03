@@ -60,6 +60,13 @@ func (c *clientSocket) IsConnected() bool {
 	return c.client.conn.IsConnected() && c.connected
 }
 
+// Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
+func (c *clientSocket) IsActive() bool {
+	c.subEventsEnabledMu.Lock()
+	defer c.subEventsEnabledMu.Unlock()
+	return c.subEventsEnabled
+}
+
 func (s *clientSocket) setID(id SocketID) {
 	s.id.Store(id)
 }

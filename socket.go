@@ -95,6 +95,9 @@ type ServerSocket interface {
 type ClientSocket interface {
 	Socket
 
+	// Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
+	IsActive() bool
+
 	// Connect the socket.
 	Connect()
 
