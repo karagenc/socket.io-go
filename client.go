@@ -68,6 +68,9 @@ type Client struct {
 	emitter *eventEmitter
 	backoff *backoff
 	conn    *clientConn
+
+	skipReconnect   bool
+	skipReconnectMu sync.Mutex
 }
 
 const (
@@ -152,9 +155,7 @@ func (c *Client) Socket(namespace string) ClientSocket {
 		c.sockets.Set(socket)
 	}
 
-	if !c.conn.IsConnected() {
-		socket.sendConnectPacket()
-	}
+	socket.Connect()
 	return socket
 }
 
@@ -281,7 +282,10 @@ func (c *Client) onError(err error) {
 }
 
 func (c *Client) destroy(socket *clientSocket) {
-	// TODO: Implement this.
+	for _, socket := range c.sockets.GetAll() {
+
+	}
+	c.Disconnect()
 }
 
 func (c *Client) onClose(reason string, err error) {
@@ -289,6 +293,15 @@ func (c *Client) onClose(reason string, err error) {
 	defer c.parserMu.Unlock()
 	c.parser.Reset()
 	c.backoff.Reset()
+
+	// On original socket.io, sockets' onclose method
+	// gets called with the "close" (sub)event.
+	//
+	// https://github.com/socketio/socket.io-client/blob/89175d0481fc7633c12bb5b233dc3421f87860ef/lib/socket.ts#L287
+	for _, socket := range c.sockets.GetAll() {
+		socket.onClose(reason)
+	}
+
 	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {

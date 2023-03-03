@@ -95,6 +95,11 @@ func (s *clientSocket) Connect() {
 func (s *clientSocket) Disconnect() {
 	if s.IsConnected() {
 		go s.sendControlPacket(parser.PacketTypeDisconnect)
+	}
+	// Remove socket from pool
+	s.destroy()
+
+	if s.IsConnected() {
 		s.client.onClose("io client disconnect", nil)
 	}
 }
@@ -231,6 +236,8 @@ type connectError struct {
 }
 
 func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
+	s.destroy()
+
 	var v *connectError
 	vt := reflect.TypeOf(v)
 	values, err := decode(vt)
@@ -373,6 +380,9 @@ func (s *clientSocket) onError(err error) {
 	s.client.onError(err)
 }
 
+// Called upon forced client/server side disconnections,
+// this method ensures the `Client` (manager on original socket.io implementation)
+// stops tracking us and that reconnections don't get triggered for this.
 func (s *clientSocket) destroy() {
 	s.client.destroy(s)
 }
