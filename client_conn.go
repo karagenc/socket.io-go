@@ -79,7 +79,7 @@ func (c *clientConn) Connect() (err error) {
 
 	sockets := c.client.sockets.GetAll()
 	for _, socket := range sockets {
-		go socket.sendConnectPacket()
+		go socket.onOpen()
 	}
 
 	c.client.emitReserved("open")

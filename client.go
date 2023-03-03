@@ -244,6 +244,14 @@ func (c *Client) onEIOClose(reason string, err error) {
 
 // Convenience method for emitting events to the user.
 func (s *Client) emitReserved(eventName string, v ...interface{}) {
+	// On original socket.io, events are also emitted to
+	// subevents registered by the socket.
+	//
+	// https://github.com/socketio/socket.io-client/blob/89175d0481fc7633c12bb5b233dc3421f87860ef/lib/socket.ts#L287
+	for _, socket := range s.sockets.GetAll() {
+		socket.invokeSubEvents(eventName, v)
+	}
+
 	handlers := s.emitter.GetHandlers(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
@@ -282,9 +290,9 @@ func (c *Client) onError(err error) {
 }
 
 func (c *Client) destroy(socket *clientSocket) {
-	for _, socket := range c.sockets.GetAll() {
-
-	}
+	/* for _, socket := range s.sockets.GetAll() {
+		TODO: Active?
+	} */
 	c.Disconnect()
 }
 
@@ -293,15 +301,6 @@ func (c *Client) onClose(reason string, err error) {
 	defer c.parserMu.Unlock()
 	c.parser.Reset()
 	c.backoff.Reset()
-
-	// On original socket.io, sockets' onclose method
-	// gets called with the "close" (sub)event.
-	//
-	// https://github.com/socketio/socket.io-client/blob/89175d0481fc7633c12bb5b233dc3421f87860ef/lib/socket.ts#L287
-	for _, socket := range c.sockets.GetAll() {
-		socket.onClose(reason)
-	}
-
 	c.emitReserved("close", reason, err)
 
 	if !c.noReconnection {

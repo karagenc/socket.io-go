@@ -33,6 +33,9 @@ type clientSocket struct {
 	acks   map[uint64]*ackHandler
 	ackID  uint64
 	acksMu sync.Mutex
+
+	subEventsEnabled   bool
+	subEventsEnabledMu sync.Mutex
 }
 
 func newClientSocket(client *Client, namespace string, parser parser.Parser) *clientSocket {
@@ -87,7 +90,7 @@ func (s *clientSocket) Connect() {
 		isConnected := s.client.conn.state == clientConnStateConnected
 		s.client.conn.stateMu.RUnlock()
 		if isConnected {
-			s.sendConnectPacket()
+			s.onOpen()
 		}
 	}()
 }
@@ -115,13 +118,49 @@ func (s *clientSocket) SetAuth(v any) {
 	}
 }
 
-func (s *clientSocket) sendConnectPacket() {
+func (s *clientSocket) onOpen() {
+	authData := s.auth.Get()
+	s.sendConnectPacket(authData)
+}
+
+func (s *clientSocket) invokeSubEvents(eventName string, v ...interface{}) {
+	s.subEventsEnabledMu.Lock()
+	defer s.subEventsEnabledMu.Unlock()
+	if !s.subEventsEnabled {
+		return
+	}
+
+	switch eventName {
+	case "open":
+		s.onOpen()
+	case "error":
+		if len(v) != 1 {
+			panic("sio: 1 argument was expected: err")
+		}
+		err, ok := v[0].(error)
+		if !ok {
+			panic("sio: type of the argument `err` must be error")
+		}
+		if !s.IsConnected() {
+			s.emitReserved("connect_error", err)
+		}
+	case "close":
+		if len(v) != 2 {
+			panic("sio: 2 arguments were expected: reason and err")
+		}
+		reason, ok := v[0].(string)
+		if !ok {
+			panic("sio: type of the argument `reason` must be string")
+		}
+		s.onClose(reason)
+	}
+}
+
+func (s *clientSocket) sendConnectPacket(authData interface{}) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.namespace,
 	}
-
-	authData := s.auth.Get()
 
 	var (
 		buffers [][]byte
@@ -376,7 +415,7 @@ func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
 }
 
 func (s *clientSocket) onError(err error) {
-	// In original socket.io, errors are handled on `Manager` (`Client` in this implementation).
+	// In original socket.io, errors are emitted only on `Manager` (`Client` in this implementation).
 	s.client.onError(err)
 }
 
