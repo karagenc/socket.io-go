@@ -290,7 +290,7 @@ func (m *Manager) onError(err error) {
 
 func (m *Manager) destroy(socket *clientSocket) {
 	for _, socket := range m.sockets.GetAll() {
-		if socket.IsActive() {
+		if socket.Active() {
 			return
 		}
 	}

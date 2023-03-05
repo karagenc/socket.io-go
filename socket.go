@@ -7,7 +7,7 @@ type Socket interface {
 	ID() SocketID
 
 	// Is the socket (currently) connected?
-	IsConnected() bool
+	Connected() bool
 
 	// Register an event handler.
 	On(eventName string, handler interface{})
@@ -46,7 +46,7 @@ type ServerSocket interface {
 	// temporary disconnection. In that case, any missed packets
 	// will be transmitted to the client, the data attribute
 	// and the rooms will be restored.
-	WasRecovered() bool
+	Recovered() bool
 
 	// Register a middleware for events.
 	//
@@ -96,7 +96,7 @@ type ClientSocket interface {
 	Socket
 
 	// Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
-	IsActive() bool
+	Active() bool
 
 	// Connect the socket.
 	Connect()

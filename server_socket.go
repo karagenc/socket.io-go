@@ -89,9 +89,9 @@ func (s *serverSocket) Server() *Server { return s.server }
 
 func (s *serverSocket) Namespace() *Namespace { return s.nsp }
 
-func (s *serverSocket) WasRecovered() bool { return s.recovered }
+func (s *serverSocket) Recovered() bool { return s.recovered }
 
-func (s *serverSocket) IsConnected() bool {
+func (s *serverSocket) Connected() bool {
 	s.connectedMu.RLock()
 	defer s.connectedMu.RUnlock()
 	return s.connected
@@ -176,7 +176,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		return
 	}
 
-	if !s.IsConnected() {
+	if !s.Connected() {
 		return
 	}
 
@@ -394,7 +394,7 @@ func (s *serverSocket) onClose(reason string) {
 	// We don't want it to close more than once,
 	// so we use sync.Once to avoid running onClose more than once.
 	s.closeOnce.Do(func() {
-		if !s.IsConnected() {
+		if !s.Connected() {
 			return
 		}
 		s.emitReserved("disconnecting", reason)
@@ -564,7 +564,7 @@ func (s *serverSocket) OffAll() {
 }
 
 func (s *serverSocket) Disconnect(close bool) {
-	if !s.IsConnected() {
+	if !s.Connected() {
 		return
 	}
 	if close {

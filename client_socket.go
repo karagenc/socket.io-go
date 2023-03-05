@@ -54,14 +54,14 @@ func (s *clientSocket) ID() SocketID {
 	return id
 }
 
-func (s *clientSocket) IsConnected() bool {
+func (s *clientSocket) Connected() bool {
 	s.connectedMu.RLock()
 	defer s.connectedMu.RUnlock()
-	return s.manager.conn.IsConnected() && s.connected
+	return s.manager.conn.Connected() && s.connected
 }
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
-func (s *clientSocket) IsActive() bool {
+func (s *clientSocket) Active() bool {
 	s.subEventsEnabledMu.Lock()
 	defer s.subEventsEnabledMu.Unlock()
 	return s.subEventsEnabled
@@ -93,22 +93,22 @@ func (s *clientSocket) Connect() {
 		}
 
 		s.manager.conn.stateMu.RLock()
-		isConnected := s.manager.conn.state == clientConnStateConnected
+		connected := s.manager.conn.state == clientConnStateConnected
 		s.manager.conn.stateMu.RUnlock()
-		if isConnected {
+		if connected {
 			s.onOpen()
 		}
 	}()
 }
 
 func (s *clientSocket) Disconnect() {
-	if s.IsConnected() {
+	if s.Connected() {
 		s.sendControlPacket(parser.PacketTypeDisconnect)
 	}
-	// Remove socket from pool
+
 	s.destroy()
 
-	if s.IsConnected() {
+	if s.Connected() {
 		s.manager.onClose("io client disconnect", nil)
 	}
 }
@@ -147,7 +147,7 @@ func (s *clientSocket) invokeSubEvents(eventName string, v ...interface{}) {
 		if !ok {
 			panic("sio: type of the argument `err` must be error")
 		}
-		if !s.IsConnected() {
+		if !s.Connected() {
 			s.emitReserved("connect_error", err)
 		}
 	case "close":

@@ -232,7 +232,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 		}
 	}
 
-	if n.server.connectionStateRecovery.Enabled && !n.server.connectionStateRecovery.UseMiddlewares && socket.WasRecovered() {
+	if n.server.connectionStateRecovery.Enabled && !n.server.connectionStateRecovery.UseMiddlewares && socket.Recovered() {
 		return socket, n.doConnect(socket)
 	}
 

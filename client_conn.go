@@ -36,7 +36,7 @@ func newClientConn(manager *Manager) *clientConn {
 	}
 }
 
-func (c *clientConn) IsConnected() bool {
+func (c *clientConn) Connected() bool {
 	c.stateMu.RLock()
 	defer c.stateMu.RUnlock()
 	return c.state == clientConnStateConnected
