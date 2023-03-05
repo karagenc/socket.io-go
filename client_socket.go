@@ -7,12 +7,16 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/fatih/structs"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
 type clientSocket struct {
 	id        atomic.Value
+	pid       atomic.Value
+	recovered atomic.Value
+
 	namespace string
 	manager   *Manager
 	parser    parser.Parser
@@ -39,7 +43,7 @@ type clientSocket struct {
 }
 
 func newClientSocket(manager *Manager, namespace string, parser parser.Parser) *clientSocket {
-	return &clientSocket{
+	s := &clientSocket{
 		namespace: namespace,
 		manager:   manager,
 		parser:    parser,
@@ -47,11 +51,35 @@ func newClientSocket(manager *Manager, namespace string, parser parser.Parser) *
 		emitter:   newEventEmitter(),
 		acks:      make(map[uint64]*ackHandler),
 	}
+	s.setRecovered(false)
+	return s
 }
 
 func (s *clientSocket) ID() SocketID {
 	id, _ := s.id.Load().(SocketID)
 	return id
+}
+
+func (s *clientSocket) setID(id SocketID) {
+	s.id.Store(id)
+}
+
+func (s *clientSocket) PID() (pid PrivateSessionID, ok bool) {
+	pid, ok = s.pid.Load().(PrivateSessionID)
+	return
+}
+
+func (s *clientSocket) setPID(pid PrivateSessionID) {
+	s.pid.Store(pid)
+}
+
+func (s *clientSocket) Recovered() bool {
+	recovered, _ := s.pid.Load().(bool)
+	return recovered
+}
+
+func (s *clientSocket) setRecovered(recovered bool) {
+	s.recovered.Store(recovered)
 }
 
 func (s *clientSocket) Connected() bool {
@@ -65,10 +93,6 @@ func (s *clientSocket) Active() bool {
 	s.subEventsEnabledMu.Lock()
 	defer s.subEventsEnabledMu.Unlock()
 	return s.subEventsEnabled
-}
-
-func (s *clientSocket) setID(id SocketID) {
-	s.id.Store(id)
 }
 
 func (s *clientSocket) Connect() {
@@ -173,10 +197,27 @@ func (s *clientSocket) sendConnectPacket(authData interface{}) {
 		err     error
 	)
 
-	if authData == nil {
-		buffers, err = s.parser.Encode(&header, nil)
+	pid, ok := s.PID()
+	if ok {
+		m := make(map[string]interface{})
+		m["pid"] = pid
+		m["offset"] = "TODO: offset"
+
+		if authData != nil {
+			a := structs.New(&authData)
+			a.TagName = "json"
+			for k, v := range a.Map() {
+				m[k] = v
+			}
+		}
+
+		buffers, err = s.parser.Encode(&header, m)
 	} else {
-		buffers, err = s.parser.Encode(&header, &authData)
+		if authData == nil {
+			buffers, err = s.parser.Encode(&header, nil)
+		} else {
+			buffers, err = s.parser.Encode(&header, &authData)
+		}
 	}
 
 	if err != nil {
@@ -246,6 +287,14 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	if v.SID == "" {
 		connectError(wrapInternalError(fmt.Errorf("sid is empty")))
 		return
+	}
+
+	if v.PID != nil {
+		pid, ok := s.PID()
+		if ok && pid == PrivateSessionID(*v.PID) {
+			s.setRecovered(true)
+		}
+		s.setPID(PrivateSessionID(*v.PID))
 	}
 
 	s.setID(SocketID(v.SID))

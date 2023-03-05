@@ -309,8 +309,8 @@ func (s *serverSocket) newBroadcastOperator() *BroadcastOperator {
 }
 
 type sidInfo struct {
-	SID string `json:"sid"`
-	PID string `json:"pid"`
+	SID string  `json:"sid"`
+	PID *string `json:"pid"`
 }
 
 func (s *serverSocket) onConnect() error {
@@ -325,9 +325,10 @@ func (s *serverSocket) onConnect() error {
 		Namespace: s.nsp.Name(),
 	}
 
+	pid := string(s.pid)
 	c := &sidInfo{
 		SID: string(s.ID()),
-		PID: string(s.pid),
+		PID: &pid,
 	}
 
 	buffers, err := s.parser.Encode(header, c)

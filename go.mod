@@ -6,6 +6,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/bytedance/sonic v1.7.1
 	github.com/deckarep/golang-set/v2 v2.1.0
+	github.com/fatih/structs v1.1.0
 	github.com/gin-gonic/gin v1.7.1
 	github.com/goccy/go-json v0.10.0
 	github.com/stretchr/testify v1.8.2
