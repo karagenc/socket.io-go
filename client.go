@@ -249,7 +249,7 @@ func (s *Client) emitReserved(eventName string, v ...interface{}) {
 	//
 	// https://github.com/socketio/socket.io-client/blob/89175d0481fc7633c12bb5b233dc3421f87860ef/lib/socket.ts#L287
 	for _, socket := range s.sockets.GetAll() {
-		socket.invokeSubEvents(eventName, v)
+		socket.invokeSubEvents(eventName, v...)
 	}
 
 	handlers := s.emitter.GetHandlers(eventName)
