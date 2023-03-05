@@ -195,6 +195,9 @@ func (c *serverConn) onFatalError(err error) {
 }
 
 func (c *serverConn) onClose(reason string, err error) {
+	// Server connection is one-time, it cannot be reconnected.
+	// We don't want it to close more than once,
+	// so we use sync.Once to avoid running onClose more than once.
 	c.closeOnce.Do(func() {
 		sockets := c.sockets.GetAndRemoveAll()
 		for _, socket := range sockets {
