@@ -80,7 +80,9 @@ func (s *clientSocket) Connect() {
 		return
 	}
 
-	// TODO: subevents
+	s.subEventsEnabledMu.Lock()
+	s.subEventsEnabled = true
+	s.subEventsEnabledMu.Unlock()
 
 	go func() {
 		s.client.conn.stateMu.RLock()
@@ -430,6 +432,9 @@ func (s *clientSocket) onError(err error) {
 // this method ensures the `Client` (manager on original socket.io implementation)
 // stops tracking us and that reconnections don't get triggered for this.
 func (s *clientSocket) destroy() {
+	s.subEventsEnabledMu.Lock()
+	s.subEventsEnabled = false
+	s.subEventsEnabledMu.Unlock()
 	s.client.destroy(s)
 }
 
