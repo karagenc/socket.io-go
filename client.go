@@ -135,7 +135,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 	return io
 }
 
-func (c *Client) Connect() {
+func (c *Client) Open() {
 	go func() {
 		err := c.conn.Connect(false)
 		if err != nil {
@@ -155,6 +155,7 @@ func (c *Client) Socket(namespace string) ClientSocket {
 		c.sockets.Set(socket)
 	}
 
+	// TODO: ???
 	socket.Connect()
 	return socket
 }
@@ -295,7 +296,7 @@ func (c *Client) destroy(socket *clientSocket) {
 			return
 		}
 	}
-	c.Disconnect()
+	c.Close()
 }
 
 func (c *Client) onClose(reason string, err error) {
@@ -310,6 +311,6 @@ func (c *Client) onClose(reason string, err error) {
 	}
 }
 
-func (c *Client) Disconnect() {
+func (c *Client) Close() {
 	c.conn.Disconnect()
 }
