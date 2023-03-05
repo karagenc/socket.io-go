@@ -443,12 +443,12 @@ func (s *serverSocket) setAck(handler *ackHandler) (id uint64) {
 }
 
 func (s *serverSocket) Emit(eventName string, v ...interface{}) {
-	s.sendDataPacket(parser.PacketTypeEvent, eventName, v...)
+	s.sendEventPacket(eventName, v...)
 }
 
-func (s *serverSocket) sendDataPacket(typ parser.PacketType, eventName string, _v ...interface{}) {
+func (s *serverSocket) sendEventPacket(eventName string, _v ...interface{}) {
 	header := &parser.PacketHeader{
-		Type:      typ,
+		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),
 	}
 

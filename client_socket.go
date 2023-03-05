@@ -477,12 +477,12 @@ func (s *clientSocket) OffAll() {
 }
 
 func (s *clientSocket) Emit(eventName string, v ...interface{}) {
-	s.sendDataPacket(parser.PacketTypeEvent, eventName, v...)
+	s.sendEventPacket(eventName, v...)
 }
 
-func (s *clientSocket) sendDataPacket(typ parser.PacketType, eventName string, v ...interface{}) {
+func (s *clientSocket) sendEventPacket(eventName string, v ...interface{}) {
 	header := parser.PacketHeader{
-		Type:      typ,
+		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,
 	}
 
