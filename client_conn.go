@@ -87,9 +87,7 @@ func (c *clientConn) Connect() (err error) {
 }
 
 func (c *clientConn) MaybeReconnectOnOpen() {
-	c.stateMu.RLock()
-	reconnect := c.state != clientConnStateReconnecting && c.client.backoff.Attempts() == 0 && !c.client.noReconnection
-	c.stateMu.RUnlock()
+	reconnect := c.client.backoff.Attempts() == 0 && !c.client.noReconnection
 	if reconnect {
 		c.Reconnect(false)
 	}
@@ -103,7 +101,12 @@ func (c *clientConn) Reconnect(again bool) {
 		c.stateMu.Lock()
 		defer c.stateMu.Unlock()
 	}
-	if c.state == clientConnStateReconnecting {
+
+	// If the state is 'connected', 'connecting', or 'reconnecting', etc; don't try to connect.
+	//
+	// If the state is 'reconnecting' or 'connecting', there is another goroutine trying to connect.
+	// If the state is 'connected', there is nothing for this method to do.
+	if c.state != clientConnStateDisconnected {
 		return
 	}
 	c.state = clientConnStateReconnecting
