@@ -13,7 +13,7 @@ import (
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
-type ClientConfig struct {
+type ManagerConfig struct {
 	// A creator function for the Socket.IO parser.
 	// This function is used for creating a parser.Parser object.
 	// You can use a custom parser by changing this variable.
@@ -47,7 +47,7 @@ type ClientConfig struct {
 	RandomizationFactor *float32
 }
 
-type Client struct {
+type Manager struct {
 	url       string
 	eioConfig eio.ClientConfig
 
@@ -79,22 +79,20 @@ const (
 	DefaultRandomizationFactor  float32 = 0.5
 )
 
-// This function creates a new Client.
+// This function creates a new Manager for client sockets.
 //
 // You should create a new Socket using the Socket
-// method of the Client returned by this function.
+// method of the Manager returned by this function.
 // If you don't do that, server will terminate your connection. See: https://socket.io/docs/v4/server-initialization/#connectTimeout
-//
-// The Client is called "Manager" in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
-func NewClient(url string, config *ClientConfig) *Client {
+func NewManager(url string, config *ManagerConfig) *Manager {
 	if config == nil {
-		config = new(ClientConfig)
+		config = new(ManagerConfig)
 	} else {
 		c := *config
 		config = &c
 	}
 
-	io := &Client{
+	io := &Manager{
 		url:       url,
 		eioConfig: config.EIO,
 
@@ -135,24 +133,24 @@ func NewClient(url string, config *ClientConfig) *Client {
 	return io
 }
 
-func (c *Client) Open() {
+func (m *Manager) Open() {
 	go func() {
-		err := c.conn.Connect(false)
+		err := m.conn.Connect(false)
 		if err != nil {
-			c.conn.MaybeReconnectOnOpen()
+			m.conn.MaybeReconnectOnOpen()
 		}
 	}()
 }
 
-func (c *Client) Socket(namespace string) ClientSocket {
+func (m *Manager) Socket(namespace string) ClientSocket {
 	if namespace == "" {
 		namespace = "/"
 	}
 
-	socket, ok := c.sockets.Get(namespace)
+	socket, ok := m.sockets.Get(namespace)
 	if !ok {
-		socket = newClientSocket(c, namespace, c.parser)
-		c.sockets.Set(socket)
+		socket = newClientSocket(m, namespace, m.parser)
+		m.sockets.Set(socket)
 	}
 
 	// TODO: ???
@@ -160,17 +158,17 @@ func (c *Client) Socket(namespace string) ClientSocket {
 	return socket
 }
 
-func (c *Client) On(eventName string, handler interface{}) {
-	c.checkHandler(eventName, handler)
-	c.emitter.On(eventName, handler)
+func (m *Manager) On(eventName string, handler interface{}) {
+	m.checkHandler(eventName, handler)
+	m.emitter.On(eventName, handler)
 }
 
-func (c *Client) Once(eventName string, handler interface{}) {
-	c.checkHandler(eventName, handler)
-	c.emitter.On(eventName, handler)
+func (m *Manager) Once(eventName string, handler interface{}) {
+	m.checkHandler(eventName, handler)
+	m.emitter.On(eventName, handler)
 }
 
-func (c *Client) checkHandler(eventName string, handler interface{}) {
+func (m *Manager) checkHandler(eventName string, handler interface{}) {
 	switch eventName {
 	case "":
 		fallthrough
@@ -196,64 +194,64 @@ func (c *Client) checkHandler(eventName string, handler interface{}) {
 	}
 }
 
-func (c *Client) Off(eventName string, handler interface{}) {
-	c.emitter.Off(eventName, handler)
+func (m *Manager) Off(eventName string, handler interface{}) {
+	m.emitter.Off(eventName, handler)
 }
 
-func (c *Client) OffAll() {
-	c.emitter.OffAll()
+func (m *Manager) OffAll() {
+	m.emitter.OffAll()
 }
 
-func (c *Client) onEIOPacket(packets ...*eioparser.Packet) {
-	c.parserMu.Lock()
-	defer c.parserMu.Unlock()
+func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
+	m.parserMu.Lock()
+	defer m.parserMu.Unlock()
 
 	for _, packet := range packets {
 		switch packet.Type {
 		case eioparser.PacketTypeMessage:
-			err := c.parser.Add(packet.Data, c.onFinishEIOPacket)
+			err := m.parser.Add(packet.Data, m.onFinishEIOPacket)
 			if err != nil {
-				c.onError(wrapInternalError(err))
+				m.onError(wrapInternalError(err))
 				return
 			}
 
 		case eioparser.PacketTypePing:
-			c.emitReserved("ping")
+			m.emitReserved("ping")
 		}
 	}
 }
 
-func (c *Client) onFinishEIOPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
+func (m *Manager) onFinishEIOPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	if header.Namespace == "" {
 		header.Namespace = "/"
 	}
 
-	socket, ok := c.sockets.Get(header.Namespace)
+	socket, ok := m.sockets.Get(header.Namespace)
 	if !ok {
 		return
 	}
 	socket.onPacket(header, eventName, decode)
 }
 
-func (c *Client) onEIOError(err error) {
-	c.onError(err)
+func (m *Manager) onEIOError(err error) {
+	m.onError(err)
 }
 
-func (c *Client) onEIOClose(reason string, err error) {
-	c.onClose(reason, err)
+func (m *Manager) onEIOClose(reason string, err error) {
+	m.onClose(reason, err)
 }
 
 // Convenience method for emitting events to the user.
-func (s *Client) emitReserved(eventName string, v ...interface{}) {
+func (m *Manager) emitReserved(eventName string, v ...interface{}) {
 	// On original socket.io, events are also emitted to
 	// subevents registered by the socket.
 	//
 	// https://github.com/socketio/socket.io-client/blob/89175d0481fc7633c12bb5b233dc3421f87860ef/lib/socket.ts#L287
-	for _, socket := range s.sockets.GetAll() {
+	for _, socket := range m.sockets.GetAll() {
 		socket.invokeSubEvents(eventName, v...)
 	}
 
-	handlers := s.emitter.GetHandlers(eventName)
+	handlers := m.emitter.GetHandlers(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
 		values[i] = reflect.ValueOf(v)
@@ -263,20 +261,20 @@ func (s *Client) emitReserved(eventName string, v ...interface{}) {
 		for _, handler := range handlers {
 			_, err := handler.Call(values...)
 			if err != nil {
-				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+				m.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
 				return
 			}
 		}
 	}()
 }
 
-func (c *Client) onError(err error) {
+func (m *Manager) onError(err error) {
 	// emitReserved is not used because if an error would happen in handler.Call
 	// onError would be called recursively.
 
 	errValue := reflect.ValueOf(err)
 
-	handlers := c.emitter.GetHandlers("error")
+	handlers := m.emitter.GetHandlers("error")
 	go func() {
 		for _, handler := range handlers {
 			_, err := handler.Call(errValue)
@@ -290,27 +288,27 @@ func (c *Client) onError(err error) {
 	}()
 }
 
-func (c *Client) destroy(socket *clientSocket) {
-	for _, socket := range c.sockets.GetAll() {
+func (m *Manager) destroy(socket *clientSocket) {
+	for _, socket := range m.sockets.GetAll() {
 		if socket.IsActive() {
 			return
 		}
 	}
-	c.Close()
+	m.Close()
 }
 
-func (c *Client) onClose(reason string, err error) {
-	c.parserMu.Lock()
-	defer c.parserMu.Unlock()
-	c.parser.Reset()
-	c.backoff.Reset()
-	c.emitReserved("close", reason, err)
+func (m *Manager) onClose(reason string, err error) {
+	m.parserMu.Lock()
+	defer m.parserMu.Unlock()
+	m.parser.Reset()
+	m.backoff.Reset()
+	m.emitReserved("close", reason, err)
 
-	if !c.noReconnection {
-		go c.conn.Reconnect(false)
+	if !m.noReconnection {
+		go m.conn.Reconnect(false)
 	}
 }
 
-func (c *Client) Close() {
-	c.conn.Disconnect()
+func (m *Manager) Close() {
+	m.conn.Disconnect()
 }

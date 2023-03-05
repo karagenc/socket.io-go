@@ -104,10 +104,8 @@ type ClientSocket interface {
 	// Disconnect the socket (a DISCONNECT packet will be sent).
 	Disconnect()
 
-	// Retrieves the underlying Client.
-	//
-	// It is called Manager in official implementation of Socket.IO: https://github.com/socketio/socket.io-client/blob/4.1.3/lib/manager.ts#L295
-	Client() *Client
+	// Retrieves the Manager.
+	Manager() *Manager
 
 	// Setting the authentication data is optional and if used, it must be a JSON object (struct or map).
 	// Non-JSON-object authentication data will not accepted, and panic will occur.

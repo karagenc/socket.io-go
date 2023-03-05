@@ -26,12 +26,12 @@ type clientConn struct {
 	eioPacketQueue *packetQueue
 	eioMu          sync.RWMutex
 
-	client *Client
+	manager *Manager
 }
 
-func newClientConn(client *Client) *clientConn {
+func newClientConn(manager *Manager) *clientConn {
 	return &clientConn{
-		client:         client,
+		manager:        manager,
 		eioPacketQueue: newPacketQueue(),
 	}
 }
@@ -59,40 +59,40 @@ func (c *clientConn) Connect(again bool) (err error) {
 	defer c.eioMu.Unlock()
 
 	callbacks := eio.Callbacks{
-		OnPacket: c.client.onEIOPacket,
-		OnError:  c.client.onEIOError,
-		OnClose:  c.client.onEIOClose,
+		OnPacket: c.manager.onEIOPacket,
+		OnError:  c.manager.onEIOError,
+		OnClose:  c.manager.onEIOClose,
 	}
 
-	_eio, err := eio.Dial(c.client.url, &callbacks, &c.client.eioConfig)
+	_eio, err := eio.Dial(c.manager.url, &callbacks, &c.manager.eioConfig)
 	if err != nil {
-		c.client.parserMu.Lock()
-		defer c.client.parserMu.Unlock()
-		c.client.parser.Reset()
+		c.manager.parserMu.Lock()
+		defer c.manager.parserMu.Unlock()
+		c.manager.parser.Reset()
 
 		c.state = clientConnStateDisconnected
-		c.client.emitReserved("error", err)
+		c.manager.emitReserved("error", err)
 		return err
 	}
 	c.eio = _eio
 
-	c.client.parserMu.Lock()
-	defer c.client.parserMu.Unlock()
-	c.client.parser.Reset()
+	c.manager.parserMu.Lock()
+	defer c.manager.parserMu.Unlock()
+	c.manager.parser.Reset()
 
 	go pollAndSend(c.eio, c.eioPacketQueue)
 
-	sockets := c.client.sockets.GetAll()
+	sockets := c.manager.sockets.GetAll()
 	for _, socket := range sockets {
 		go socket.onOpen()
 	}
 
-	c.client.emitReserved("open")
+	c.manager.emitReserved("open")
 	return
 }
 
 func (c *clientConn) MaybeReconnectOnOpen() {
-	reconnect := c.client.backoff.Attempts() == 0 && !c.client.noReconnection
+	reconnect := c.manager.backoff.Attempts() == 0 && !c.manager.noReconnection
 	if reconnect {
 		c.Reconnect(false)
 	}
@@ -115,35 +115,35 @@ func (c *clientConn) Reconnect(again bool) {
 	}
 	c.state = clientConnStateReconnecting
 
-	attempts := c.client.backoff.Attempts()
-	didAttemptsReachedMaxAttempts := c.client.reconnectionAttempts > 0 && attempts >= c.client.reconnectionAttempts
+	attempts := c.manager.backoff.Attempts()
+	didAttemptsReachedMaxAttempts := c.manager.reconnectionAttempts > 0 && attempts >= c.manager.reconnectionAttempts
 	// Just in case
-	didAttemptsReachedMaxInt := c.client.reconnectionAttempts == 0 && attempts == math.MaxUint32
+	didAttemptsReachedMaxInt := c.manager.reconnectionAttempts == 0 && attempts == math.MaxUint32
 
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
-		c.client.backoff.Reset()
-		c.client.emitReserved("reconnect_failed")
+		c.manager.backoff.Reset()
+		c.manager.emitReserved("reconnect_failed")
 		c.state = clientConnStateDisconnected
 		return
 	}
 
-	backoffDuration := c.client.backoff.Duration()
+	backoffDuration := c.manager.backoff.Duration()
 	time.Sleep(backoffDuration)
 
-	attempts = c.client.backoff.Attempts()
-	c.client.emitReserved("reconnect_attempt", attempts)
+	attempts = c.manager.backoff.Attempts()
+	c.manager.emitReserved("reconnect_attempt", attempts)
 
 	err := c.Connect(again)
 	if err != nil {
-		c.client.emitReserved("reconnect", err)
+		c.manager.emitReserved("reconnect", err)
 		c.state = clientConnStateDisconnected
 		c.Reconnect(true)
 		return
 	}
 
-	attempts = c.client.backoff.Attempts()
-	c.client.backoff.Reset()
-	c.client.emitReserved("reconnect", attempts)
+	attempts = c.manager.backoff.Attempts()
+	c.manager.backoff.Reset()
+	c.manager.emitReserved("reconnect", attempts)
 }
 
 func (c *clientConn) Packet(packets ...*eioparser.Packet) {
@@ -157,7 +157,7 @@ func (c *clientConn) Disconnect() {
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
 	c.state = clientConnStateDisconnected
-	c.client.onClose("forced close", nil)
+	c.manager.onClose("forced close", nil)
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
 	c.eio.Close()

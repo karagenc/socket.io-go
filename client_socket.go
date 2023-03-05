@@ -14,7 +14,7 @@ import (
 type clientSocket struct {
 	id        atomic.Value
 	namespace string
-	client    *Client
+	manager   *Manager
 	parser    parser.Parser
 
 	auth *Auth
@@ -38,10 +38,10 @@ type clientSocket struct {
 	subEventsEnabledMu sync.Mutex
 }
 
-func newClientSocket(client *Client, namespace string, parser parser.Parser) *clientSocket {
+func newClientSocket(manager *Manager, namespace string, parser parser.Parser) *clientSocket {
 	return &clientSocket{
 		namespace: namespace,
-		client:    client,
+		manager:   manager,
 		parser:    parser,
 		auth:      newAuth(),
 		emitter:   newEventEmitter(),
@@ -54,17 +54,17 @@ func (s *clientSocket) ID() SocketID {
 	return id
 }
 
-func (c *clientSocket) IsConnected() bool {
-	c.connectedMu.RLock()
-	defer c.connectedMu.RUnlock()
-	return c.client.conn.IsConnected() && c.connected
+func (s *clientSocket) IsConnected() bool {
+	s.connectedMu.RLock()
+	defer s.connectedMu.RUnlock()
+	return s.manager.conn.IsConnected() && s.connected
 }
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
-func (c *clientSocket) IsActive() bool {
-	c.subEventsEnabledMu.Lock()
-	defer c.subEventsEnabledMu.Unlock()
-	return c.subEventsEnabled
+func (s *clientSocket) IsActive() bool {
+	s.subEventsEnabledMu.Lock()
+	defer s.subEventsEnabledMu.Unlock()
+	return s.subEventsEnabled
 }
 
 func (s *clientSocket) setID(id SocketID) {
@@ -85,16 +85,16 @@ func (s *clientSocket) Connect() {
 	s.subEventsEnabledMu.Unlock()
 
 	go func() {
-		s.client.conn.stateMu.RLock()
-		isReconnecting := s.client.conn.state == clientConnStateReconnecting
-		s.client.conn.stateMu.RUnlock()
+		s.manager.conn.stateMu.RLock()
+		isReconnecting := s.manager.conn.state == clientConnStateReconnecting
+		s.manager.conn.stateMu.RUnlock()
 		if !isReconnecting {
-			s.client.Open()
+			s.manager.Open()
 		}
 
-		s.client.conn.stateMu.RLock()
-		isConnected := s.client.conn.state == clientConnStateConnected
-		s.client.conn.stateMu.RUnlock()
+		s.manager.conn.stateMu.RLock()
+		isConnected := s.manager.conn.state == clientConnStateConnected
+		s.manager.conn.stateMu.RUnlock()
 		if isConnected {
 			s.onOpen()
 		}
@@ -103,17 +103,17 @@ func (s *clientSocket) Connect() {
 
 func (s *clientSocket) Disconnect() {
 	if s.IsConnected() {
-		go s.sendControlPacket(parser.PacketTypeDisconnect)
+		s.sendControlPacket(parser.PacketTypeDisconnect)
 	}
 	// Remove socket from pool
 	s.destroy()
 
 	if s.IsConnected() {
-		s.client.onClose("io client disconnect", nil)
+		s.manager.onClose("io client disconnect", nil)
 	}
 }
 
-func (s *clientSocket) Client() *Client { return s.client }
+func (s *clientSocket) Manager() *Manager { return s.manager }
 
 func (s *clientSocket) Auth() any { return s.auth.Get() }
 
@@ -194,7 +194,7 @@ func (s *clientSocket) sendConnectPacket(authData interface{}) {
 		s.onError(wrapInternalError(err))
 		return
 	}
-	s.client.conn.Packet(packet)
+	s.manager.conn.Packet(packet)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -270,7 +270,7 @@ func (s *clientSocket) emitBuffered() {
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
 	if len(s.sendBuffer) != 0 {
-		s.client.conn.Packet(s.sendBuffer...)
+		s.manager.conn.Packet(s.sendBuffer...)
 		s.sendBuffer = nil
 	}
 }
@@ -422,7 +422,7 @@ func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
 
 func (s *clientSocket) onError(err error) {
 	// In original socket.io, errors are emitted only on `Manager` (`Client` in this implementation).
-	s.client.onError(err)
+	s.manager.onError(err)
 }
 
 // Called upon forced client/server side disconnections,
@@ -432,7 +432,7 @@ func (s *clientSocket) destroy() {
 	s.subEventsEnabledMu.Lock()
 	s.subEventsEnabled = false
 	s.subEventsEnabledMu.Unlock()
-	s.client.destroy(s)
+	s.manager.destroy(s)
 }
 
 func (s *clientSocket) onClose(reason string) {
@@ -584,7 +584,7 @@ func (s *clientSocket) sendBuffers(buffers ...[]byte) {
 		s.connectedMu.Lock()
 		defer s.connectedMu.Unlock()
 		if s.connected {
-			s.client.conn.Packet(packets...)
+			s.manager.conn.Packet(packets...)
 		} else {
 			s.sendBufferMu.Lock()
 			s.sendBuffer = append(s.sendBuffer, packets...)
