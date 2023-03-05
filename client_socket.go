@@ -89,7 +89,7 @@ func (s *clientSocket) Connect() {
 		isReconnecting := s.client.conn.state != clientConnStateReconnecting
 		s.client.conn.stateMu.RUnlock()
 		if isReconnecting {
-			err := s.client.conn.Connect()
+			err := s.client.conn.Connect(false)
 			if err != nil && !s.client.noReconnection {
 				s.client.conn.MaybeReconnectOnOpen()
 			}

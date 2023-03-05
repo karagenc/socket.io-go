@@ -137,7 +137,7 @@ func NewClient(url string, config *ClientConfig) *Client {
 
 func (c *Client) Connect() {
 	go func() {
-		err := c.conn.Connect()
+		err := c.conn.Connect(false)
 		if err != nil {
 			c.conn.MaybeReconnectOnOpen()
 		}

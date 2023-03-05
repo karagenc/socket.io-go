@@ -42,9 +42,14 @@ func (c *clientConn) IsConnected() bool {
 	return c.state == clientConnStateConnected
 }
 
-func (c *clientConn) Connect() (err error) {
-	c.stateMu.Lock()
-	defer c.stateMu.Unlock()
+func (c *clientConn) Connect(again bool) (err error) {
+	// again = Is this the first time we're doing reconnect?
+	// In other words: are we recursing?
+	if !again {
+		c.stateMu.Lock()
+		defer c.stateMu.Unlock()
+	}
+
 	if c.state == clientConnStateConnected {
 		return nil
 	}
@@ -96,7 +101,6 @@ func (c *clientConn) MaybeReconnectOnOpen() {
 func (c *clientConn) Reconnect(again bool) {
 	// again = Is this the first time we're doing reconnect?
 	// In other words: are we recursing?
-
 	if !again {
 		c.stateMu.Lock()
 		defer c.stateMu.Unlock()
@@ -129,7 +133,7 @@ func (c *clientConn) Reconnect(again bool) {
 	attempts = c.client.backoff.Attempts()
 	c.client.emitReserved("reconnect_attempt", attempts)
 
-	err := c.Connect()
+	err := c.Connect(again)
 	if err != nil {
 		c.client.emitReserved("reconnect", err)
 		c.state = clientConnStateDisconnected
