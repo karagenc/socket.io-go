@@ -212,7 +212,8 @@ func (s *clientSocket) sendConnectPacket(authData interface{}) {
 	if ok {
 		m := make(map[string]interface{})
 		m["pid"] = pid
-		m["offset"] = "TODO: offset"
+		lastOffset, _ := s.lastOffset()
+		m["offset"] = lastOffset
 
 		if authData != nil {
 			a := structs.New(&authData)
@@ -314,9 +315,8 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.connected = true
 	s.connectedMu.Unlock()
 
-	s.emitBuffered()
+	go s.emitBuffered()
 	s.emitReserved("connect")
-
 }
 
 func (s *clientSocket) emitBuffered() {
@@ -408,6 +408,14 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 }
 
 func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value) {
+	// Set the lastOffset before calling the handler.
+	// An error can occur when the handler gets called,
+	// and we can miss setting the lastOffset.
+	_, ok := s.pid()
+	if ok && len(values) > 0 && values[len(values)-1].Kind() == reflect.String {
+		s.setLastOffset(values[len(values)-1].String())
+	}
+
 	ret, err := handler.Call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
