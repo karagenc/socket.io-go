@@ -349,15 +349,13 @@ func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
 		values[i] = reflect.ValueOf(v)
 	}
 
-	go func() {
-		for _, handler := range handlers {
-			_, err := handler.Call(values...)
-			if err != nil {
-				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-				return
-			}
+	for _, handler := range handlers {
+		_, err := handler.Call(values...)
+		if err != nil {
+			s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+			return
 		}
-	}()
+	}
 }
 
 func (s *serverSocket) onError(err error) {
@@ -367,17 +365,15 @@ func (s *serverSocket) onError(err error) {
 	errValue := reflect.ValueOf(err)
 
 	handlers := s.emitter.GetHandlers("error")
-	go func() {
-		for _, handler := range handlers {
-			_, err := handler.Call(errValue)
-			if err != nil {
-				// This should panic.
-				// If you cannot handle the error via `onError`
-				// then what option do you have?
-				panic(fmt.Errorf("sio: %w", err))
-			}
+	for _, handler := range handlers {
+		_, err := handler.Call(errValue)
+		if err != nil {
+			// This should panic.
+			// If you cannot handle the error via `onError`
+			// then what option do you have?
+			panic(fmt.Errorf("sio: %w", err))
 		}
-	}()
+	}
 }
 
 // TODO: Check these

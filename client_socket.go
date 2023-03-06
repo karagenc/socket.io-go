@@ -315,7 +315,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.connected = true
 	s.connectedMu.Unlock()
 
-	go s.emitBuffered()
+	s.emitBuffered()
 	s.emitReserved("connect")
 }
 
@@ -478,15 +478,13 @@ func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
 		values[i] = reflect.ValueOf(v)
 	}
 
-	go func() {
-		for _, handler := range handlers {
-			_, err := handler.Call(values...)
-			if err != nil {
-				s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-				return
-			}
+	for _, handler := range handlers {
+		_, err := handler.Call(values...)
+		if err != nil {
+			s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+			return
 		}
-	}()
+	}
 }
 
 func (s *clientSocket) onError(err error) {

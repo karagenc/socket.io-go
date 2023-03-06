@@ -257,15 +257,13 @@ func (m *Manager) emitReserved(eventName string, v ...interface{}) {
 		values[i] = reflect.ValueOf(v)
 	}
 
-	go func() {
-		for _, handler := range handlers {
-			_, err := handler.Call(values...)
-			if err != nil {
-				m.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-				return
-			}
+	for _, handler := range handlers {
+		_, err := handler.Call(values...)
+		if err != nil {
+			m.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
+			return
 		}
-	}()
+	}
 }
 
 func (m *Manager) onError(err error) {

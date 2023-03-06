@@ -283,9 +283,6 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 		for _, handler := range connectHandlers {
 			callHandler(handler)
 		}
-	}()
-
-	go func() {
 		for _, handler := range connectionHandlers {
 			callHandler(handler)
 		}
