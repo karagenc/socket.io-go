@@ -414,6 +414,7 @@ func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHea
 	_, ok := s.pid()
 	if ok && len(values) > 0 && values[len(values)-1].Kind() == reflect.String {
 		s.setLastOffset(values[len(values)-1].String())
+		values = values[:len(values)-1] // Remove offset
 	}
 
 	ret, err := handler.Call(values...)
