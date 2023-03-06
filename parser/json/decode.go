@@ -44,6 +44,7 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 
 		ok := header.IsBinary() == false || header.Attachments == 0
 		if ok {
+			// In case finish panics, p.r is guaranteed to be nil.
 			defer func() {
 				p.r = nil
 			}()
@@ -54,6 +55,7 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 
 	ok := p.r.AddBuffer(data)
 	if ok {
+		// In case finish panics, p.r is guaranteed to be nil.
 		defer func() {
 			p.r = nil
 		}()
