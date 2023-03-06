@@ -13,9 +13,11 @@ import (
 )
 
 type clientSocket struct {
-	id        atomic.Value
-	pid       atomic.Value
-	recovered atomic.Value
+	id atomic.Value
+
+	_pid        atomic.Value
+	_lastOffset atomic.Value
+	_recovered  atomic.Value
 
 	namespace string
 	manager   *Manager
@@ -64,22 +66,31 @@ func (s *clientSocket) setID(id SocketID) {
 	s.id.Store(id)
 }
 
-func (s *clientSocket) PID() (pid PrivateSessionID, ok bool) {
-	pid, ok = s.pid.Load().(PrivateSessionID)
+func (s *clientSocket) pid() (pid PrivateSessionID, ok bool) {
+	pid, ok = s._pid.Load().(PrivateSessionID)
 	return
 }
 
 func (s *clientSocket) setPID(pid PrivateSessionID) {
-	s.pid.Store(pid)
+	s._pid.Store(pid)
+}
+
+func (s *clientSocket) lastOffset() (lastOffset string, ok bool) {
+	lastOffset, ok = s._lastOffset.Load().(string)
+	return
+}
+
+func (s *clientSocket) setLastOffset(lastOffset string) {
+	s._lastOffset.Store(lastOffset)
 }
 
 func (s *clientSocket) Recovered() bool {
-	recovered, _ := s.pid.Load().(bool)
+	recovered, _ := s._recovered.Load().(bool)
 	return recovered
 }
 
 func (s *clientSocket) setRecovered(recovered bool) {
-	s.recovered.Store(recovered)
+	s._recovered.Store(recovered)
 }
 
 func (s *clientSocket) Connected() bool {
@@ -197,7 +208,7 @@ func (s *clientSocket) sendConnectPacket(authData interface{}) {
 		err     error
 	)
 
-	pid, ok := s.PID()
+	pid, ok := s.pid()
 	if ok {
 		m := make(map[string]interface{})
 		m["pid"] = pid
@@ -290,7 +301,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	}
 
 	if v.PID != nil {
-		pid, ok := s.PID()
+		pid, ok := s.pid()
 		if ok && pid == PrivateSessionID(*v.PID) {
 			s.setRecovered(true)
 		}
