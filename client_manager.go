@@ -70,7 +70,7 @@ type Manager struct {
 	conn    *clientConn
 
 	skipReconnect   bool
-	skipReconnectMu sync.Mutex
+	skipReconnectMu sync.RWMutex
 }
 
 const (
@@ -304,7 +304,10 @@ func (m *Manager) onClose(reason string, err error) {
 	m.backoff.Reset()
 	m.emitReserved("close", reason, err)
 
-	if !m.noReconnection {
+	m.skipReconnectMu.RLock()
+	skipReconnect := m.skipReconnect
+	m.skipReconnectMu.RUnlock()
+	if !m.noReconnection && !skipReconnect {
 		go m.conn.Reconnect(false)
 	}
 }

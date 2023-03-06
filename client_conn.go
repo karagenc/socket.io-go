@@ -48,6 +48,9 @@ func (c *clientConn) Connect(again bool) (err error) {
 	if !again {
 		c.stateMu.Lock()
 		defer c.stateMu.Unlock()
+		c.manager.skipReconnectMu.RLock()
+		defer c.manager.skipReconnectMu.RUnlock()
+		c.manager.skipReconnect = false
 	}
 
 	if c.state == clientConnStateConnected {
@@ -104,6 +107,12 @@ func (c *clientConn) Reconnect(again bool) {
 	if !again {
 		c.stateMu.Lock()
 		defer c.stateMu.Unlock()
+
+		c.manager.skipReconnectMu.RLock()
+		defer c.manager.skipReconnectMu.RUnlock()
+		if c.manager.skipReconnect {
+			return
+		}
 	}
 
 	// If the state is 'connected', 'connecting', or 'reconnecting', etc; don't try to connect.
@@ -130,8 +139,16 @@ func (c *clientConn) Reconnect(again bool) {
 	backoffDuration := c.manager.backoff.Duration()
 	time.Sleep(backoffDuration)
 
+	if c.manager.skipReconnect {
+		return
+	}
+
 	attempts = c.manager.backoff.Attempts()
 	c.manager.emitReserved("reconnect_attempt", attempts)
+
+	if c.manager.skipReconnect {
+		return
+	}
 
 	err := c.Connect(again)
 	if err != nil {
@@ -157,7 +174,13 @@ func (c *clientConn) Disconnect() {
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
 	c.state = clientConnStateDisconnected
+
+	c.manager.skipReconnectMu.Lock()
+	defer c.manager.skipReconnectMu.Unlock()
+	c.manager.skipReconnect = true
+
 	c.manager.onClose("forced close", nil)
+
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
 	c.eio.Close()
