@@ -10,16 +10,30 @@ import (
 const url = "http://127.0.0.1:3000/socket.io"
 
 func main() {
-	client := sio.NewClient(url, nil)
-	socket := client.Socket("/")
+	manager := sio.NewManager(url, nil)
+	socket := manager.Socket("/")
+
+	fmt.Println("Init")
 
 	socket.On("connect", func() {
 		fmt.Println("Connected!")
 	})
 
-	socket.Emit("echo", "Hello!", func(message string) {
-		fmt.Printf("ACK: %s\n", message)
+	socket.On("reconnect", func() {
+		fmt.Printf("reconnect happened\n")
 	})
 
-	time.Sleep(time.Second * 2)
+	socket.On("connect_error", func(err error) {
+		fmt.Printf("connect error: %s\n", err)
+	})
+
+	//socket.Emit("echo", "Hello!")
+	socket.On("e", func(message string) {
+		fmt.Println(message)
+	})
+
+	socket.Connect()
+	manager.Open()
+
+	time.Sleep(time.Second * 10)
 }

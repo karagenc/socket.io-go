@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	sio "github.com/tomruk/socket.io-go"
@@ -26,9 +25,8 @@ func main() {
 
 	io.On("connect", func(socket sio.ServerSocket) {
 		fmt.Printf("New socket: %s\n", socket.ID())
-		socket.On("echo", func(message string) string {
+		socket.On("echo", func(message string) {
 			fmt.Printf("Message: %s\n", message)
-			return "HEYYO!"
 		})
 	})
 
@@ -40,22 +38,9 @@ func main() {
 	fs := http.FileServer(http.Dir("public"))
 	router := http.NewServeMux()
 
-	if allowOrigin == "" {
-		// Make sure to have a slash at the end of the URL.
-		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
-		router.Handle("/socket.io/", io)
-	} else {
-		if !strings.HasPrefix(allowOrigin, "http://") {
-			allowOrigin = "http://" + allowOrigin
-		}
-
-		fmt.Printf("ALLOW_ORIGIN is set to: %s\n", allowOrigin)
-		h := corsMiddleware(io, allowOrigin)
-
-		// Make sure to have a slash at the end of the URL.
-		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
-		router.Handle("/socket.io/", h)
-	}
+	// Make sure to have a slash at the end of the URL.
+	// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
+	router.Handle("/socket.io/", io)
 
 	router.Handle("/", fs)
 
