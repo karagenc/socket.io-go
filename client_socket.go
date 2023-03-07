@@ -544,10 +544,6 @@ func (s *clientSocket) OffAll() {
 }
 
 func (s *clientSocket) Emit(eventName string, v ...interface{}) {
-	s.sendEventPacket(eventName, v...)
-}
-
-func (s *clientSocket) sendEventPacket(eventName string, v ...interface{}) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,

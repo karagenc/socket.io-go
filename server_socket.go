@@ -439,11 +439,7 @@ func (s *serverSocket) setAck(handler *ackHandler) (id uint64) {
 	return
 }
 
-func (s *serverSocket) Emit(eventName string, v ...interface{}) {
-	s.sendEventPacket(eventName, v...)
-}
-
-func (s *serverSocket) sendEventPacket(eventName string, _v ...interface{}) {
+func (s *serverSocket) Emit(eventName string, _v ...interface{}) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),
