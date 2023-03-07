@@ -536,12 +536,12 @@ func (s *clientSocket) onClose(reason string) {
 
 func (s *clientSocket) OnEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitterForEvents.On(newEventHandler(handler))
+	s.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
 func (s *clientSocket) OnceEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitterForEvents.Once(newEventHandler(handler))
+	s.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
 func (s *clientSocket) checkHandler(eventName string, handler any) {
@@ -565,7 +565,7 @@ func (s *clientSocket) OffEvent(eventName string, _handler ...any) {
 	for i, h := range _handler {
 		handlers[i] = newEventHandler(h)
 	}
-	s.emitterForEvents.Off(handlers...)
+	s.emitterForEvents.Off(eventName, handlers...)
 }
 
 func (s *clientSocket) OffAll() {
