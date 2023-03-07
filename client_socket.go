@@ -575,7 +575,7 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	}
 
 	if IsEventReservedForClient(eventName) {
-		panic("sio: Emit: attempted to emit a reserved event")
+		panic("sio: Emit: attempted to emit a reserved event: `" + eventName + "`")
 	}
 
 	v = append([]any{eventName}, v...)

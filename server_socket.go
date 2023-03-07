@@ -446,7 +446,7 @@ func (s *serverSocket) Emit(eventName string, _v ...any) {
 	}
 
 	if IsEventReservedForServer(eventName) {
-		panic(fmt.Errorf("sio: Emit: attempted to emit a reserved event"))
+		panic("sio: Emit: attempted to emit a reserved event: `" + eventName + "`")
 	}
 
 	// One extra space for eventName,
