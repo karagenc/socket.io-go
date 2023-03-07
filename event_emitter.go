@@ -4,110 +4,65 @@ import "sync"
 
 type eventEmitter[T comparable] struct {
 	mu         sync.Mutex
-	events     map[string][]T
-	eventsOnce map[string][]T
+	events     []T
+	eventsOnce []T
 }
 
 func newEventEmitter[T comparable]() *eventEmitter[T] {
-	return &eventEmitter[T]{
-		events:     make(map[string][]T),
-		eventsOnce: make(map[string][]T),
-	}
+	return new(eventEmitter[T])
 }
 
-func (e *eventEmitter[T]) On(eventName string, handler T) {
-	// TODO: ???
-	/* if handler == nil {
-		return
-	} */
-
+func (e *eventEmitter[T]) On(handler T) {
 	e.mu.Lock()
-	handlers, _ := e.events[eventName]
-	handlers = append(handlers, handler)
-	e.events[eventName] = handlers
+	e.events = append(e.events, handler)
 	e.mu.Unlock()
 }
 
-func (e *eventEmitter[T]) Once(eventName string, handler T) {
-	// TODO: ???
-	/* if handler == nil {
-		return
-	} */
-
+func (e *eventEmitter[T]) Once(handler T) {
 	e.mu.Lock()
-	handlers, _ := e.eventsOnce[eventName]
-	handlers = append(handlers, handler)
-	e.eventsOnce[eventName] = handlers
+	e.eventsOnce = append(e.eventsOnce, handler)
 	e.mu.Unlock()
 }
 
-func (e *eventEmitter[T]) Off(eventName string, handler ...T) {
-	if eventName == "" {
-		return
-	}
-
+func (e *eventEmitter[T]) Off(handler ...T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-
-	if handler == nil {
-		delete(e.events, eventName)
-		delete(e.eventsOnce, eventName)
-		return
-	}
 
 	remove := func(slice []T, s int) []T {
 		return append(slice[:s], slice[s+1:]...)
 	}
 
-	handlers, ok := e.events[eventName]
-	if ok {
-		for i, h := range handlers {
-			for _, _h := range handler {
-				if h == _h {
-					handlers = remove(handlers, i)
-				}
+	for i, h := range e.events {
+		for _, _h := range handler {
+			if h == _h {
+				e.events = remove(e.events, i)
 			}
 		}
-		e.events[eventName] = handlers
 	}
 
-	handlers, ok = e.eventsOnce[eventName]
-	if ok {
-		for i, h := range handlers {
-			for _, _h := range handler {
-				if h == _h {
-					handlers = remove(handlers, i)
-				}
+	for i, h := range e.eventsOnce {
+		for _, _h := range handler {
+			if h == _h {
+				e.eventsOnce = remove(e.eventsOnce, i)
 			}
 		}
-		e.eventsOnce[eventName] = handlers
 	}
 }
 
 func (e *eventEmitter[T]) OffAll() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-
-	for k := range e.events {
-		delete(e.events, k)
-	}
-
-	for k := range e.eventsOnce {
-		delete(e.eventsOnce, k)
-	}
+	e.events = nil
+	e.eventsOnce = nil
 }
 
 func (e *eventEmitter[T]) GetHandlers(eventName string) (handlers []T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	h, _ := e.events[eventName]
-	hOnce, _ := e.eventsOnce[eventName]
-
-	delete(e.eventsOnce, eventName)
-
-	handlers = make([]T, 0, len(h)+len(hOnce))
-	handlers = append(handlers, h...)
-	handlers = append(handlers, hOnce...)
+	handlers = make([]T, 0, len(e.events)+len(e.eventsOnce))
+	handlers = append(handlers, e.events...)
+	handlers = append(handlers, e.eventsOnce...)
+	e.eventsOnce = nil
 	return
 }
