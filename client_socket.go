@@ -54,7 +54,7 @@ type clientSocket struct {
 	receiveBuffer   []*clientEvent
 	receiveBufferMu sync.Mutex
 
-	emitterForEvents *eventEmitter[*eventHandler]
+	emitterForEvents *eventEmitter
 
 	acks   map[uint64]*ackHandler
 	ackID  uint64
@@ -73,7 +73,7 @@ func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace str
 		manager:          manager,
 		parser:           parser,
 		auth:             newAuth(),
-		emitterForEvents: newEventEmitter[*eventHandler](),
+		emitterForEvents: newEventEmitter(),
 		acks:             make(map[uint64]*ackHandler),
 		packetQueue:      newClientPacketQueue(),
 	}
@@ -560,12 +560,8 @@ func (s *clientSocket) checkHandler(eventName string, handler any) {
 	}
 }
 
-func (s *clientSocket) OffEvent(eventName string, _handler ...any) {
-	handlers := make([]*eventHandler, len(_handler))
-	for i, h := range _handler {
-		handlers[i] = newEventHandler(h)
-	}
-	s.emitterForEvents.Off(eventName, handlers...)
+func (s *clientSocket) OffEvent(eventName string, handler ...any) {
+	s.emitterForEvents.Off(eventName, handler...)
 }
 
 func (s *clientSocket) OffAll() {

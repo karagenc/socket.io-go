@@ -23,7 +23,7 @@ type serverSocket struct {
 	nsp     *Namespace
 	adapter Adapter
 
-	emitterForEvents *eventEmitter[*eventHandler]
+	emitterForEvents *eventEmitter
 	parser           parser.Parser
 
 	acks   map[uint64]*ackHandler
@@ -47,7 +47,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 		nsp:              nsp,
 		adapter:          adapter,
 		parser:           parser,
-		emitterForEvents: newEventEmitter[*eventHandler](),
+		emitterForEvents: newEventEmitter(),
 	}
 
 	s.join = func(room ...Room) {
@@ -548,12 +548,8 @@ func (s *serverSocket) checkHandler(eventName string, handler any) {
 	}
 }
 
-func (s *serverSocket) OffEvent(eventName string, _handler ...any) {
-	handlers := make([]*eventHandler, len(_handler))
-	for i, h := range _handler {
-		handlers[i] = newEventHandler(h)
-	}
-	s.emitterForEvents.Off(eventName, handlers...)
+func (s *serverSocket) OffEvent(eventName string, handler ...any) {
+	s.emitterForEvents.Off(eventName, handler...)
 }
 
 func (s *serverSocket) OffAll() {
