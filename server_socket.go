@@ -23,8 +23,8 @@ type serverSocket struct {
 	nsp     *Namespace
 	adapter Adapter
 
-	emitter *eventEmitter
-	parser  parser.Parser
+	emitterForEvents *eventEmitter[*eventHandler]
+	parser           parser.Parser
 
 	acks   map[uint64]*ackHandler
 	acksMu sync.Mutex
@@ -42,12 +42,12 @@ type serverSocket struct {
 func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
 	adapter := nsp.Adapter()
 	s := &serverSocket{
-		server:  server,
-		conn:    c,
-		nsp:     nsp,
-		adapter: adapter,
-		parser:  parser,
-		emitter: newEventEmitter(),
+		server:           server,
+		conn:             c,
+		nsp:              nsp,
+		adapter:          adapter,
+		parser:           parser,
+		emitterForEvents: newEventEmitter[*eventHandler](),
 	}
 
 	s.join = func(room ...Room) {
@@ -129,7 +129,7 @@ func (s *serverSocket) Use(f any) {
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.emitter.GetHandlers(eventName)
+		handlers := s.emitterForEvents.GetHandlers(eventName)
 
 		go func() {
 			for _, handler := range handlers {
@@ -343,7 +343,7 @@ func (s *serverSocket) onConnect() error {
 
 // Convenience method for emitting events to the user.
 func (s *serverSocket) emitReserved(eventName string, v ...any) {
-	handlers := s.emitter.GetHandlers(eventName)
+	handlers := s.emitterForEvents.GetHandlers(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
 		values[i] = reflect.ValueOf(v)
@@ -364,7 +364,7 @@ func (s *serverSocket) onError(err error) {
 
 	errValue := reflect.ValueOf(err)
 
-	handlers := s.emitter.GetHandlers("error")
+	handlers := s.emitterForEvents.GetHandlers("error")
 	for _, handler := range handlers {
 		_, err := handler.Call(errValue)
 		if err != nil {
@@ -520,14 +520,14 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 	s.conn.sendBuffers(buffers...)
 }
 
-func (s *serverSocket) On(eventName string, handler any) {
+func (s *serverSocket) OnEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitter.On(eventName, handler)
+	s.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
-func (s *serverSocket) Once(eventName string, handler any) {
+func (s *serverSocket) OnceEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitter.On(eventName, handler)
+	s.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
 func (s *serverSocket) checkHandler(eventName string, handler any) {
@@ -548,12 +548,16 @@ func (s *serverSocket) checkHandler(eventName string, handler any) {
 	}
 }
 
-func (s *serverSocket) Off(eventName string, handler any) {
-	s.emitter.Off(eventName, handler)
+func (s *serverSocket) OffEvent(eventName string, _handler ...any) {
+	handlers := make([]*eventHandler, len(_handler))
+	for i, h := range _handler {
+		handlers[i] = newEventHandler(h)
+	}
+	s.emitterForEvents.Off(eventName, handlers...)
 }
 
 func (s *serverSocket) OffAll() {
-	s.emitter.OffAll()
+	s.emitterForEvents.OffAll()
 }
 
 func (s *serverSocket) Disconnect(close bool) {
