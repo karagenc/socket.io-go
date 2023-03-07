@@ -5,7 +5,7 @@ import "github.com/tomruk/socket.io-go/parser"
 type queuedPacket struct {
 	id     int
 	header *parser.PacketHeader
-	v      []interface{}
+	v      []any
 }
 
 type clientPacketQueue struct {
@@ -16,6 +16,6 @@ func newClientPacketQueue() *clientPacketQueue {
 	return &clientPacketQueue{}
 }
 
-func (q *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []interface{}) {
+func (q *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 
 }

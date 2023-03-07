@@ -129,7 +129,7 @@ func shouldIncludePacket(sessionRooms []Room, opts *BroadcastOptions) bool {
 	return included && notExcluded
 }
 
-func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions) {
+func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, v []any, opts *BroadcastOptions) {
 	isEventPacket := header.Type == parser.PacketTypeEvent
 	withoutAcknowledgement := header.ID == nil
 	if isEventPacket && withoutAcknowledgement {

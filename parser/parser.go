@@ -11,7 +11,7 @@ type Finish func(header *PacketHeader, eventName string, decode Decode)
 type Decode func(types ...reflect.Type) (values []reflect.Value, err error)
 
 type Parser interface {
-	Encode(header *PacketHeader, v interface{}) (buffers [][]byte, err error)
+	Encode(header *PacketHeader, v any) (buffers [][]byte, err error)
 	Add(data []byte, finish Finish) error
 	Reset()
 }

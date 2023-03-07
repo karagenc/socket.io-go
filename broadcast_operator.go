@@ -47,7 +47,7 @@ func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *Br
 }
 
 // Emits an event to all choosen clients.
-func (b *BroadcastOperator) Emit(eventName string, _v ...interface{}) {
+func (b *BroadcastOperator) Emit(eventName string, _v ...any) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: b.nsp,
@@ -59,7 +59,7 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...interface{}) {
 
 	// One extra space for eventName,
 	// the other for ID (see the Broadcast method of sessionAwareAdapter)
-	v := make([]interface{}, 0, len(_v)+2)
+	v := make([]any, 0, len(_v)+2)
 	v = append(v, eventName)
 	v = append(v, _v...)
 

@@ -25,7 +25,7 @@ type _empty struct{}
 // A placeholder for an empty value.
 var empty _empty
 
-func (p *Parser) Encode(header *parser.PacketHeader, v interface{}) ([][]byte, error) {
+func (p *Parser) Encode(header *parser.PacketHeader, v any) ([][]byte, error) {
 	if v == nil {
 		v = &empty
 	}
@@ -59,7 +59,7 @@ func (p *Parser) Encode(header *parser.PacketHeader, v interface{}) ([][]byte, e
 	return [][]byte{buf}, err
 }
 
-func (p *Parser) encodeString(header *parser.PacketHeader, v interface{}) ([]byte, error) {
+func (p *Parser) encodeString(header *parser.PacketHeader, v any) ([]byte, error) {
 	var (
 		buf  = bytes.Buffer{}
 		e    = p.json.NewEncoder(&buf)
@@ -106,7 +106,7 @@ func (p *Parser) encodeString(header *parser.PacketHeader, v interface{}) ([]byt
 	return buf.Bytes(), nil
 }
 
-func (p *Parser) encodeBinary(header *parser.PacketHeader, v interface{}) (buffers [][]byte, err error) {
+func (p *Parser) encodeBinary(header *parser.PacketHeader, v any) (buffers [][]byte, err error) {
 	numBuffers := 0
 	buffers, err = p.deconstructPacket(reflect.ValueOf(v), &numBuffers)
 	if err != nil {

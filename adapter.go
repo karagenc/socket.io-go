@@ -23,7 +23,7 @@ type Adapter interface {
 	Delete(sid SocketID, room Room)
 	DeleteAll(sid SocketID)
 
-	Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions)
+	Broadcast(header *parser.PacketHeader, v []any, opts *BroadcastOptions)
 
 	// The return value 'sids' is a thread safe mapset.Set.
 	Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID])
@@ -36,7 +36,7 @@ type Adapter interface {
 	DelSockets(opts *BroadcastOptions, rooms ...Room)
 	DisconnectSockets(opts *BroadcastOptions, close bool)
 
-	ServerSideEmit(header *parser.PacketHeader, v []interface{})
+	ServerSideEmit(header *parser.PacketHeader, v []any)
 
 	// Save the client session in order to restore it upon reconnection.
 	PersistSession(session *SessionToPersist)
@@ -60,7 +60,7 @@ type AdapterSocket interface {
 
 	// Emit a message.
 	// If you want to emit a binary data, use sio.Binary instead of []byte.
-	Emit(eventName string, v ...interface{})
+	Emit(eventName string, v ...any)
 
 	// Sets a modifier for a subsequent event emission that the event
 	// will only be broadcast to clients that have joined the given room.
@@ -108,7 +108,7 @@ type PersistedPacket struct {
 	Opts      *BroadcastOptions
 
 	Header *parser.PacketHeader
-	Data   []interface{}
+	Data   []any
 }
 
 func (p *PersistedPacket) HasExpired(maxDisconnectDuration time.Duration) bool {

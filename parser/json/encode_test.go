@@ -75,10 +75,10 @@ func TestMaxAttachmentsEncode(t *testing.T) {
 
 func createEncodeTests(t *testing.T) []*encodeTest {
 	type person struct {
-		Name string      `json:"name"`
-		Age  int         `json:"age"`
-		Bin  Binary      `json:"bin,omitempty"`
-		V    interface{} `json:"v,omitempty"`
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+		Bin  Binary `json:"bin,omitempty"`
+		V    any    `json:"v,omitempty"`
 	}
 
 	return []*encodeTest{
@@ -169,7 +169,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 		{
 			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
-				gin.H{ // This is map[string]interface{}
+				gin.H{ // This is map[string]any
 					"lorem": "ipsum",
 					"dolor": 12345,
 					"amet":  Binary("This is binary"),
@@ -180,7 +180,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 		{
 			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
-				gin.H{ // This is map[string]interface{}
+				gin.H{ // This is map[string]any
 					"lorem": "ipsum",
 					"dolor": 12345,
 					"amet":  Binary("One"),
@@ -200,7 +200,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 					Name: "Abdurrezak",
 					Age:  25,
 					Bin:  Binary("One"),
-					V: gin.H{ // This is map[string]interface{}
+					V: gin.H{ // This is map[string]any
 						"lorem": "ipsum",
 						"dolor": 12345,
 						"amet":  Binary("Two"),
@@ -212,13 +212,13 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 	}
 }
 
-func createArgs(v ...interface{}) *[]interface{} {
+func createArgs(v ...any) *[]any {
 	return &v
 }
 
 type encodeTest struct {
 	Header   *parser.PacketHeader
-	V        interface{}
+	V        any
 	Expected [][]byte
 }
 

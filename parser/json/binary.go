@@ -270,7 +270,7 @@ func (r *reconstructor) Reconstruct(types ...reflect.Type) (values []reflect.Val
 		return nil, errInvalidNumberOfValues
 	}
 
-	ifaces := make([]interface{}, len(values))
+	ifaces := make([]any, len(values))
 
 	for i, rv := range values {
 		if !rv.CanInterface() {

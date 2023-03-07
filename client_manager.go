@@ -163,17 +163,17 @@ func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSoc
 	return socket
 }
 
-func (m *Manager) On(eventName string, handler interface{}) {
+func (m *Manager) On(eventName string, handler any) {
 	m.checkHandler(eventName, handler)
 	m.emitter.On(eventName, handler)
 }
 
-func (m *Manager) Once(eventName string, handler interface{}) {
+func (m *Manager) Once(eventName string, handler any) {
 	m.checkHandler(eventName, handler)
 	m.emitter.On(eventName, handler)
 }
 
-func (m *Manager) checkHandler(eventName string, handler interface{}) {
+func (m *Manager) checkHandler(eventName string, handler any) {
 	switch eventName {
 	case "":
 		fallthrough
@@ -199,7 +199,7 @@ func (m *Manager) checkHandler(eventName string, handler interface{}) {
 	}
 }
 
-func (m *Manager) Off(eventName string, handler interface{}) {
+func (m *Manager) Off(eventName string, handler any) {
 	m.emitter.Off(eventName, handler)
 }
 
@@ -247,7 +247,7 @@ func (m *Manager) onEIOClose(reason string, err error) {
 }
 
 // Convenience method for emitting events to the user.
-func (m *Manager) emitReserved(eventName string, v ...interface{}) {
+func (m *Manager) emitReserved(eventName string, v ...any) {
 	// On original socket.io, events are also emitted to
 	// subevents registered by the socket.
 	//

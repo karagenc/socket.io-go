@@ -16,11 +16,11 @@ type Socket interface {
 	Recovered() bool
 
 	// Register an event handler.
-	On(eventName string, handler interface{})
+	On(eventName string, handler any)
 
 	// Register a one-time event handler.
 	// The handler will run once and will be removed afterwards.
-	Once(eventName string, handler interface{})
+	Once(eventName string, handler any)
 
 	// Remove an event handler.
 	//
@@ -28,7 +28,7 @@ type Socket interface {
 	// provide the eventName and leave the handler nil.
 	//
 	// Otherwise, provide both the eventName and handler arguments.
-	Off(eventName string, handler interface{})
+	Off(eventName string, handler any)
 
 	// Remove all event handlers.
 	// Including special event handlers such as: connect, connect_error, disconnect, disconnecting.
@@ -36,7 +36,7 @@ type Socket interface {
 
 	// Emit a message.
 	// If you want to emit a binary data, use sio.Binary instead of []byte.
-	Emit(eventName string, v ...interface{})
+	Emit(eventName string, v ...any)
 }
 
 type ServerSocket interface {
@@ -51,8 +51,8 @@ type ServerSocket interface {
 	// Register a middleware for events.
 	//
 	// Function signature must be same as with On and Once:
-	// func(eventName string, v ...interface{}) error
-	Use(f interface{})
+	// func(eventName string, v ...any) error
+	Use(f any)
 
 	// Join room(s)
 	Join(room ...Room)

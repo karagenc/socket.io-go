@@ -94,7 +94,7 @@ func (a *inMemoryAdapter) DeleteAll(sid SocketID) {
 	delete(a.sids, sid)
 }
 
-func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []interface{}, opts *BroadcastOptions) {
+func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []any, opts *BroadcastOptions) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -230,7 +230,7 @@ func (a *inMemoryAdapter) computeExceptSids(exceptRooms mapset.Set[Room]) (excep
 	return
 }
 
-func (a *inMemoryAdapter) ServerSideEmit(header *parser.PacketHeader, v []interface{}) {}
+func (a *inMemoryAdapter) ServerSideEmit(header *parser.PacketHeader, v []any) {}
 
 func (a *inMemoryAdapter) PersistSession(session *SessionToPersist) {}
 

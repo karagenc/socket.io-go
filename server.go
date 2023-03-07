@@ -116,17 +116,17 @@ func (s *Server) Use(f NspMiddlewareFunc) {
 }
 
 // Alias of: s.Of("/").On(...)
-func (s *Server) On(eventName string, handler interface{}) {
+func (s *Server) On(eventName string, handler any) {
 	s.Of("/").On(eventName, handler)
 }
 
 // Alias of: s.Of("/").Once(...)
-func (s *Server) Once(eventName string, handler interface{}) {
+func (s *Server) Once(eventName string, handler any) {
 	s.Of("/").Once(eventName, handler)
 }
 
 // Alias of: s.Of("/").Off(...)
-func (s *Server) Off(eventName string, handler interface{}) {
+func (s *Server) Off(eventName string, handler any) {
 	s.Of("/").Off(eventName, handler)
 }
 
@@ -135,7 +135,7 @@ func (s *Server) OffAll() {
 	s.Of("/").OffAll()
 }
 
-func (s *Server) Emit(eventName string, v ...interface{}) {
+func (s *Server) Emit(eventName string, v ...any) {
 	s.Of("/").Emit(eventName, v...)
 }
 
@@ -216,7 +216,7 @@ func (s *Server) DisconnectSockets(close bool) {
 }
 
 // Sends a message to the other Socket.IO servers of the cluster.
-func (s *Server) ServerSideEmit(eventName string, v ...interface{}) {
+func (s *Server) ServerSideEmit(eventName string, v ...any) {
 	s.Of("/").ServerSideEmit(eventName, v...)
 }
 

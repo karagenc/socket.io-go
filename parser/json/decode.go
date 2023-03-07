@@ -215,7 +215,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				return nil, errMalformedPacket
 			}
 
-			ifaces := make([]interface{}, len(values))
+			ifaces := make([]any, len(values))
 
 			for i, rv := range values {
 				if !rv.CanInterface() {
@@ -253,7 +253,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				return nil, err
 			}
 		} else {
-			ifaces := make([]interface{}, len(values))
+			ifaces := make([]any, len(values))
 
 			for i, rv := range values {
 				if !rv.CanInterface() {
@@ -285,7 +285,7 @@ func convertTypesToValues(types ...reflect.Type) (values []reflect.Value) {
 	for i, typ := range types {
 		if typ == nil {
 			var (
-				unused interface{}
+				unused any
 				ptr    = &unused
 			)
 			typ = reflect.TypeOf(ptr)

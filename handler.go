@@ -11,7 +11,7 @@ type eventHandler struct {
 	outputArgs []reflect.Type
 }
 
-func newEventHandler(v interface{}) *eventHandler {
+func newEventHandler(v any) *eventHandler {
 	rv := reflect.ValueOf(v)
 
 	if rv.Kind() != reflect.Func {
@@ -58,7 +58,7 @@ type ackHandler struct {
 	outputArgs []reflect.Type
 }
 
-func newAckHandler(v interface{}) *ackHandler {
+func newAckHandler(v any) *ackHandler {
 	rv := reflect.ValueOf(v)
 
 	if rv.Kind() != reflect.Func {
@@ -105,7 +105,7 @@ func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
-func checkHandler(eventName string, handler interface{}) error {
+func checkHandler(eventName string, handler any) error {
 	switch eventName {
 	case "":
 		return fmt.Errorf("event name cannot be empty")
@@ -266,7 +266,7 @@ func checkHandler(eventName string, handler interface{}) error {
 
 var serverSocketInterface = reflect.TypeOf((*ServerSocket)(nil)).Elem()
 
-func checkNamespaceHandler(eventName string, handler interface{}) error {
+func checkNamespaceHandler(eventName string, handler any) error {
 	switch eventName {
 	case "":
 		return fmt.Errorf("event name cannot be empty")

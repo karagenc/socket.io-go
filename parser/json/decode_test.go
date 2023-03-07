@@ -138,7 +138,7 @@ func createBuffers(payload []byte, attachments ...[]byte) [][]byte {
 	return append([][]byte{payload}, attachments...)
 }
 
-func createTypes(v ...interface{}) (types []reflect.Type) {
+func createTypes(v ...any) (types []reflect.Type) {
 	for _, x := range v {
 		typ := reflect.TypeOf(x)
 		types = append(types, typ)

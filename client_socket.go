@@ -189,7 +189,7 @@ func (s *clientSocket) onOpen() {
 	s.sendConnectPacket(authData)
 }
 
-func (s *clientSocket) invokeSubEvents(eventName string, v ...interface{}) {
+func (s *clientSocket) invokeSubEvents(eventName string, v ...any) {
 	s.subEventsEnabledMu.Lock()
 	defer s.subEventsEnabledMu.Unlock()
 	if !s.subEventsEnabled {
@@ -222,7 +222,7 @@ func (s *clientSocket) invokeSubEvents(eventName string, v ...interface{}) {
 	}
 }
 
-func (s *clientSocket) sendConnectPacket(authData interface{}) {
+func (s *clientSocket) sendConnectPacket(authData any) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeConnect,
 		Namespace: s.namespace,
@@ -235,7 +235,7 @@ func (s *clientSocket) sendConnectPacket(authData interface{}) {
 
 	pid, ok := s.pid()
 	if ok {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["pid"] = pid
 		lastOffset, _ := s.lastOffset()
 		m["offset"] = lastOffset
@@ -496,7 +496,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 }
 
 // Convenience method for emitting events to the user.
-func (s *clientSocket) emitReserved(eventName string, v ...interface{}) {
+func (s *clientSocket) emitReserved(eventName string, v ...any) {
 	handlers := s.emitter.GetHandlers(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
@@ -534,17 +534,17 @@ func (s *clientSocket) onClose(reason string) {
 	s.emitReserved("disconnect")
 }
 
-func (s *clientSocket) On(eventName string, handler interface{}) {
+func (s *clientSocket) On(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
 	s.emitter.On(eventName, handler)
 }
 
-func (s *clientSocket) Once(eventName string, handler interface{}) {
+func (s *clientSocket) Once(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
 	s.emitter.Once(eventName, handler)
 }
 
-func (s *clientSocket) checkHandler(eventName string, handler interface{}) {
+func (s *clientSocket) checkHandler(eventName string, handler any) {
 	switch eventName {
 	case "":
 		fallthrough
@@ -560,7 +560,7 @@ func (s *clientSocket) checkHandler(eventName string, handler interface{}) {
 	}
 }
 
-func (s *clientSocket) Off(eventName string, handler interface{}) {
+func (s *clientSocket) Off(eventName string, handler any) {
 	s.emitter.Off(eventName, handler)
 }
 
@@ -568,7 +568,7 @@ func (s *clientSocket) OffAll() {
 	s.emitter.OffAll()
 }
 
-func (s *clientSocket) Emit(eventName string, v ...interface{}) {
+func (s *clientSocket) Emit(eventName string, v ...any) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,
@@ -578,7 +578,7 @@ func (s *clientSocket) Emit(eventName string, v ...interface{}) {
 		panic("sio: Emit: attempted to emit a reserved event")
 	}
 
-	v = append([]interface{}{eventName}, v...)
+	v = append([]any{eventName}, v...)
 
 	s.packetQueue.addToQueue(&header, v)
 
@@ -608,7 +608,7 @@ func (s *clientSocket) Emit(eventName string, v ...interface{}) {
 	s.sendBuffers(buffers...)
 }
 
-func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...interface{}) {
+func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 	header := parser.PacketHeader{
 		Type:      typ,
 		Namespace: s.namespace,
@@ -630,7 +630,7 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		ID:        &id,
 	}
 
-	v := make([]interface{}, len(values))
+	v := make([]any, len(values))
 
 	for i := range values {
 		if values[i].CanInterface() {

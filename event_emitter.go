@@ -15,7 +15,7 @@ func newEventEmitter() *eventEmitter {
 	}
 }
 
-func (e *eventEmitter) On(eventName string, handler interface{}) {
+func (e *eventEmitter) On(eventName string, handler any) {
 	if handler == nil {
 		return
 	}
@@ -27,7 +27,7 @@ func (e *eventEmitter) On(eventName string, handler interface{}) {
 	e.mu.Unlock()
 }
 
-func (e *eventEmitter) Once(eventName string, handler interface{}) {
+func (e *eventEmitter) Once(eventName string, handler any) {
 	if handler == nil {
 		return
 	}
@@ -39,7 +39,7 @@ func (e *eventEmitter) Once(eventName string, handler interface{}) {
 	e.mu.Unlock()
 }
 
-func (e *eventEmitter) Off(eventName string, handler interface{}) {
+func (e *eventEmitter) Off(eventName string, handler any) {
 	if eventName == "" {
 		return
 	}

@@ -53,17 +53,17 @@ func (n *Namespace) Use(f NspMiddlewareFunc) {
 	n.middlewareFuncs = append(n.middlewareFuncs, f)
 }
 
-func (n *Namespace) On(eventName string, handler interface{}) {
+func (n *Namespace) On(eventName string, handler any) {
 	n.checkHandler(eventName, handler)
 	n.emitter.On(eventName, handler)
 }
 
-func (n *Namespace) Once(eventName string, handler interface{}) {
+func (n *Namespace) Once(eventName string, handler any) {
 	n.checkHandler(eventName, handler)
 	n.emitter.Once(eventName, handler)
 }
 
-func (n *Namespace) checkHandler(eventName string, handler interface{}) {
+func (n *Namespace) checkHandler(eventName string, handler any) {
 	switch eventName {
 	case "":
 		fallthrough
@@ -77,7 +77,7 @@ func (n *Namespace) checkHandler(eventName string, handler interface{}) {
 	}
 }
 
-func (n *Namespace) Off(eventName string, handler interface{}) {
+func (n *Namespace) Off(eventName string, handler any) {
 	n.emitter.Off(eventName, handler)
 }
 
@@ -86,12 +86,12 @@ func (n *Namespace) OffAll() {
 }
 
 // Emits an event to all connected clients in the given namespace.
-func (n *Namespace) Emit(eventName string, v ...interface{}) {
+func (n *Namespace) Emit(eventName string, v ...any) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
 }
 
 // Sends a message to the other Socket.IO servers of the cluster.
-func (n *Namespace) ServerSideEmit(eventName string, _v ...interface{}) {
+func (n *Namespace) ServerSideEmit(eventName string, _v ...any) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: n.Name(),
@@ -103,14 +103,14 @@ func (n *Namespace) ServerSideEmit(eventName string, _v ...interface{}) {
 
 	// One extra space for eventName,
 	// the other for ID (see the Broadcast method of sessionAwareAdapter)
-	v := make([]interface{}, 0, len(_v)+1)
+	v := make([]any, 0, len(_v)+1)
 	v = append(v, eventName)
 	v = append(v, _v...)
 
 	n.adapter.ServerSideEmit(header, v)
 }
 
-func (n *Namespace) OnServerSideEmit(eventName string, _v ...interface{}) {
+func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 	values := make([]reflect.Value, len(_v))
 	for i, v := range _v {
 		values[i] = reflect.ValueOf(v)

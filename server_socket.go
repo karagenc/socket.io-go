@@ -100,7 +100,7 @@ func (s *serverSocket) Connected() bool {
 var _emptyError error
 var reflectError = reflect.TypeOf(&_emptyError).Elem()
 
-func (s *serverSocket) Use(f interface{}) {
+func (s *serverSocket) Use(f any) {
 	s.middlewareFuncsMu.Lock()
 	defer s.middlewareFuncsMu.Unlock()
 	rv := reflect.ValueOf(f)
@@ -109,19 +109,19 @@ func (s *serverSocket) Use(f interface{}) {
 	}
 	rt := rv.Type()
 	if rt.NumIn() != 2 {
-		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+		panic("sio: function signature: func(eventName string, v ...any) error")
 	}
 	if rt.In(0).Kind() != reflect.String {
-		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+		panic("sio: function signature: func(eventName string, v ...any) error")
 	}
 	if rt.In(1).Kind() != reflect.Slice || rt.In(1).Elem().Kind() != reflect.Interface {
-		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+		panic("sio: function signature: func(eventName string, v ...any) error")
 	}
 	if rt.NumOut() != 1 {
-		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+		panic("sio: function signature: func(eventName string, v ...any) error")
 	}
 	if rt.Out(0).Kind() != reflect.Interface || !rt.Out(0).Implements(reflectError) {
-		panic("sio: function signature: func(eventName string, v ...interface{}) error")
+		panic("sio: function signature: func(eventName string, v ...any) error")
 	}
 	s.middlewareFuncs = append(s.middlewareFuncs, rv)
 }
@@ -342,7 +342,7 @@ func (s *serverSocket) onConnect() error {
 }
 
 // Convenience method for emitting events to the user.
-func (s *serverSocket) emitReserved(eventName string, v ...interface{}) {
+func (s *serverSocket) emitReserved(eventName string, v ...any) {
 	handlers := s.emitter.GetHandlers(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
@@ -439,7 +439,7 @@ func (s *serverSocket) setAck(handler *ackHandler) (id uint64) {
 	return
 }
 
-func (s *serverSocket) Emit(eventName string, _v ...interface{}) {
+func (s *serverSocket) Emit(eventName string, _v ...any) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),
@@ -451,7 +451,7 @@ func (s *serverSocket) Emit(eventName string, _v ...interface{}) {
 
 	// One extra space for eventName,
 	// the other for ID (see the Broadcast method of sessionAwareAdapter)
-	v := make([]interface{}, 0, len(_v)+2)
+	v := make([]any, 0, len(_v)+2)
 	v = append(v, eventName)
 	v = append(v, _v...)
 
@@ -478,7 +478,7 @@ func (s *serverSocket) Emit(eventName string, _v ...interface{}) {
 	}
 }
 
-func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...interface{}) {
+func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 	header := parser.PacketHeader{
 		Type:      typ,
 		Namespace: s.nsp.Name(),
@@ -500,7 +500,7 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		ID:        &id,
 	}
 
-	v := make([]interface{}, len(values))
+	v := make([]any, len(values))
 
 	for i := range values {
 		if values[i].CanInterface() {
@@ -520,17 +520,17 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 	s.conn.sendBuffers(buffers...)
 }
 
-func (s *serverSocket) On(eventName string, handler interface{}) {
+func (s *serverSocket) On(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
 	s.emitter.On(eventName, handler)
 }
 
-func (s *serverSocket) Once(eventName string, handler interface{}) {
+func (s *serverSocket) Once(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
 	s.emitter.On(eventName, handler)
 }
 
-func (s *serverSocket) checkHandler(eventName string, handler interface{}) {
+func (s *serverSocket) checkHandler(eventName string, handler any) {
 	switch eventName {
 	case "":
 		fallthrough
@@ -548,7 +548,7 @@ func (s *serverSocket) checkHandler(eventName string, handler interface{}) {
 	}
 }
 
-func (s *serverSocket) Off(eventName string, handler interface{}) {
+func (s *serverSocket) Off(eventName string, handler any) {
 	s.emitter.Off(eventName, handler)
 }
 
