@@ -10,6 +10,8 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
+type NamespaceConnectFunc func(socket ServerSocket)
+
 type Namespace struct {
 	name   string
 	server *Server
@@ -25,7 +27,8 @@ type Namespace struct {
 	ackID uint64
 	ackMu sync.Mutex
 
-	emitterForEvents *eventEmitter[*eventHandler]
+	emitterForEvents  *eventEmitter[*eventHandler]
+	emitterForConnect *eventEmitter[*NamespaceConnectFunc]
 }
 
 func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
@@ -273,22 +276,11 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 		return err
 	}
 
-	connectHandlers := n.emitter.GetHandlers("connect")
-	connectionHandlers := n.emitter.GetHandlers("connection")
-
-	callHandler := func(handler *eventHandler) {
-		_, err := handler.Call(reflect.ValueOf(socket))
-		if err != nil {
-			panic(fmt.Errorf("sio: %w", err))
-		}
-	}
+	connectHandlers := n.emitterForConnect.GetHandlers("connect")
 
 	go func() {
 		for _, handler := range connectHandlers {
-			callHandler(handler)
-		}
-		for _, handler := range connectionHandlers {
-			callHandler(handler)
+			(*handler)(socket)
 		}
 	}()
 	return nil
