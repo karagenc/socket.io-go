@@ -42,16 +42,19 @@ type clientSocket struct {
 
 	subEventsEnabled   bool
 	subEventsEnabledMu sync.Mutex
+
+	packetQueue *clientPacketQueue
 }
 
 func newClientSocket(manager *Manager, namespace string, parser parser.Parser) *clientSocket {
 	s := &clientSocket{
-		namespace: namespace,
-		manager:   manager,
-		parser:    parser,
-		auth:      newAuth(),
-		emitter:   newEventEmitter(),
-		acks:      make(map[uint64]*ackHandler),
+		namespace:   namespace,
+		manager:     manager,
+		parser:      parser,
+		auth:        newAuth(),
+		emitter:     newEventEmitter(),
+		acks:        make(map[uint64]*ackHandler),
+		packetQueue: newClientPacketQueue(),
 	}
 	s.setRecovered(false)
 	return s
@@ -554,6 +557,8 @@ func (s *clientSocket) Emit(eventName string, v ...interface{}) {
 	}
 
 	v = append([]interface{}{eventName}, v...)
+
+	s.packetQueue.addToQueue(&header, v)
 
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
