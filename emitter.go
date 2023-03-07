@@ -56,7 +56,7 @@ func (e *emitter[T]) OffAll() {
 	e.funcsOnce = nil
 }
 
-func (e *emitter[T]) GetHandlers(eventName string) (handlers []T) {
+func (e *emitter[T]) GetHandlers() (handlers []T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
