@@ -2,20 +2,20 @@ package sio
 
 import "sync"
 
-type eventEmitter[T comparable] struct {
+type eventEmitter struct {
 	mu         sync.Mutex
-	events     map[string][]T
-	eventsOnce map[string][]T
+	events     map[string][]*eventHandler
+	eventsOnce map[string][]*eventHandler
 }
 
-func newEventEmitter[T comparable]() *eventEmitter[T] {
-	return &eventEmitter[T]{
-		events:     make(map[string][]T),
-		eventsOnce: make(map[string][]T),
+func newEventEmitter() *eventEmitter {
+	return &eventEmitter{
+		events:     make(map[string][]*eventHandler),
+		eventsOnce: make(map[string][]*eventHandler),
 	}
 }
 
-func (e *eventEmitter[T]) On(eventName string, handler T) {
+func (e *eventEmitter) On(eventName string, handler *eventHandler) {
 	e.mu.Lock()
 	handlers, _ := e.events[eventName]
 	handlers = append(handlers, handler)
@@ -23,7 +23,7 @@ func (e *eventEmitter[T]) On(eventName string, handler T) {
 	e.mu.Unlock()
 }
 
-func (e *eventEmitter[T]) Once(eventName string, handler T) {
+func (e *eventEmitter) Once(eventName string, handler *eventHandler) {
 	e.mu.Lock()
 	handlers, _ := e.eventsOnce[eventName]
 	handlers = append(handlers, handler)
@@ -31,7 +31,7 @@ func (e *eventEmitter[T]) Once(eventName string, handler T) {
 	e.mu.Unlock()
 }
 
-func (e *eventEmitter[T]) Off(eventName string, handler ...T) {
+func (e *eventEmitter) Off(eventName string, handler ...any) {
 	if eventName == "" {
 		return
 	}
@@ -45,7 +45,7 @@ func (e *eventEmitter[T]) Off(eventName string, handler ...T) {
 		return
 	}
 
-	remove := func(slice []T, s int) []T {
+	remove := func(slice []*eventHandler, s int) []*eventHandler {
 		return append(slice[:s], slice[s+1:]...)
 	}
 
@@ -53,7 +53,7 @@ func (e *eventEmitter[T]) Off(eventName string, handler ...T) {
 	if ok {
 		for i, h := range handlers {
 			for _, _h := range handler {
-				if h == _h {
+				if h.rv.Interface() == _h {
 					handlers = remove(handlers, i)
 				}
 			}
@@ -74,7 +74,7 @@ func (e *eventEmitter[T]) Off(eventName string, handler ...T) {
 	}
 }
 
-func (e *eventEmitter[T]) OffAll() {
+func (e *eventEmitter) OffAll() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -87,7 +87,7 @@ func (e *eventEmitter[T]) OffAll() {
 	}
 }
 
-func (e *eventEmitter[T]) GetHandlers(eventName string) (handlers []T) {
+func (e *eventEmitter) GetHandlers(eventName string) (handlers []*eventHandler) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -96,7 +96,7 @@ func (e *eventEmitter[T]) GetHandlers(eventName string) (handlers []T) {
 
 	delete(e.eventsOnce, eventName)
 
-	handlers = make([]T, 0, len(h)+len(hOnce))
+	handlers = make([]*eventHandler, 0, len(h)+len(hOnce))
 	handlers = append(handlers, h...)
 	handlers = append(handlers, hOnce...)
 	return

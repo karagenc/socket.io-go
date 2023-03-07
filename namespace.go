@@ -27,7 +27,7 @@ type Namespace struct {
 	ackID uint64
 	ackMu sync.Mutex
 
-	emitterForEvents  *eventEmitter[*eventHandler]
+	emitterForEvents  *eventEmitter
 	emitterForConnect *emitter[*NamespaceConnectFunc]
 }
 
@@ -38,7 +38,7 @@ func newNamespace(name string, server *Server, adapterCreator AdapterCreator, pa
 		server:            server,
 		sockets:           socketStore,
 		parser:            parserCreator(),
-		emitterForEvents:  newEventEmitter[*eventHandler](),
+		emitterForEvents:  newEventEmitter(),
 		emitterForConnect: newEmitter[*NamespaceConnectFunc](),
 	}
 	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
@@ -58,12 +58,16 @@ func (n *Namespace) Use(f NspMiddlewareFunc) {
 }
 
 func (n *Namespace) OnEvent(eventName string, handler any) {
-	n.checkHandler(eventName, handler)
+	if IsEventReservedForNsp(eventName) {
+		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
+	}
 	n.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
 func (n *Namespace) OnceEvent(eventName string, handler any) {
-	n.checkHandler(eventName, handler)
+	if IsEventReservedForNsp(eventName) {
+		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
+	}
 	n.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
@@ -81,12 +85,8 @@ func (n *Namespace) checkHandler(eventName string, handler any) {
 	}
 }
 
-func (n *Namespace) OffEvent(eventName string, _handler ...any) {
-	handlers := make([]*eventHandler, len(_handler))
-	for i, h := range _handler {
-		handlers[i] = newEventHandler(h)
-	}
-	n.emitterForEvents.Off(eventName, handlers...)
+func (n *Namespace) OffEvent(eventName string, handler ...any) {
+	n.emitterForEvents.Off(eventName, handler...)
 }
 
 func (n *Namespace) OffAll() {
