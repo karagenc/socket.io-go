@@ -9,6 +9,14 @@ var clientReservedEvents = map[string]bool{
 	"removeListener": true,
 }
 
+func IsEventReservedForClient(eventName string) bool {
+	isReserved, ok := clientReservedEvents[eventName]
+	if ok && isReserved {
+		return true
+	}
+	return false
+}
+
 var serverReservedEvents = map[string]bool{
 	"connect":        true,
 	"connect_error":  true,
@@ -20,16 +28,22 @@ var serverReservedEvents = map[string]bool{
 	"error":          true,
 }
 
-func IsEventReservedForClient(eventName string) bool {
-	isReserved, ok := clientReservedEvents[eventName]
+func IsEventReservedForServer(eventName string) bool {
+	isReserved, ok := serverReservedEvents[eventName]
 	if ok && isReserved {
 		return true
 	}
 	return false
 }
 
-func IsEventReservedForServer(eventName string) bool {
-	isReserved, ok := serverReservedEvents[eventName]
+var nspReservedEvents = map[string]bool{
+	"connect":       true,
+	"connection":    true,
+	"new_namespace": true,
+}
+
+func IsEventReservedForNsp(eventName string) bool {
+	isReserved, ok := nspReservedEvents[eventName]
 	if ok && isReserved {
 		return true
 	}

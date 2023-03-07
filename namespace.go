@@ -28,17 +28,18 @@ type Namespace struct {
 	ackMu sync.Mutex
 
 	emitterForEvents  *eventEmitter[*eventHandler]
-	emitterForConnect *eventEmitter[*NamespaceConnectFunc]
+	emitterForConnect *emitter[*NamespaceConnectFunc]
 }
 
 func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
-		name:             name,
-		server:           server,
-		sockets:          socketStore,
-		parser:           parserCreator(),
-		emitterForEvents: newEventEmitter[*eventHandler](),
+		name:              name,
+		server:            server,
+		sockets:           socketStore,
+		parser:            parserCreator(),
+		emitterForEvents:  newEventEmitter[*eventHandler](),
+		emitterForConnect: newEmitter[*NamespaceConnectFunc](),
 	}
 	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
 	return nsp
@@ -276,8 +277,7 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 		return err
 	}
 
-	connectHandlers := n.emitterForConnect.GetHandlers("connect")
-
+	connectHandlers := n.emitterForConnect.GetHandlers()
 	go func() {
 		for _, handler := range connectHandlers {
 			(*handler)(socket)
