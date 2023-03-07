@@ -16,7 +16,7 @@ import (
 type ClientSocketConfig struct {
 	// Authentication data.
 	//
-	// This can also be set using Socket.SetAuth method.
+	// This can also be set/overridden using Socket.SetAuth method.
 	Auth any
 
 	// The maximum number of retries for the packet to be sent.
@@ -78,6 +78,7 @@ func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace str
 		packetQueue: newClientPacketQueue(),
 	}
 	s.setRecovered(false)
+	s.SetAuth(config.Auth)
 	return s
 }
 
