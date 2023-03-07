@@ -2,7 +2,6 @@ package sio
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -71,20 +70,6 @@ func (n *Namespace) OnceEvent(eventName string, handler any) {
 	n.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
-func (n *Namespace) checkHandler(eventName string, handler any) {
-	switch eventName {
-	case "":
-		fallthrough
-	case "connect":
-		fallthrough
-	case "connection":
-		err := checkNamespaceHandler(eventName, handler)
-		if err != nil {
-			panic(fmt.Errorf("sio: %w", err))
-		}
-	}
-}
-
 func (n *Namespace) OffEvent(eventName string, handler ...any) {
 	n.emitterForEvents.Off(eventName, handler...)
 }
@@ -105,7 +90,7 @@ func (n *Namespace) ServerSideEmit(eventName string, _v ...any) {
 		Namespace: n.Name(),
 	}
 
-	if IsEventReservedForServer(eventName) {
+	if IsEventReservedForNsp(eventName) {
 		panic("sio: broadcastOperator.Emit: attempted to emit to a reserved event")
 	}
 

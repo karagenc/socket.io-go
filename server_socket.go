@@ -521,31 +521,17 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 }
 
 func (s *serverSocket) OnEvent(eventName string, handler any) {
-	s.checkHandler(eventName, handler)
+	if IsEventReservedForServer(eventName) {
+		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
+	}
 	s.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
 func (s *serverSocket) OnceEvent(eventName string, handler any) {
-	s.checkHandler(eventName, handler)
-	s.emitterForEvents.On(eventName, newEventHandler(handler))
-}
-
-func (s *serverSocket) checkHandler(eventName string, handler any) {
-	switch eventName {
-	case "":
-		fallthrough
-	case "connect":
-		fallthrough
-	case "connect_error":
-		fallthrough
-	case "disconnecting":
-		fallthrough
-	case "disconnect":
-		err := checkHandler(eventName, handler)
-		if err != nil {
-			panic(fmt.Errorf("sio: %w", err))
-		}
+	if IsEventReservedForServer(eventName) {
+		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
+	s.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
 func (s *serverSocket) OffEvent(eventName string, handler ...any) {

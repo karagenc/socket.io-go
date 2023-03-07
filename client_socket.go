@@ -535,29 +535,17 @@ func (s *clientSocket) onClose(reason string) {
 }
 
 func (s *clientSocket) OnEvent(eventName string, handler any) {
-	s.checkHandler(eventName, handler)
+	if IsEventReservedForClient(eventName) {
+		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
+	}
 	s.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
 func (s *clientSocket) OnceEvent(eventName string, handler any) {
-	s.checkHandler(eventName, handler)
-	s.emitterForEvents.Once(eventName, newEventHandler(handler))
-}
-
-func (s *clientSocket) checkHandler(eventName string, handler any) {
-	switch eventName {
-	case "":
-		fallthrough
-	case "connect":
-		fallthrough
-	case "connect_error":
-		fallthrough
-	case "disconnect":
-		err := checkHandler(eventName, handler)
-		if err != nil {
-			panic(fmt.Errorf("sio: %w", err))
-		}
+	if IsEventReservedForClient(eventName) {
+		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
+	s.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
 func (s *clientSocket) OffEvent(eventName string, handler ...any) {
