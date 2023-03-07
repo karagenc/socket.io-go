@@ -54,7 +54,7 @@ type clientSocket struct {
 	receiveBuffer   []*clientEvent
 	receiveBufferMu sync.Mutex
 
-	emitter *eventEmitter
+	emitterForEvents *eventEmitter[*eventHandler]
 
 	acks   map[uint64]*ackHandler
 	ackID  uint64
@@ -68,14 +68,14 @@ type clientSocket struct {
 
 func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace string, parser parser.Parser) *clientSocket {
 	s := &clientSocket{
-		config:      config,
-		namespace:   namespace,
-		manager:     manager,
-		parser:      parser,
-		auth:        newAuth(),
-		emitter:     newEventEmitter(),
-		acks:        make(map[uint64]*ackHandler),
-		packetQueue: newClientPacketQueue(),
+		config:           config,
+		namespace:        namespace,
+		manager:          manager,
+		parser:           parser,
+		auth:             newAuth(),
+		emitterForEvents: newEventEmitter[*eventHandler](),
+		acks:             make(map[uint64]*ackHandler),
+		packetQueue:      newClientPacketQueue(),
 	}
 	s.setRecovered(false)
 	s.SetAuth(config.Auth)
@@ -281,7 +281,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		s.onConnect(header, decode)
 
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.emitter.GetHandlers(eventName)
+		handlers := s.emitterForEvents.GetHandlers(eventName)
 
 		go func() {
 			for _, handler := range handlers {
@@ -497,7 +497,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 
 // Convenience method for emitting events to the user.
 func (s *clientSocket) emitReserved(eventName string, v ...any) {
-	handlers := s.emitter.GetHandlers(eventName)
+	handlers := s.emitterForEvents.GetHandlers(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
 		values[i] = reflect.ValueOf(v)
@@ -534,14 +534,14 @@ func (s *clientSocket) onClose(reason string) {
 	s.emitReserved("disconnect")
 }
 
-func (s *clientSocket) On(eventName string, handler any) {
+func (s *clientSocket) OnEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitter.On(eventName, handler)
+	s.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
-func (s *clientSocket) Once(eventName string, handler any) {
+func (s *clientSocket) OnceEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitter.Once(eventName, handler)
+	s.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
 func (s *clientSocket) checkHandler(eventName string, handler any) {
@@ -560,12 +560,16 @@ func (s *clientSocket) checkHandler(eventName string, handler any) {
 	}
 }
 
-func (s *clientSocket) Off(eventName string, handler any) {
-	s.emitter.Off(eventName, handler)
+func (s *clientSocket) OffEvent(eventName string, _handler ...any) {
+	handlers := make([]*eventHandler, len(_handler))
+	for i, h := range _handler {
+		handlers[i] = newEventHandler(h)
+	}
+	s.emitterForEvents.Off(eventName, handlers...)
 }
 
 func (s *clientSocket) OffAll() {
-	s.emitter.OffAll()
+	s.emitterForEvents.OffAll()
 }
 
 func (s *clientSocket) Emit(eventName string, v ...any) {
