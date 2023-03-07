@@ -142,19 +142,24 @@ func (m *Manager) Open() {
 	}()
 }
 
-func (m *Manager) Socket(namespace string) ClientSocket {
+func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSocket {
 	if namespace == "" {
 		namespace = "/"
+	}
+	if config == nil {
+		config = new(ClientSocketConfig)
+	} else {
+		// Copy config in order to prevent concurrency problems.
+		// User can modify config.
+		temp := *config
+		config = &temp
 	}
 
 	socket, ok := m.sockets.Get(namespace)
 	if !ok {
-		socket = newClientSocket(m, namespace, m.parser)
+		socket = newClientSocket(config, m, namespace, m.parser)
 		m.sockets.Set(socket)
 	}
-
-	// TODO: ???
-	socket.Connect()
 	return socket
 }
 

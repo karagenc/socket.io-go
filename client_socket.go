@@ -6,11 +6,30 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/fatih/structs"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/parser"
 )
+
+type ClientSocketConfig struct {
+	// Authentication data.
+	//
+	// This can also be set using Socket.SetAuth method.
+	Auth any
+
+	// The maximum number of retries for the packet to be sent.
+	// Above the limit, the packet will be discarded.
+	//
+	// Using `Infinity` means the delivery guarantee is
+	// "at-least-once" (instead of "at-most-once" by default),
+	// but a smaller value like 10 should be sufficient in practice.
+	Retries int
+
+	// The default timeout used when waiting for an acknowledgement.
+	AckTimeout time.Duration
+}
 
 type clientSocket struct {
 	id atomic.Value
@@ -19,6 +38,7 @@ type clientSocket struct {
 	_lastOffset atomic.Value
 	_recovered  atomic.Value
 
+	config    *ClientSocketConfig
 	namespace string
 	manager   *Manager
 	parser    parser.Parser
@@ -46,8 +66,9 @@ type clientSocket struct {
 	packetQueue *clientPacketQueue
 }
 
-func newClientSocket(manager *Manager, namespace string, parser parser.Parser) *clientSocket {
+func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace string, parser parser.Parser) *clientSocket {
 	s := &clientSocket{
+		config:      config,
 		namespace:   namespace,
 		manager:     manager,
 		parser:      parser,

@@ -11,7 +11,7 @@ const url = "http://127.0.0.1:3000/socket.io"
 
 func main() {
 	manager := sio.NewManager(url, nil)
-	socket := manager.Socket("/")
+	socket := manager.Socket("/", nil)
 
 	fmt.Println("Init")
 
