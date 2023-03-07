@@ -25,17 +25,17 @@ type Namespace struct {
 	ackID uint64
 	ackMu sync.Mutex
 
-	emitter *eventEmitter
+	emitterForEvents *eventEmitter[*eventHandler]
 }
 
 func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
-		name:    name,
-		server:  server,
-		sockets: socketStore,
-		parser:  parserCreator(),
-		emitter: newEventEmitter(),
+		name:             name,
+		server:           server,
+		sockets:          socketStore,
+		parser:           parserCreator(),
+		emitterForEvents: newEventEmitter[*eventHandler](),
 	}
 	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
 	return nsp
@@ -53,14 +53,14 @@ func (n *Namespace) Use(f NspMiddlewareFunc) {
 	n.middlewareFuncs = append(n.middlewareFuncs, f)
 }
 
-func (n *Namespace) On(eventName string, handler any) {
+func (n *Namespace) OnEvent(eventName string, handler any) {
 	n.checkHandler(eventName, handler)
-	n.emitter.On(eventName, handler)
+	n.emitterForEvents.On(eventName, newEventHandler(handler))
 }
 
-func (n *Namespace) Once(eventName string, handler any) {
+func (n *Namespace) OnceEvent(eventName string, handler any) {
 	n.checkHandler(eventName, handler)
-	n.emitter.Once(eventName, handler)
+	n.emitterForEvents.Once(eventName, newEventHandler(handler))
 }
 
 func (n *Namespace) checkHandler(eventName string, handler any) {
@@ -77,12 +77,16 @@ func (n *Namespace) checkHandler(eventName string, handler any) {
 	}
 }
 
-func (n *Namespace) Off(eventName string, handler any) {
-	n.emitter.Off(eventName, handler)
+func (n *Namespace) OffEvent(eventName string, _handler ...any) {
+	handlers := make([]*eventHandler, len(_handler))
+	for i, h := range _handler {
+		handlers[i] = newEventHandler(h)
+	}
+	n.emitterForEvents.Off(eventName, handlers...)
 }
 
 func (n *Namespace) OffAll() {
-	n.emitter.OffAll()
+	n.emitterForEvents.OffAll()
 }
 
 // Emits an event to all connected clients in the given namespace.
@@ -115,7 +119,7 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 	for i, v := range _v {
 		values[i] = reflect.ValueOf(v)
 	}
-	handlers := n.emitter.GetHandlers(eventName)
+	handlers := n.emitterForEvents.GetHandlers(eventName)
 
 	go func() {
 		for _, handler := range handlers {
