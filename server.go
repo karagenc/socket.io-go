@@ -115,19 +115,19 @@ func (s *Server) Use(f NspMiddlewareFunc) {
 	s.Of("/").Use(f)
 }
 
-// Alias of: s.Of("/").On(...)
-func (s *Server) On(eventName string, handler any) {
-	s.Of("/").On(eventName, handler)
+// Alias of: s.Of("/").OnEvent(...)
+func (s *Server) OnEvent(eventName string, handler any) {
+	s.Of("/").OnEvent(eventName, handler)
 }
 
-// Alias of: s.Of("/").Once(...)
-func (s *Server) Once(eventName string, handler any) {
-	s.Of("/").Once(eventName, handler)
+// Alias of: s.Of("/").OnceEvent(...)
+func (s *Server) OnceEvent(eventName string, handler any) {
+	s.Of("/").OnceEvent(eventName, handler)
 }
 
-// Alias of: s.Of("/").Off(...)
-func (s *Server) Off(eventName string, handler any) {
-	s.Of("/").Off(eventName, handler)
+// Alias of: s.Of("/").OffEvent(...)
+func (s *Server) OffEvent(eventName string, handler any) {
+	s.Of("/").OffEvent(eventName, handler)
 }
 
 // Alias of: s.Of("/").OffAll(...)

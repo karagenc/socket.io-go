@@ -58,12 +58,12 @@ func (n *Namespace) Use(f NspMiddlewareFunc) {
 
 func (n *Namespace) OnEvent(eventName string, handler any) {
 	n.checkHandler(eventName, handler)
-	n.emitterForEvents.On(eventName, newEventHandler(handler))
+	n.emitterForEvents.On(newEventHandler(handler))
 }
 
 func (n *Namespace) OnceEvent(eventName string, handler any) {
 	n.checkHandler(eventName, handler)
-	n.emitterForEvents.Once(eventName, newEventHandler(handler))
+	n.emitterForEvents.Once(newEventHandler(handler))
 }
 
 func (n *Namespace) checkHandler(eventName string, handler any) {
@@ -85,7 +85,7 @@ func (n *Namespace) OffEvent(eventName string, _handler ...any) {
 	for i, h := range _handler {
 		handlers[i] = newEventHandler(h)
 	}
-	n.emitterForEvents.Off(eventName, handlers...)
+	n.emitterForEvents.Off(handlers...)
 }
 
 func (n *Namespace) OffAll() {

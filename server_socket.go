@@ -522,12 +522,12 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 
 func (s *serverSocket) OnEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitterForEvents.On(eventName, newEventHandler(handler))
+	s.emitterForEvents.On(newEventHandler(handler))
 }
 
 func (s *serverSocket) OnceEvent(eventName string, handler any) {
 	s.checkHandler(eventName, handler)
-	s.emitterForEvents.On(eventName, newEventHandler(handler))
+	s.emitterForEvents.On(newEventHandler(handler))
 }
 
 func (s *serverSocket) checkHandler(eventName string, handler any) {
@@ -553,7 +553,7 @@ func (s *serverSocket) OffEvent(eventName string, _handler ...any) {
 	for i, h := range _handler {
 		handlers[i] = newEventHandler(h)
 	}
-	s.emitterForEvents.Off(eventName, handlers...)
+	s.emitterForEvents.Off(handlers...)
 }
 
 func (s *serverSocket) OffAll() {
