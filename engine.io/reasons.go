@@ -3,8 +3,9 @@ package eio
 type Reason string
 
 const (
+	ReasonTransportError Reason = "transport error"
+	ReasonTransportClose Reason = "transport close"
 	ReasonForcedClose    Reason = "forced close"
 	ReasonPingTimeout    Reason = "ping timeout"
-	ReasonTransportClose Reason = "transport close"
-	ReasonTransportError Reason = "transport error"
+	ReasonParseError     Reason = "parse error"
 )

@@ -376,16 +376,6 @@ func (s *serverSocket) onError(err error) {
 	}
 }
 
-// TODO: Check these
-var recoverableDisconnectReasons = mapset.NewThreadUnsafeSet(
-	"transport error",
-	"transport close",
-	"forced close",
-	"ping timeout",
-	"server shutting down",
-	"forced server close",
-)
-
 func (s *serverSocket) onClose(reason Reason) {
 	// Server socket is one-time, it cannot be reconnected.
 	// We don't want it to close more than once,

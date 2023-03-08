@@ -1,17 +1,23 @@
 package sio
 
-import eio "github.com/tomruk/socket.io-go/engine.io"
+import (
+	mapset "github.com/deckarep/golang-set/v2"
+	eio "github.com/tomruk/socket.io-go/engine.io"
+)
 
 type Reason = eio.Reason
 
 const (
 	ReasonIOServerDisconnect Reason = "io server disconnect"
 	ReasonIOClientDisconnect Reason = "io client disconnect"
-	ReasonForcedClose        Reason = "forced close"
-	ReasonPingTimeout        Reason = "ping timeout"
-	ReasonTransportClose     Reason = "transport close"
-	ReasonTransportError     Reason = "transport error"
-	ReasonParseError         Reason = "parse error"
+)
+
+const (
+	ReasonForcedClose    Reason = eio.ReasonForcedClose
+	ReasonTransportClose Reason = eio.ReasonTransportClose
+	ReasonTransportError Reason = eio.ReasonTransportError
+	ReasonPingTimeout    Reason = eio.ReasonPingTimeout
+	ReasonParseError     Reason = eio.ReasonParseError
 )
 
 const (
@@ -19,4 +25,13 @@ const (
 	ReasonForcedServerClose         Reason = "forced server close"
 	ReasonClientNamespaceDisconnect Reason = "client namespace disconnect"
 	ReasonServerNamespaceDisconnect Reason = "server namespace disconnect"
+)
+
+var recoverableDisconnectReasons = mapset.NewThreadUnsafeSet(
+	ReasonTransportError,
+	ReasonTransportClose,
+	ReasonForcedClose,
+	ReasonPingTimeout,
+	ReasonServerShuttingDown,
+	ReasonForcedServerClose,
 )
