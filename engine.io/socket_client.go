@@ -282,7 +282,7 @@ func (s *clientSocket) Send(packets ...*parser.Packet) {
 	s.t.Send(packets...)
 }
 
-func (s *clientSocket) close(reason string, err error) {
+func (s *clientSocket) close(reason Reason, err error) {
 	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		defer s.callbacks.OnClose(reason, err)

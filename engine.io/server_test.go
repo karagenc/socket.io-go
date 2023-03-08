@@ -274,7 +274,7 @@ func TestMaxBufferSizePolling(t *testing.T) {
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
-			OnClose: func(reason string, err error) {
+			OnClose: func(reason Reason, err error) {
 				defer tw.Done()
 
 				if reason != ReasonTransportError || err == nil {
@@ -296,7 +296,7 @@ func TestMaxBufferSizePolling(t *testing.T) {
 	s := httptest.NewServer(io)
 
 	callbacks := &Callbacks{
-		OnClose: func(reason string, err error) {
+		OnClose: func(reason Reason, err error) {
 			defer tw.Done()
 
 			if reason != ReasonTransportError || err == nil {
@@ -638,7 +638,7 @@ func TestServerClose(t *testing.T) {
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
-			OnClose: func(reason string, err error) {
+			OnClose: func(reason Reason, err error) {
 				defer tw.Done()
 
 				if reason != ReasonForcedClose {
@@ -671,7 +671,7 @@ func TestServerClose(t *testing.T) {
 		tw.Add(2) // For server and client.
 
 		callbacks := &Callbacks{
-			OnClose: func(reason string, err error) {
+			OnClose: func(reason Reason, err error) {
 				defer tw.Done()
 
 				if reason != ReasonTransportClose {

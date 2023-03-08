@@ -200,7 +200,7 @@ func (s *serverSocket) onTransportClose(name string, err error) {
 	}
 }
 
-func (s *serverSocket) close(reason string, err error) {
+func (s *serverSocket) close(reason Reason, err error) {
 	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		defer s.onClose(s.id)

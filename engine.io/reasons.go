@@ -1,8 +1,10 @@
 package eio
 
+type Reason string
+
 const (
-	ReasonForcedClose    = "forced close"
-	ReasonPingTimeout    = "ping timeout"
-	ReasonTransportClose = "transport close"
-	ReasonTransportError = "transport error"
+	ReasonForcedClose    Reason = "forced close"
+	ReasonPingTimeout    Reason = "ping timeout"
+	ReasonTransportClose Reason = "transport close"
+	ReasonTransportError Reason = "transport error"
 )

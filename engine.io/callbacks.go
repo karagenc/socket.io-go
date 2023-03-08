@@ -9,7 +9,7 @@ type PacketCallback func(packets ...*parser.Packet)
 type ErrorCallback func(err error)
 
 // err can be nil. Always do a nil check.
-type CloseCallback func(reason string, err error)
+type CloseCallback func(reason Reason, err error)
 
 type Callbacks struct {
 	OnPacket PacketCallback
@@ -25,6 +25,6 @@ func (c *Callbacks) setMissing() {
 		c.OnError = func(err error) {}
 	}
 	if c.OnClose == nil {
-		c.OnClose = func(reason string, err error) {}
+		c.OnClose = func(reason Reason, err error) {}
 	}
 }
