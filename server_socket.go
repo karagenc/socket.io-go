@@ -421,7 +421,7 @@ func (s *serverSocket) ID() SocketID {
 	return s.id
 }
 
-func (s *serverSocket) setAck(handler *ackHandler) (id uint64) {
+func (s *serverSocket) registerAckHandler(handler *ackHandler) (id uint64) {
 	id = s.nsp.nextAckID()
 	s.acksMu.Lock()
 	s.acks[id] = handler
@@ -449,7 +449,7 @@ func (s *serverSocket) Emit(eventName string, _v ...any) {
 	rt := reflect.TypeOf(f)
 
 	if rt.Kind() == reflect.Func {
-		ackID := s.setAck(newAckHandler(f))
+		ackID := s.registerAckHandler(newAckHandler(f))
 		header.ID = &ackID
 		v = v[:len(v)-1]
 	}

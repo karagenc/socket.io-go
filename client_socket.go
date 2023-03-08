@@ -577,13 +577,8 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	rt := reflect.TypeOf(f)
 	if rt.Kind() == reflect.Func {
 		ackHandler := newAckHandler(f)
-
-		id := s.nextAckID()
-		s.acksMu.Lock()
-		s.acks[id] = ackHandler
-		s.acksMu.Unlock()
-
-		header.ID = &id
+		ackID := s.registerAckHandler(ackHandler)
+		header.ID = &ackID
 		v = v[:len(v)-1]
 	}
 
@@ -594,6 +589,14 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	}
 
 	s.sendBuffers(buffers...)
+}
+
+func (s *clientSocket) registerAckHandler(handler *ackHandler) (id uint64) {
+	id = s.nextAckID()
+	s.acksMu.Lock()
+	s.acks[id] = handler
+	s.acksMu.Unlock()
+	return
 }
 
 func (s *clientSocket) nextAckID() uint64 {
