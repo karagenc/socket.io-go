@@ -386,7 +386,7 @@ var recoverableDisconnectReasons = mapset.NewThreadUnsafeSet(
 	"forced server close",
 )
 
-func (s *serverSocket) onClose(reason string) {
+func (s *serverSocket) onClose(reason Reason) {
 	// Server socket is one-time, it cannot be reconnected.
 	// We don't want it to close more than once,
 	// so we use sync.Once to avoid running onClose more than once.

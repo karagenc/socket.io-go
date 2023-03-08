@@ -180,7 +180,7 @@ func (c *clientConn) Disconnect() {
 	defer c.manager.skipReconnectMu.Unlock()
 	c.manager.skipReconnect = true
 
-	c.manager.onClose("forced close", nil)
+	c.manager.onClose(ReasonForcedClose, nil)
 
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()

@@ -169,7 +169,7 @@ func (s *clientSocket) Disconnect() {
 	s.destroy()
 
 	if s.Connected() {
-		s.manager.onClose("io client disconnect", nil)
+		s.onClose(ReasonIOClientDisconnect)
 	}
 }
 
@@ -214,7 +214,7 @@ func (s *clientSocket) invokeSubEvents(eventName string, v ...any) {
 		if len(v) != 2 {
 			panic("sio: 2 arguments were expected: reason and err")
 		}
-		reason, ok := v[0].(string)
+		reason, ok := v[0].(Reason)
 		if !ok {
 			panic("sio: type of the argument `reason` must be string")
 		}
@@ -390,7 +390,7 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 
 func (s *clientSocket) onDisconnect() {
 	s.destroy()
-	s.onClose("io server disconnect")
+	s.onClose(ReasonIOServerDisconnect)
 }
 
 type clientEvent struct {
@@ -527,7 +527,7 @@ func (s *clientSocket) destroy() {
 	s.manager.destroy(s)
 }
 
-func (s *clientSocket) onClose(reason string) {
+func (s *clientSocket) onClose(reason Reason) {
 	s.connectedMu.Lock()
 	s.connected = false
 	s.connectedMu.Unlock()

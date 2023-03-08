@@ -194,7 +194,7 @@ func (c *serverConn) onFatalError(err error) {
 	c.eio.Close()
 }
 
-func (c *serverConn) onClose(reason string, err error) {
+func (c *serverConn) onClose(reason Reason, err error) {
 	// Server connection is one-time, it cannot be reconnected.
 	// We don't want it to close more than once,
 	// so we use sync.Once to avoid running onClose more than once.
