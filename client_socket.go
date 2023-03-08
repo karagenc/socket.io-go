@@ -75,8 +75,8 @@ func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace str
 		auth:             newAuth(),
 		emitterForEvents: newEventEmitter(),
 		acks:             make(map[uint64]*ackHandler),
-		packetQueue:      newClientPacketQueue(),
 	}
+	s.packetQueue = newClientPacketQueue(s)
 	s.setRecovered(false)
 	s.SetAuth(config.Auth)
 	return s
@@ -568,7 +568,10 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 
 	v = append([]any{eventName}, v...)
 
-	s.packetQueue.addToQueue(&header, v)
+	if s.config.Retries > 0 {
+		s.packetQueue.addToQueue(&header, v)
+		return
+	}
 
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)

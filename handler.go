@@ -60,7 +60,7 @@ type ackHandler struct {
 	wrapper ackHandlerWrapperFunc
 }
 
-type ackHandlerWrapperFunc = func(err error, handler *ackHandler)
+type ackHandlerWrapperFunc = func(err error, handler *ackHandler) error
 
 func newAckHandler(v any) *ackHandler {
 	rv := reflect.ValueOf(v)
@@ -98,7 +98,15 @@ func newAckHandlerWithWrapper(wrapper ackHandlerWrapperFunc, v any) *ackHandler 
 	return h
 }
 
-func (f *ackHandler) Call(args ...reflect.Value) (err error) {
+func (f *ackHandler) Call(_err error, args ...reflect.Value) (err error) {
+	if f.wrapper != nil {
+		return f.wrapper(_err, f)
+	} else {
+		return f.call(args...)
+	}
+}
+
+func (f *ackHandler) call(args ...reflect.Value) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
