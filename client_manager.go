@@ -163,46 +163,6 @@ func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSoc
 	return socket
 }
 
-func (m *Manager) On(eventName string, handler any) {
-	m.checkHandler(eventName, handler)
-	m.emitter.On(eventName, handler)
-}
-
-func (m *Manager) Once(eventName string, handler any) {
-	m.checkHandler(eventName, handler)
-	m.emitter.On(eventName, handler)
-}
-
-func (m *Manager) checkHandler(eventName string, handler any) {
-	switch eventName {
-	case "":
-		fallthrough
-	case "open":
-		fallthrough
-	case "error":
-		fallthrough
-	case "ping":
-		fallthrough
-	case "close":
-		fallthrough
-	case "reconnect":
-		fallthrough
-	case "reconnect_attempt":
-		fallthrough
-	case "reconnect_error":
-		fallthrough
-	case "reconnect_failed":
-		err := checkHandler(eventName, handler)
-		if err != nil {
-			panic(fmt.Errorf("sio: %w", err))
-		}
-	}
-}
-
-func (m *Manager) Off(eventName string, handler any) {
-	m.emitter.Off(eventName, handler)
-}
-
 func (m *Manager) OffAll() {
 	m.emitter.OffAll()
 }
