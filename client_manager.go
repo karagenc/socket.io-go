@@ -45,11 +45,15 @@ type ManagerConfig struct {
 	//
 	// Default: 0.5
 	RandomizationFactor *float32
+
+	// For debugging purposes. Leave it nil if it is of no use.
+	DebugFunc DebugFunc
 }
 
 type Manager struct {
 	url       string
 	eioConfig eio.ClientConfig
+	debugFunc DebugFunc
 
 	// This mutex is used for protecting parser from concurrent calls.
 	// Due to the modular and concurrent nature of Engine.IO,
@@ -119,6 +123,12 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		io.randomizationFactor = *config.RandomizationFactor
 	} else {
 		io.randomizationFactor = DefaultRandomizationFactor
+	}
+
+	if config.DebugFunc != nil {
+		io.debugFunc = config.DebugFunc
+	} else {
+		io.debugFunc = NoopDebugFunc
 	}
 
 	io.backoff = newBackoff(io.reconnectionDelay, io.reconnectionDelayMax, io.randomizationFactor)
