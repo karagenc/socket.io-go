@@ -56,7 +56,11 @@ type ackHandler struct {
 	rv         reflect.Value
 	inputArgs  []reflect.Type
 	outputArgs []reflect.Type
+
+	wrapper ackHandlerWrapperFunc
 }
+
+type ackHandlerWrapperFunc = func(err error, handler *ackHandler)
 
 func newAckHandler(v any) *ackHandler {
 	rv := reflect.ValueOf(v)
@@ -86,6 +90,12 @@ func newAckHandler(v any) *ackHandler {
 		inputArgs:  inputArgs,
 		outputArgs: outputArgs,
 	}
+}
+
+func newAckHandlerWithWrapper(wrapper ackHandlerWrapperFunc, v any) *ackHandler {
+	h := newAckHandler(v)
+	h.wrapper = wrapper
+	return h
 }
 
 func (f *ackHandler) Call(args ...reflect.Value) (err error) {
