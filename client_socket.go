@@ -557,6 +557,14 @@ func (s *clientSocket) OffAll() {
 }
 
 func (s *clientSocket) Emit(eventName string, v ...any) {
+	s.emit(eventName, 0, v...)
+}
+
+func (s *clientSocket) EmitWithTimeout(eventName string, timeout time.Duration, v ...any) {
+	s.emit(eventName, timeout, v...)
+}
+
+func (s *clientSocket) emit(eventName string, timeout time.Duration, v ...any) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,
@@ -576,8 +584,7 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
 	if rt.Kind() == reflect.Func {
-		ackHandler := newAckHandler(f)
-		ackID := s.registerAckHandler(ackHandler)
+		ackID := s.registerAckHandler(f, timeout)
 		header.ID = &ackID
 		v = v[:len(v)-1]
 	}
@@ -591,11 +598,32 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	s.sendBuffers(buffers...)
 }
 
-func (s *clientSocket) registerAckHandler(handler *ackHandler) (id uint64) {
+// 0 as the timeout argument means there is no timeout.
+func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint64) {
+	if timeout == 0 && s.config.AckTimeout > 0 {
+		timeout = s.config.AckTimeout
+	}
 	id = s.nextAckID()
-	s.acksMu.Lock()
-	s.acks[id] = handler
-	s.acksMu.Unlock()
+	if timeout == 0 {
+		s.acksMu.Lock()
+		s.acks[id] = newAckHandler(f)
+		s.acksMu.Unlock()
+		return
+	}
+
+	go func() {
+		time.Sleep(timeout)
+
+		s.acksMu.Lock()
+		delete(s.acks, id)
+		s.acksMu.Unlock()
+
+		s.sendBufferMu.Lock()
+		for _, packet := range s.sendBuffer {
+			// TODO: Remove packet
+		}
+		s.sendBufferMu.Unlock()
+	}()
 	return
 }
 

@@ -37,7 +37,7 @@ func (s *NamespaceSocketStore) SetAck(sid SocketID, ackHandler *ackHandler) (ok 
 		return false
 	}
 	socket := _socket.(*serverSocket)
-	socket.setAck(ackHandler)
+	socket.registerAckHandler(ackHandler)
 	return true
 }
 
