@@ -3,6 +3,8 @@ package sio
 import (
 	"fmt"
 	"reflect"
+	"sync"
+	"time"
 )
 
 type eventHandler struct {
@@ -11,8 +13,8 @@ type eventHandler struct {
 	outputArgs []reflect.Type
 }
 
-func newEventHandler(v any) *eventHandler {
-	rv := reflect.ValueOf(v)
+func newEventHandler(f any) *eventHandler {
+	rv := reflect.ValueOf(f)
 
 	if rv.Kind() != reflect.Func {
 		panic("sio: function expected")
@@ -56,10 +58,14 @@ type ackHandler struct {
 	rv         reflect.Value
 	inputArgs  []reflect.Type
 	outputArgs []reflect.Type
+
+	called   bool
+	timedOut bool
+	mu       sync.Mutex
 }
 
-func newAckHandler(v any) *ackHandler {
-	rv := reflect.ValueOf(v)
+func newAckHandler(f any) *ackHandler {
+	rv := reflect.ValueOf(f)
 
 	if rv.Kind() != reflect.Func {
 		panic("sio: function expected")
@@ -88,7 +94,36 @@ func newAckHandler(v any) *ackHandler {
 	}
 }
 
+func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) *ackHandler {
+	h := newAckHandler(f)
+	go func() {
+		time.Sleep(timeout)
+		h.mu.Lock()
+		if h.called {
+			h.mu.Unlock()
+			return
+		}
+		h.timedOut = true
+		h.mu.Unlock()
+
+		defer func() {
+			recover()
+		}()
+		timeoutFunc()
+		h.rv.Call([]reflect.Value{reflect.ValueOf(fmt.Errorf("operation has timed out"))})
+	}()
+	return h
+}
+
 func (f *ackHandler) Call(args ...reflect.Value) (err error) {
+	f.mu.Lock()
+	if f.timedOut {
+		f.mu.Unlock()
+		return nil
+	}
+	f.called = true
+	f.mu.Unlock()
+
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool

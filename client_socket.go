@@ -611,9 +611,7 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		return
 	}
 
-	go func() {
-		time.Sleep(timeout)
-
+	h := newAckHandlerWithTimeout(f, timeout, func() {
 		s.acksMu.Lock()
 		delete(s.acks, id)
 		s.acksMu.Unlock()
@@ -623,7 +621,11 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 			// TODO: Remove packet
 		}
 		s.sendBufferMu.Unlock()
-	}()
+	})
+
+	s.acksMu.Lock()
+	s.acks[id] = h
+	s.acksMu.Unlock()
 	return
 }
 
