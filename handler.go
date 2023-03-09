@@ -56,11 +56,7 @@ type ackHandler struct {
 	rv         reflect.Value
 	inputArgs  []reflect.Type
 	outputArgs []reflect.Type
-
-	wrapper ackHandlerWrapperFunc
 }
-
-type ackHandlerWrapperFunc = func(err error, handler *ackHandler) error
 
 func newAckHandler(v any) *ackHandler {
 	rv := reflect.ValueOf(v)
@@ -92,21 +88,7 @@ func newAckHandler(v any) *ackHandler {
 	}
 }
 
-func newAckHandlerWithWrapper(wrapper ackHandlerWrapperFunc, v any) *ackHandler {
-	h := newAckHandler(v)
-	h.wrapper = wrapper
-	return h
-}
-
-func (f *ackHandler) Call(_err error, args ...reflect.Value) (err error) {
-	if f.wrapper != nil {
-		return f.wrapper(_err, f)
-	} else {
-		return f.call(args...)
-	}
-}
-
-func (f *ackHandler) call(args ...reflect.Value) (err error) {
+func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -120,7 +102,3 @@ func (f *ackHandler) call(args ...reflect.Value) (err error) {
 	f.rv.Call(args)
 	return
 }
-
-var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
-
-var serverSocketInterface = reflect.TypeOf((*ServerSocket)(nil)).Elem()
