@@ -46,7 +46,7 @@ func (q *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 
 	var h *ackHandler
 	if haveAck {
-		h = newAckHandlerWithWrapper(func(err error, handler *ackHandler) error {
+		h = newAckHandlerWithTimeout(func(err error, handler *ackHandler) error {
 			if err != nil {
 				packet.mu.Lock()
 				tryCount := packet.tryCount
@@ -59,9 +59,7 @@ func (q *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 			}
 		}, f)
 	} else {
-		h = newAckHandler(func(err error) {
-
-		})
+		h = newAckHandler(f, true)
 		q.socket.acksMu.Lock()
 
 		q.socket.acksMu.Unlock()

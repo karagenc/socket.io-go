@@ -606,7 +606,7 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 	id = s.nextAckID()
 	if timeout == 0 {
 		s.acksMu.Lock()
-		s.acks[id] = newAckHandler(f)
+		s.acks[id] = newAckHandler(f, false)
 		s.acksMu.Unlock()
 		return
 	}

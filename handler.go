@@ -59,12 +59,14 @@ type ackHandler struct {
 	inputArgs  []reflect.Type
 	outputArgs []reflect.Type
 
+	hasError bool
+
 	called   bool
 	timedOut bool
 	mu       sync.Mutex
 }
 
-func newAckHandler(f any) *ackHandler {
+func newAckHandler(f any, hasError bool) *ackHandler {
 	rv := reflect.ValueOf(f)
 
 	if rv.Kind() != reflect.Func {
@@ -91,11 +93,12 @@ func newAckHandler(f any) *ackHandler {
 		rv:         rv,
 		inputArgs:  inputArgs,
 		outputArgs: outputArgs,
+		hasError:   hasError,
 	}
 }
 
 func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) *ackHandler {
-	h := newAckHandler(f)
+	h := newAckHandler(f, true)
 	go func() {
 		time.Sleep(timeout)
 		h.mu.Lock()
@@ -134,6 +137,38 @@ func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 		}
 	}()
 
+	if f.hasError {
+		var e error = nil
+		args = append([]reflect.Value{reflect.ValueOf(e)}, args...)
+	}
+	f.rv.Call(args)
+	return
+}
+
+func (f *ackHandler) CallWithError(e error, args ...reflect.Value) (err error) {
+	if !f.hasError {
+		panic("sio: hasError is false. this shouldn't have happened")
+	}
+
+	f.mu.Lock()
+	if f.timedOut {
+		f.mu.Unlock()
+		return nil
+	}
+	f.called = true
+	f.mu.Unlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("sio: ack handler error: %v", r)
+			}
+		}
+	}()
+
+	args = append([]reflect.Value{reflect.ValueOf(e)}, args...)
 	f.rv.Call(args)
 	return
 }
