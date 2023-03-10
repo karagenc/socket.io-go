@@ -284,8 +284,22 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		handlers := s.emitterForEvents.GetHandlers(eventName)
 
 		go func() {
+			ackSent := false
+			ackSentMu := new(sync.Mutex)
+
+			sendAck := func(id uint64, ret []reflect.Value) {
+				ackSentMu.Lock()
+				if ackSent {
+					ackSentMu.Unlock()
+					return
+				}
+				ackSent = true
+				ackSentMu.Unlock()
+				s.sendAckPacket(id, ret)
+			}
+
 			for _, handler := range handlers {
-				s.onEvent(handler, header, decode)
+				s.onEvent(handler, header, decode, sendAck)
 			}
 		}()
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
@@ -344,11 +358,34 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.emitReserved("connect")
 }
 
+type sendAckFunc = func(id uint64, ret []reflect.Value)
+
 func (s *clientSocket) emitBuffered() {
 	s.receiveBufferMu.Lock()
 	defer s.receiveBufferMu.Unlock()
+
+	ackIDs := make(map[uint64]bool, len(s.receiveBuffer))
+	ackIDsMu := new(sync.Mutex)
 	for _, event := range s.receiveBuffer {
-		s.callEvent(event.handler, event.header, event.values)
+		if event.header.ID != nil {
+			ackIDs[*event.header.ID] = false
+		}
+	}
+
+	sendAck := func(id uint64, ret []reflect.Value) {
+		ackIDsMu.Lock()
+		sent, ok := ackIDs[id]
+		if ok && sent {
+			ackIDsMu.Unlock()
+			return
+		}
+		ackIDs[id] = true
+		ackIDsMu.Unlock()
+		s.sendAckPacket(id, ret)
+	}
+
+	for _, event := range s.receiveBuffer {
+		s.callEvent(event.handler, event.header, event.values, sendAck)
 	}
 	s.receiveBuffer = nil
 
@@ -399,7 +436,7 @@ type clientEvent struct {
 	values  []reflect.Value
 }
 
-func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
+func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck sendAckFunc) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -420,7 +457,7 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	s.connectedMu.RLock()
 	defer s.connectedMu.RUnlock()
 	if s.connected {
-		s.callEvent(handler, header, values)
+		s.callEvent(handler, header, values, sendAck)
 	} else {
 		s.receiveBufferMu.Lock()
 		defer s.receiveBufferMu.Unlock()
@@ -432,7 +469,7 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	}
 }
 
-func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value) {
+func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value, sendAck sendAckFunc) {
 	// Set the lastOffset before calling the handler.
 	// An error can occur when the handler gets called,
 	// and we can miss setting the lastOffset.
@@ -449,7 +486,7 @@ func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHea
 	}
 
 	if header.ID != nil {
-		s.sendAckPacket(*header.ID, ret)
+		sendAck(*header.ID, ret)
 	}
 }
 
