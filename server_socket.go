@@ -132,8 +132,22 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		handlers := s.emitterForEvents.GetHandlers(eventName)
 
 		go func() {
+			ackSent := false
+			ackSentMu := new(sync.Mutex)
+
+			sendAck := func(id uint64, ret []reflect.Value) {
+				ackSentMu.Lock()
+				if ackSent {
+					ackSentMu.Unlock()
+					return
+				}
+				ackSent = true
+				ackSentMu.Unlock()
+				s.sendAckPacket(id, ret)
+			}
+
 			for _, handler := range handlers {
-				s.onEvent(handler, header, decode)
+				s.onEvent(handler, header, decode, sendAck)
 			}
 		}()
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
@@ -152,7 +166,7 @@ func (s *serverSocket) onDisconnect() {
 	s.onClose("client namespace disconnect")
 }
 
-func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode) {
+func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck sendAckFunc) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -187,7 +201,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	}
 
 	if header.ID != nil {
-		s.sendAckPacket(*header.ID, ret)
+		sendAck(*header.ID, ret)
 	}
 }
 
