@@ -437,7 +437,7 @@ func (s *serverSocket) ID() SocketID {
 }
 
 func (s *serverSocket) Emit(eventName string, v ...any) {
-	s.emit(eventName, 0, false, v...)
+	s.emit(eventName, 0, false, false, v...)
 }
 
 func (s *serverSocket) emit(eventName string, timeout time.Duration, volatile, fromQueue bool, _v ...any) {

@@ -612,7 +612,7 @@ func (s *clientSocket) emit(eventName string, timeout time.Duration, volatile, f
 		v = append([]any{eventName}, v...)
 	}
 
-	if s.config.Retries > 0 && !fromQueue {
+	if s.config.Retries > 0 && !fromQueue && !volatile {
 		s.packetQueue.addToQueue(&header, v)
 		return
 	}

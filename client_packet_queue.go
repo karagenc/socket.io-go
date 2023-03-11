@@ -117,7 +117,7 @@ func (pq *clientPacketQueue) drainQueue(force bool) {
 	packet.tryCount++
 	packet.mu.Unlock()
 
-	pq.socket.emit("", 0, true, packet.v...)
+	pq.socket.emit("", 0, false, true, packet.v...)
 }
 
 func (pq *clientPacketQueue) dismantleAckFunc(rt reflect.Type) (in, out []reflect.Type, variadic bool) {
