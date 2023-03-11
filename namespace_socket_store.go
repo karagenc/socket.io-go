@@ -31,16 +31,6 @@ func (s *NamespaceSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok b
 	return true
 }
 
-func (s *NamespaceSocketStore) SetAck(sid SocketID, ackHandler *ackHandler) (ok bool) {
-	_socket, ok := s.Get(sid)
-	if !ok {
-		return false
-	}
-	socket := _socket.(*serverSocket)
-	socket.registerAckHandler(ackHandler)
-	return true
-}
-
 func (s *NamespaceSocketStore) GetAll() []ServerSocket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
