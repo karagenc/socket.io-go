@@ -12,8 +12,11 @@ type Emitter struct {
 }
 
 type emitter interface {
+	Socket
 	emit(eventName string, timeout time.Duration, volatile, fromQueue bool, v ...any)
 }
+
+func (e *Emitter) Socket() Socket { return e.socket }
 
 func (e *Emitter) Emit(eventName string, v ...any) {
 	hasAck := len(v) != 0 && reflect.TypeOf(v[len(v)-1]).Kind() == reflect.Func
@@ -24,4 +27,14 @@ func (e *Emitter) Emit(eventName string, v ...any) {
 		}
 	}
 	e.socket.emit(eventName, e.timeout, e.volatile, false, v...)
+}
+
+func (e Emitter) Timeout(timeout time.Duration) Emitter {
+	e.timeout = timeout
+	return e
+}
+
+func (e Emitter) Volatile() Emitter {
+	e.volatile = true
+	return e
 }
