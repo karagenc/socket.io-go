@@ -86,8 +86,8 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 		if err != nil {
 			panic(err)
 		}
-		in, out, variadic := pq.dismantleAckFunc(rt)
-		ackF := reflect.MakeFunc(reflect.FuncOf(in, out, variadic), replacementAck)
+		in, variadic := pq.dismantleAckFunc(rt)
+		ackF := reflect.MakeFunc(reflect.FuncOf(in, nil, variadic), replacementAck)
 		f = ackF.Interface()
 	} else {
 		in := []reflect.Type{reflectError}
@@ -124,15 +124,10 @@ func (pq *clientPacketQueue) drainQueue(force bool) {
 	pq.socket.emit("", 0, false, true, packet.v...)
 }
 
-func (pq *clientPacketQueue) dismantleAckFunc(rt reflect.Type) (in, out []reflect.Type, variadic bool) {
+func (pq *clientPacketQueue) dismantleAckFunc(rt reflect.Type) (in []reflect.Type, variadic bool) {
 	in = make([]reflect.Type, rt.NumIn())
-	out = make([]reflect.Type, rt.NumOut())
-
 	for i := range in {
 		in[i] = rt.In(i)
-	}
-	for i := range in {
-		out[i] = rt.Out(i)
 	}
 	variadic = rt.IsVariadic()
 	return
