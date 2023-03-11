@@ -68,7 +68,31 @@ type ackHandler struct {
 
 func newAckHandler(f any, hasError bool) *ackHandler {
 	rv := reflect.ValueOf(f)
+	return newAckHandlerWithReflectFunc(rv, hasError)
+}
 
+func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) *ackHandler {
+	h := newAckHandler(f, true)
+	go func() {
+		time.Sleep(timeout)
+		h.mu.Lock()
+		if h.called {
+			h.mu.Unlock()
+			return
+		}
+		h.timedOut = true
+		h.mu.Unlock()
+
+		defer func() {
+			recover()
+		}()
+		timeoutFunc()
+		h.rv.Call([]reflect.Value{reflect.ValueOf(fmt.Errorf("operation has timed out"))})
+	}()
+	return h
+}
+
+func newAckHandlerWithReflectFunc(rv reflect.Value, hasError bool) *ackHandler {
 	if rv.Kind() != reflect.Func {
 		panic("sio: function expected")
 	}
@@ -95,27 +119,6 @@ func newAckHandler(f any, hasError bool) *ackHandler {
 		outputArgs: outputArgs,
 		hasError:   hasError,
 	}
-}
-
-func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) *ackHandler {
-	h := newAckHandler(f, true)
-	go func() {
-		time.Sleep(timeout)
-		h.mu.Lock()
-		if h.called {
-			h.mu.Unlock()
-			return
-		}
-		h.timedOut = true
-		h.mu.Unlock()
-
-		defer func() {
-			recover()
-		}()
-		timeoutFunc()
-		h.rv.Call([]reflect.Value{reflect.ValueOf(fmt.Errorf("operation has timed out"))})
-	}()
-	return h
 }
 
 func (f *ackHandler) Call(args ...reflect.Value) (err error) {
