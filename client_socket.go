@@ -48,7 +48,7 @@ type clientSocket struct {
 	connected   bool
 	connectedMu sync.RWMutex
 
-	sendBuffer   []*eioparser.Packet
+	sendBuffer   []sendBufferItem
 	sendBufferMu sync.Mutex
 
 	receiveBuffer   []*clientEvent
@@ -361,6 +361,11 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 
 type sendAckFunc = func(id uint64, ret []reflect.Value)
 
+type sendBufferItem struct {
+	AckID  *uint64
+	Packet *eioparser.Packet
+}
+
 func (s *clientSocket) emitBuffered() {
 	s.receiveBufferMu.Lock()
 	defer s.receiveBufferMu.Unlock()
@@ -393,7 +398,11 @@ func (s *clientSocket) emitBuffered() {
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
 	if len(s.sendBuffer) != 0 {
-		s.manager.conn.Packet(s.sendBuffer...)
+		packets := make([]*eioparser.Packet, len(s.sendBuffer))
+		for i := range packets {
+			packets[i] = s.sendBuffer[i].Packet
+		}
+		s.manager.conn.Packet(packets...)
 		s.sendBuffer = nil
 	}
 }
@@ -631,7 +640,7 @@ func (s *clientSocket) emit(eventName string, timeout time.Duration, volatile, f
 		return
 	}
 
-	s.sendBuffers(volatile, buffers...)
+	s.sendBuffers(volatile, header.ID, buffers...)
 }
 
 // 0 as the timeout argument means there is no timeout.
@@ -657,9 +666,15 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		delete(s.acks, id)
 		s.acksMu.Unlock()
 
+		remove := func(slice []sendBufferItem, s int) []sendBufferItem {
+			return append(slice[:s], slice[s+1:]...)
+		}
+
 		s.sendBufferMu.Lock()
-		for _, packet := range s.sendBuffer {
-			// TODO: Remove packet
+		for i, packet := range s.sendBuffer {
+			if packet.AckID != nil && *packet.AckID == id {
+				s.sendBuffer = remove(s.sendBuffer, i)
+			}
 		}
 		s.sendBufferMu.Unlock()
 	})
@@ -704,7 +719,7 @@ func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 		return
 	}
 
-	s.sendBuffers(false, buffers...)
+	s.sendBuffers(false, nil, buffers...)
 }
 
 func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
@@ -731,10 +746,10 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		return
 	}
 
-	s.sendBuffers(false, buffers...)
+	s.sendBuffers(false, header.ID, buffers...)
 }
 
-func (s *clientSocket) sendBuffers(volatile bool, buffers ...[]byte) {
+func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]byte) {
 	if len(buffers) > 0 {
 		packets := make([]*eioparser.Packet, len(buffers))
 		buf := buffers[0]
@@ -761,7 +776,14 @@ func (s *clientSocket) sendBuffers(volatile bool, buffers ...[]byte) {
 			s.manager.conn.Packet(packets...)
 		} else if !volatile {
 			s.sendBufferMu.Lock()
-			s.sendBuffer = append(s.sendBuffer, packets...)
+			buffers := make([]sendBufferItem, len(packets))
+			for i := range buffers {
+				buffers[i] = sendBufferItem{
+					AckID:  ackID,
+					Packet: packets[i],
+				}
+			}
+			s.sendBuffer = append(s.sendBuffer, buffers...)
 			s.sendBufferMu.Unlock()
 		}
 	}
