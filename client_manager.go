@@ -286,5 +286,8 @@ func (m *Manager) onClose(reason Reason, err error) {
 }
 
 func (m *Manager) Close() {
+	m.sockets.DisconnectAll()
+	// Wait for disconnect packets to get sent
+	m.conn.eioPacketQueue.WaitForDrain(5 * time.Second)
 	m.conn.Disconnect()
 }

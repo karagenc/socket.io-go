@@ -2,6 +2,7 @@ package sio
 
 import (
 	"sync"
+	"time"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
@@ -69,6 +70,23 @@ func (pq *packetQueue) Reset() {
 	case pq.reset <- struct{}{}:
 	default:
 	}
+}
+
+func (pq *packetQueue) WaitForDrain(timeout time.Duration) (timedout bool) {
+	pq.mu.Lock()
+	drained := len(pq.packets) == 0
+	pq.mu.Unlock()
+	if drained {
+		return
+	}
+
+	select {
+	case <-pq.ready:
+	case <-pq.reset:
+	case <-time.After(timeout):
+		timedout = true
+	}
+	return
 }
 
 func pollAndSend(socket eio.Socket, pq *packetQueue) {
