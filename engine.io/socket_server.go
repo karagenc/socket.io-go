@@ -14,8 +14,8 @@ type serverSocket struct {
 	pingInterval time.Duration
 	pingTimeout  time.Duration
 
-	t   ServerTransport
-	tMu sync.RWMutex
+	transport   ServerTransport
+	transportMu sync.RWMutex
 
 	callbacks atomic.Value
 
@@ -26,7 +26,7 @@ type serverSocket struct {
 	closeOnce sync.Once
 }
 
-func newServerSocket(id string, upgrades []string, t ServerTransport, pingInterval time.Duration, pingTimeout time.Duration, onClose func(sid string)) *serverSocket {
+func newServerSocket(id string, upgrades []string, transport ServerTransport, pingInterval time.Duration, pingTimeout time.Duration, onClose func(sid string)) *serverSocket {
 	// The function below might be nil for testing purposes. See: sstore_test.go
 	if onClose == nil {
 		onClose = func(sid string) {}
@@ -38,7 +38,7 @@ func newServerSocket(id string, upgrades []string, t ServerTransport, pingInterv
 		pingInterval: pingInterval,
 		pingTimeout:  pingTimeout,
 
-		t: t,
+		transport: transport,
 
 		pongChan: make(chan struct{}, 1),
 
@@ -47,7 +47,7 @@ func newServerSocket(id string, upgrades []string, t ServerTransport, pingInterv
 	}
 
 	s.setCallbacks(nil)
-	t.Callbacks().Set(s.onPacket, s.onTransportClose)
+	transport.Callbacks().Set(s.onPacket, s.onTransportClose)
 	go s.pingPong(pingInterval, pingTimeout)
 
 	return s
@@ -74,15 +74,15 @@ func (s *serverSocket) ID() string {
 }
 
 func (s *serverSocket) Transport() ServerTransport {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	return s.t
+	s.transportMu.RLock()
+	defer s.transportMu.RUnlock()
+	return s.transport
 }
 
 func (s *serverSocket) TransportName() string {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	return s.t.Name()
+	s.transportMu.RLock()
+	defer s.transportMu.RUnlock()
+	return s.transport.Name()
 }
 
 func (s *serverSocket) Upgrades() []string {
@@ -100,11 +100,11 @@ func (s *serverSocket) PingTimeout() time.Duration {
 func (s *serverSocket) UpgradeTo(t ServerTransport) {
 	t.Callbacks().Set(s.onPacket, s.onTransportClose)
 
-	s.tMu.Lock()
-	defer s.tMu.Unlock()
+	s.transportMu.Lock()
+	defer s.transportMu.Unlock()
 
-	old := s.t
-	s.t = t
+	old := s.transport
+	s.transport = t
 	old.Discard()
 
 	// Get the queued packets from the old transport and send them with the new one.
@@ -157,9 +157,9 @@ func (s *serverSocket) handlePacket(packet *parser.Packet) {
 	case parser.PacketTypePong:
 		s.onPong()
 	case parser.PacketTypeClose:
-		s.tMu.RLock()
-		defer s.tMu.RUnlock()
-		s.t.Close()
+		s.transportMu.RLock()
+		defer s.transportMu.RUnlock()
+		s.transport.Close()
 	}
 }
 
@@ -177,9 +177,9 @@ func (s *serverSocket) onError(err error) {
 }
 
 func (s *serverSocket) Send(packets ...*parser.Packet) {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	s.t.Send(packets...)
+	s.transportMu.RLock()
+	defer s.transportMu.RUnlock()
+	s.transport.Send(packets...)
 }
 
 func (s *serverSocket) onTransportClose(name string, err error) {
@@ -208,10 +208,10 @@ func (s *serverSocket) close(reason Reason, err error) {
 		defer s.getCallbacks().OnClose(reason, err)
 
 		if reason != ReasonTransportClose && reason != ReasonTransportError {
-			s.tMu.RLock()
-			defer s.tMu.RUnlock()
-			if s.t != nil {
-				s.t.Close()
+			s.transportMu.RLock()
+			defer s.transportMu.RUnlock()
+			if s.transport != nil {
+				s.transport.Close()
 			}
 		}
 	})

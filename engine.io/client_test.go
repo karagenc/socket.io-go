@@ -198,10 +198,10 @@ func TestClientWebSocketDiscard(t *testing.T) {
 	s := httptest.NewServer(io)
 
 	socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"websocket"}})
-	// This test is to check if the socket.t.Discard is blocking.
-	socket.tMu.Lock()
-	socket.t.Discard()
-	socket.tMu.Unlock()
+	// This test is to check if the socket.transport.Discard is blocking.
+	socket.transportMu.Lock()
+	socket.transport.Discard()
+	socket.transportMu.Unlock()
 
 	tw.WaitTimeout(t, time.Second*3)
 }
@@ -248,10 +248,10 @@ func TestClientPollingDiscard(t *testing.T) {
 	s := httptest.NewServer(io)
 
 	socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"polling"}})
-	// This test is to check if the socket.t.Discard is blocking.
-	socket.tMu.Lock()
-	socket.t.Discard()
-	socket.tMu.Unlock()
+	// This test is to check if the socket.transport.Discard is blocking.
+	socket.transportMu.Lock()
+	socket.transport.Discard()
+	socket.transportMu.Unlock()
 
 	tw.WaitTimeout(t, time.Second*3)
 }

@@ -16,8 +16,8 @@ import (
 )
 
 type clientSocket struct {
-	t   ClientTransport
-	tMu sync.RWMutex
+	transport   ClientTransport
+	transportMu sync.RWMutex
 
 	url *url.URL
 
@@ -48,8 +48,8 @@ type clientSocket struct {
 }
 
 func (s *clientSocket) Connect(transports []string) (err error) {
-	s.tMu.Lock()
-	defer s.tMu.Unlock()
+	s.transportMu.Lock()
+	defer s.transportMu.Unlock()
 
 	for _, name := range transports {
 		transports = transports[1:]
@@ -58,9 +58,9 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 
 		switch name {
 		case "websocket":
-			s.t = _websocket.NewClientTransport(c, "", ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
+			s.transport = _websocket.NewClientTransport(c, "", ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
 		case "polling":
-			s.t = polling.NewClientTransport(c, ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
+			s.transport = polling.NewClientTransport(c, ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
 		default:
 			err = fmt.Errorf("eio: invalid transport name: %s", name)
 			return
@@ -69,7 +69,7 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 		c.Set(s.onPacket, s.onTransportClose)
 
 		var hr *parser.HandshakeResponse
-		hr, err = s.t.Handshake()
+		hr, err = s.transport.Handshake()
 		if err != nil {
 			continue
 		}
@@ -78,7 +78,7 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 		s.upgrades = hr.Upgrades
 		s.pingInterval = hr.GetPingInterval()
 		s.pingTimeout = hr.GetPingTimeout()
-		go s.t.Run()
+		go s.transport.Run()
 		break
 	}
 
@@ -196,11 +196,11 @@ func (s *clientSocket) upgradeTo(t ClientTransport) {
 
 	t.Callbacks().Set(s.onPacket, s.onTransportClose)
 
-	s.tMu.Lock()
-	defer s.tMu.Unlock()
+	s.transportMu.Lock()
+	defer s.transportMu.Unlock()
 
-	old := s.t
-	s.t = t
+	old := s.transport
+	s.transport = t
 	old.Discard()
 
 	t.Send(p)
@@ -240,9 +240,9 @@ func (s *clientSocket) handlePacket(packet *parser.Packet) {
 		}
 		s.Send(pong)
 	case parser.PacketTypeClose:
-		s.tMu.RLock()
-		defer s.tMu.RUnlock()
-		s.t.Close()
+		s.transportMu.RLock()
+		defer s.transportMu.RUnlock()
+		s.transport.Close()
 	}
 }
 
@@ -271,15 +271,15 @@ func (s *clientSocket) onTransportClose(name string, err error) {
 }
 
 func (s *clientSocket) TransportName() string {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	return s.t.Name()
+	s.transportMu.RLock()
+	defer s.transportMu.RUnlock()
+	return s.transport.Name()
 }
 
 func (s *clientSocket) Send(packets ...*parser.Packet) {
-	s.tMu.RLock()
-	defer s.tMu.RUnlock()
-	s.t.Send(packets...)
+	s.transportMu.RLock()
+	defer s.transportMu.RUnlock()
+	s.transport.Send(packets...)
 }
 
 func (s *clientSocket) close(reason Reason, err error) {
@@ -288,10 +288,10 @@ func (s *clientSocket) close(reason Reason, err error) {
 		defer s.callbacks.OnClose(reason, err)
 
 		if reason != ReasonTransportClose && reason != ReasonTransportError {
-			s.tMu.RLock()
-			defer s.tMu.RUnlock()
-			if s.t != nil {
-				s.t.Close()
+			s.transportMu.RLock()
+			defer s.transportMu.RUnlock()
+			if s.transport != nil {
+				s.transport.Close()
 			}
 		}
 	})
