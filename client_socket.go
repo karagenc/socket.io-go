@@ -597,10 +597,6 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	s.emit(eventName, 0, v...)
 }
 
-func (s *clientSocket) EmitWithTimeout(eventName string, timeout time.Duration, v ...any) {
-	s.emit(eventName, timeout, v...)
-}
-
 func (s *clientSocket) emit(eventName string, timeout time.Duration, v ...any) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
