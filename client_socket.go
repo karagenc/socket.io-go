@@ -356,6 +356,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 
 	s.emitBuffered()
 	s.emitReserved("connect")
+	s.packetQueue.drainQueue(true)
 }
 
 type sendAckFunc = func(id uint64, ret []reflect.Value)
@@ -607,7 +608,9 @@ func (s *clientSocket) emit(eventName string, timeout time.Duration, fromQueue b
 		panic("sio: Emit: attempted to emit a reserved event: `" + eventName + "`")
 	}
 
-	v = append([]any{eventName}, v...)
+	if eventName != "" {
+		v = append([]any{eventName}, v...)
+	}
 
 	if s.config.Retries > 0 && !fromQueue {
 		s.packetQueue.addToQueue(&header, v)

@@ -73,7 +73,7 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 		packet.mu.Lock()
 		packet.pending = false
 		packet.mu.Unlock()
-		pq.drainQueue()
+		pq.drainQueue(false)
 		return nil // TODO: Should this be kept nil?
 	}
 
@@ -93,10 +93,29 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 	pq.mu.Lock()
 	pq.queuedPackets = append(pq.queuedPackets, packet)
 	pq.mu.Unlock()
-	pq.drainQueue()
+	pq.drainQueue(false)
 }
 
-func (pq *clientPacketQueue) drainQueue() {}
+func (pq *clientPacketQueue) drainQueue(force bool) {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+	if !pq.socket.Connected() || len(pq.queuedPackets) == 0 {
+		return
+	}
+
+	packet := pq.queuedPackets[0]
+	packet.mu.Lock()
+	pending := packet.pending
+	if pending && !force {
+		packet.mu.Unlock()
+		return
+	}
+	packet.pending = true
+	packet.tryCount++
+	packet.mu.Unlock()
+
+	pq.socket.emit("", 0, true, packet.v...)
+}
 
 func (pq *clientPacketQueue) dismantleAckFunc(rt reflect.Type) (in, out []reflect.Type, variadic bool) {
 	in = make([]reflect.Type, rt.NumIn())
