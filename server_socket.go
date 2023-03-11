@@ -506,6 +506,13 @@ func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 	return
 }
 
+func (s *serverSocket) Timeout(timeout time.Duration) Emitter {
+	return Emitter{
+		socket:  s,
+		timeout: timeout,
+	}
+}
+
 func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 	header := parser.PacketHeader{
 		Type:      typ,

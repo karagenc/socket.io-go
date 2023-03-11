@@ -678,6 +678,13 @@ func (s *clientSocket) nextAckID() uint64 {
 	return id
 }
 
+func (s *clientSocket) Timeout(timeout time.Duration) Emitter {
+	return Emitter{
+		socket:  s,
+		timeout: timeout,
+	}
+}
+
 func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 	header := parser.PacketHeader{
 		Type:      typ,

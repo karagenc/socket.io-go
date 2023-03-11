@@ -1,5 +1,7 @@
 package sio
 
+import "time"
+
 type Socket interface {
 	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.
 	ID() SocketID
@@ -16,6 +18,9 @@ type Socket interface {
 	// Emit a message.
 	// If you want to emit a binary data, use sio.Binary instead of []byte.
 	Emit(eventName string, v ...any)
+
+	// Return an emitter with timeout set.
+	Timeout(timeout time.Duration) Emitter
 
 	// Register an event handler.
 	OnEvent(eventName string, handler any)
