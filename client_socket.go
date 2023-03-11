@@ -594,10 +594,10 @@ func (s *clientSocket) OffAll() {
 }
 
 func (s *clientSocket) Emit(eventName string, v ...any) {
-	s.emit(eventName, 0, v...)
+	s.emit(eventName, 0, false, v...)
 }
 
-func (s *clientSocket) emit(eventName string, timeout time.Duration, v ...any) {
+func (s *clientSocket) emit(eventName string, timeout time.Duration, fromQueue bool, v ...any) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,
@@ -609,7 +609,7 @@ func (s *clientSocket) emit(eventName string, timeout time.Duration, v ...any) {
 
 	v = append([]any{eventName}, v...)
 
-	if s.config.Retries > 0 {
+	if s.config.Retries > 0 && !fromQueue {
 		s.packetQueue.addToQueue(&header, v)
 		return
 	}

@@ -8,9 +8,9 @@ type Emitter struct {
 }
 
 type emitter interface {
-	emit(eventName string, timeout time.Duration, v ...any)
+	emit(eventName string, timeout time.Duration, fromQueue bool, v ...any)
 }
 
 func (e *Emitter) Emit(eventName string, v ...any) {
-	e.socket.emit(eventName, e.timeout, v...)
+	e.socket.emit(eventName, e.timeout, false, v...)
 }

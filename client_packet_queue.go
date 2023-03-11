@@ -43,29 +43,18 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 	packet := &queuedPacket{
 		id:     pq.socket.nextAckID(),
 		header: header,
-		v:      v,
 		mu:     new(sync.Mutex),
 	}
 
-	var (
-		h              *ackHandler
-		replacementAck = func(args []reflect.Value) (results []reflect.Value) {
-			errV := args[0]
-			hasError := errV.IsNil() == false
+	replacementAck := func(args []reflect.Value) (results []reflect.Value) {
+		errV := args[0]
+		hasError := errV.IsNil() == false
 
-			if hasError {
-				packet.mu.Lock()
-				tryCount := packet.tryCount
-				packet.mu.Unlock()
-				if tryCount > pq.socket.config.Retries {
-					pq.mu.Lock()
-					pq.queuedPackets = pq.queuedPackets[1:]
-					pq.mu.Unlock()
-					if haveAck {
-						rv.Call(args)
-					}
-				}
-			} else {
+		if hasError {
+			packet.mu.Lock()
+			tryCount := packet.tryCount
+			packet.mu.Unlock()
+			if tryCount > pq.socket.config.Retries {
 				pq.mu.Lock()
 				pq.queuedPackets = pq.queuedPackets[1:]
 				pq.mu.Unlock()
@@ -73,24 +62,33 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 					rv.Call(args)
 				}
 			}
-			packet.mu.Lock()
-			packet.pending = false
-			packet.mu.Unlock()
-			pq.drainQueue()
-			return nil // TODO: Should this be kept nil?
+		} else {
+			pq.mu.Lock()
+			pq.queuedPackets = pq.queuedPackets[1:]
+			pq.mu.Unlock()
+			if haveAck {
+				rv.Call(args)
+			}
 		}
-	)
+		packet.mu.Lock()
+		packet.pending = false
+		packet.mu.Unlock()
+		pq.drainQueue()
+		return nil // TODO: Should this be kept nil?
+	}
 
 	if haveAck {
 		in, out, variadic := pq.dismantleAckFunc(rt)
 		// TODO: Check if first element of `in` is an error?
 		ackF := reflect.MakeFunc(reflect.FuncOf(in, out, variadic), replacementAck)
-		h = newAckHandlerWithReflectFunc(ackF, true)
+		f = ackF.Interface()
 	} else {
 		in := []reflect.Type{reflectError}
 		ackF := reflect.MakeFunc(reflect.FuncOf(in, nil, false), replacementAck)
-		h = newAckHandlerWithReflectFunc(ackF, true)
+		f = ackF.Interface()
 	}
+	v = append(v, f)
+	packet.v = v
 
 	pq.mu.Lock()
 	pq.queuedPackets = append(pq.queuedPackets, packet)
