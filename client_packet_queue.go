@@ -78,8 +78,11 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 	}
 
 	if haveAck {
+		err := doesAckHandlerHasAnError(f)
+		if err != nil {
+			panic(err)
+		}
 		in, out, variadic := pq.dismantleAckFunc(rt)
-		// TODO: Check if first element of `in` is an error?
 		ackF := reflect.MakeFunc(reflect.FuncOf(in, out, variadic), replacementAck)
 		f = ackF.Interface()
 	} else {

@@ -1,6 +1,9 @@
 package sio
 
-import "time"
+import (
+	"reflect"
+	"time"
+)
 
 type Emitter struct {
 	socket  emitter
@@ -12,5 +15,12 @@ type emitter interface {
 }
 
 func (e *Emitter) Emit(eventName string, v ...any) {
+	hasAck := len(v) != 0 && reflect.TypeOf(v[len(v)-1]).Kind() == reflect.Func
+	if hasAck && e.timeout != 0 {
+		err := doesAckHandlerHasAnError(v[len(v)-1])
+		if err != nil {
+			panic(err)
+		}
+	}
 	e.socket.emit(eventName, e.timeout, false, v...)
 }

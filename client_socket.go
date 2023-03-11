@@ -647,6 +647,11 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		return
 	}
 
+	err := doesAckHandlerHasAnError(f)
+	if err != nil {
+		panic(err)
+	}
+
 	h := newAckHandlerWithTimeout(f, timeout, func() {
 		s.acksMu.Lock()
 		delete(s.acks, id)

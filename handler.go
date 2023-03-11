@@ -172,3 +172,19 @@ func (f *ackHandler) CallWithError(e error, args ...reflect.Value) (err error) {
 	f.rv.Call(args)
 	return
 }
+
+func doesAckHandlerHasAnError(f any) error {
+	rt := reflect.TypeOf(f)
+
+	if rt.Kind() != reflect.Func {
+		return fmt.Errorf("sio: function expected")
+	}
+
+	if rt.NumIn() == 0 {
+		return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
+	}
+	if rt.In(0).Kind() != reflect.Interface || !rt.In(0).Implements(reflectError) {
+		return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
+	}
+	return nil
+}
