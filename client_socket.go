@@ -595,10 +595,10 @@ func (s *clientSocket) OffAll() {
 }
 
 func (s *clientSocket) Emit(eventName string, v ...any) {
-	s.emit(eventName, 0, false, v...)
+	s.emit(eventName, 0, false, false, v...)
 }
 
-func (s *clientSocket) emit(eventName string, timeout time.Duration, fromQueue bool, v ...any) {
+func (s *clientSocket) emit(eventName string, timeout time.Duration, volatile, fromQueue bool, v ...any) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,
@@ -631,7 +631,7 @@ func (s *clientSocket) emit(eventName string, timeout time.Duration, fromQueue b
 		return
 	}
 
-	s.sendBuffers(buffers...)
+	s.sendBuffers(volatile, buffers...)
 }
 
 // 0 as the timeout argument means there is no timeout.
@@ -685,6 +685,13 @@ func (s *clientSocket) Timeout(timeout time.Duration) Emitter {
 	}
 }
 
+func (s *clientSocket) Volatile() Emitter {
+	return Emitter{
+		socket:   s,
+		volatile: true,
+	}
+}
+
 func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 	header := parser.PacketHeader{
 		Type:      typ,
@@ -697,7 +704,7 @@ func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 		return
 	}
 
-	s.sendBuffers(buffers...)
+	s.sendBuffers(false, buffers...)
 }
 
 func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
@@ -724,10 +731,10 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		return
 	}
 
-	s.sendBuffers(buffers...)
+	s.sendBuffers(false, buffers...)
 }
 
-func (s *clientSocket) sendBuffers(buffers ...[]byte) {
+func (s *clientSocket) sendBuffers(volatile bool, buffers ...[]byte) {
 	if len(buffers) > 0 {
 		packets := make([]*eioparser.Packet, len(buffers))
 		buf := buffers[0]
@@ -752,7 +759,7 @@ func (s *clientSocket) sendBuffers(buffers ...[]byte) {
 		defer s.connectedMu.Unlock()
 		if s.connected {
 			s.manager.conn.Packet(packets...)
-		} else {
+		} else if !volatile {
 			s.sendBufferMu.Lock()
 			s.sendBuffer = append(s.sendBuffer, packets...)
 			s.sendBufferMu.Unlock()

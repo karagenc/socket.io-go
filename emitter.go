@@ -6,12 +6,13 @@ import (
 )
 
 type Emitter struct {
-	socket  emitter
-	timeout time.Duration
+	socket   emitter
+	timeout  time.Duration
+	volatile bool
 }
 
 type emitter interface {
-	emit(eventName string, timeout time.Duration, fromQueue bool, v ...any)
+	emit(eventName string, timeout time.Duration, volatile, fromQueue bool, v ...any)
 }
 
 func (e *Emitter) Emit(eventName string, v ...any) {
@@ -22,5 +23,5 @@ func (e *Emitter) Emit(eventName string, v ...any) {
 			panic(err)
 		}
 	}
-	e.socket.emit(eventName, e.timeout, false, v...)
+	e.socket.emit(eventName, e.timeout, e.volatile, false, v...)
 }

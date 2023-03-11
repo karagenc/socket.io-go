@@ -440,7 +440,7 @@ func (s *serverSocket) Emit(eventName string, v ...any) {
 	s.emit(eventName, 0, false, v...)
 }
 
-func (s *serverSocket) emit(eventName string, timeout time.Duration, _ bool, _v ...any) {
+func (s *serverSocket) emit(eventName string, timeout time.Duration, volatile, fromQueue bool, _v ...any) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),
@@ -510,6 +510,13 @@ func (s *serverSocket) Timeout(timeout time.Duration) Emitter {
 	return Emitter{
 		socket:  s,
 		timeout: timeout,
+	}
+}
+
+func (s *serverSocket) Volatile() Emitter {
+	return Emitter{
+		socket:   s,
+		volatile: true,
 	}
 }
 

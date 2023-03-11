@@ -182,7 +182,6 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 }
 
 func (c *serverConn) packet(packets ...*eioparser.Packet) {
-	// TODO: Check if eio is connected
 	c.eioPacketQueue.Add(packets...)
 }
 
