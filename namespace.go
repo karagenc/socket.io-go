@@ -15,6 +15,8 @@ type Namespace struct {
 	name   string
 	server *Server
 
+	debug DebugFunc
+
 	sockets *NamespaceSocketStore
 
 	middlewareFuncs   []NspMiddlewareFunc
@@ -30,11 +32,12 @@ type Namespace struct {
 	namespaceConnectHandlers *handlerStore[*NamespaceConnectFunc]
 }
 
-func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
+func newNamespace(name string, server *Server, debug DebugFunc, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
 		name:                     name,
 		server:                   server,
+		debug:                    debug,
 		sockets:                  socketStore,
 		parser:                   parserCreator(),
 		eventHandlers:            newEventHandlerStore(),
@@ -119,7 +122,7 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 					}
 				}
 			} else {
-				// TODO: Error?
+				n.debug("Namespace.OnServerSideEmit: handler signature mismatch")
 				return
 			}
 			handler.Call(values...)

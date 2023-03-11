@@ -33,6 +33,9 @@ type ServerConfig struct {
 	AcceptAnyNamespace bool
 
 	ServerConnectionStateRecovery ServerConnectionStateRecovery
+
+	// For debugging purposes. Leave it nil if it is of no use.
+	DebugFunc DebugFunc
 }
 
 type ServerConnectionStateRecovery struct {
@@ -63,6 +66,8 @@ type Server struct {
 	acceptAnyNamespace bool
 
 	connectionStateRecovery ServerConnectionStateRecovery
+
+	debug DebugFunc
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -76,6 +81,12 @@ func NewServer(config *ServerConfig) *Server {
 		namespaces:              newNamespaceStore(),
 		acceptAnyNamespace:      config.AcceptAnyNamespace,
 		connectionStateRecovery: config.ServerConnectionStateRecovery,
+	}
+
+	if config.DebugFunc != nil {
+		server.debug = config.DebugFunc
+	} else {
+		server.debug = NoopDebugFunc
 	}
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)

@@ -43,7 +43,7 @@ func (s *namespaceStore) GetOrCreate(name string, server *Server, adapterCreator
 	defer s.mu.Unlock()
 	nsp, ok := s.nsps[name]
 	if !ok {
-		nsp = newNamespace(name, server, adapterCreator, parserCreator)
+		nsp = newNamespace(name, server, server.debug, adapterCreator, parserCreator)
 		s.nsps[nsp.Name()] = nsp
 	}
 	return nsp

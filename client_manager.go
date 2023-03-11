@@ -53,7 +53,7 @@ type ManagerConfig struct {
 type Manager struct {
 	url       string
 	eioConfig eio.ClientConfig
-	debugFunc DebugFunc
+	debug     DebugFunc
 
 	// This mutex is used for protecting parser from concurrent calls.
 	// Due to the modular and concurrent nature of Engine.IO,
@@ -107,6 +107,12 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		eventHandlers: newEventHandlerStore(),
 	}
 
+	if config.DebugFunc != nil {
+		io.debug = config.DebugFunc
+	} else {
+		io.debug = NoopDebugFunc
+	}
+
 	if config.ReconnectionDelay != nil {
 		io.reconnectionDelay = *config.ReconnectionDelay
 	} else {
@@ -123,12 +129,6 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		io.randomizationFactor = *config.RandomizationFactor
 	} else {
 		io.randomizationFactor = DefaultRandomizationFactor
-	}
-
-	if config.DebugFunc != nil {
-		io.debugFunc = config.DebugFunc
-	} else {
-		io.debugFunc = NoopDebugFunc
 	}
 
 	io.backoff = newBackoff(io.reconnectionDelay, io.reconnectionDelayMax, io.randomizationFactor)
