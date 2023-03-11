@@ -85,12 +85,6 @@ func (c *clientConn) Connect(again bool) (err error) {
 
 	go pollAndSend(c.eio, c.eioPacketQueue)
 
-	// TODO: Should I stay or should I go? (Active?)
-	sockets := c.manager.sockets.GetAll()
-	for _, socket := range sockets {
-		go socket.onOpen()
-	}
-
 	c.manager.emitReserved("open")
 	return
 }
