@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	eio "github.com/tomruk/socket.io-go/engine.io"
@@ -435,15 +436,11 @@ func (s *serverSocket) ID() SocketID {
 	return s.id
 }
 
-func (s *serverSocket) registerAckHandler(handler *ackHandler) (id uint64) {
-	id = s.nsp.nextAckID()
-	s.acksMu.Lock()
-	s.acks[id] = handler
-	s.acksMu.Unlock()
-	return
+func (s *serverSocket) Emit(eventName string, v ...any) {
+	s.emit(eventName, 0, false, v...)
 }
 
-func (s *serverSocket) Emit(eventName string, _v ...any) {
+func (s *serverSocket) emit(eventName string, timeout time.Duration, _ bool, _v ...any) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),
@@ -463,7 +460,7 @@ func (s *serverSocket) Emit(eventName string, _v ...any) {
 	rt := reflect.TypeOf(f)
 
 	if rt.Kind() == reflect.Func {
-		ackID := s.registerAckHandler(newAckHandler(f))
+		ackID := s.registerAckHandler(f, timeout)
 		header.ID = &ackID
 		v = v[:len(v)-1]
 	}
@@ -480,6 +477,33 @@ func (s *serverSocket) Emit(eventName string, _v ...any) {
 		}
 		s.conn.sendBuffers(buffers...)
 	}
+}
+
+// 0 as the timeout argument means there is no timeout.
+func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint64) {
+	id = s.nsp.nextAckID()
+	if timeout == 0 {
+		s.acksMu.Lock()
+		s.acks[id] = newAckHandler(f, false)
+		s.acksMu.Unlock()
+		return
+	}
+
+	err := doesAckHandlerHasAnError(f)
+	if err != nil {
+		panic(err)
+	}
+
+	h := newAckHandlerWithTimeout(f, timeout, func() {
+		s.acksMu.Lock()
+		delete(s.acks, id)
+		s.acksMu.Unlock()
+	})
+
+	s.acksMu.Lock()
+	s.acks[id] = h
+	s.acksMu.Unlock()
+	return
 }
 
 func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
