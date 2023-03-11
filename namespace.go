@@ -26,19 +26,19 @@ type Namespace struct {
 	ackID uint64
 	ackMu sync.Mutex
 
-	emitterForEvents  *eventEmitter
-	emitterForConnect *emitter[*NamespaceConnectFunc]
+	eventHandlers            *eventHandlerStore
+	namespaceConnectHandlers *handlerStore[*NamespaceConnectFunc]
 }
 
 func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
-		name:              name,
-		server:            server,
-		sockets:           socketStore,
-		parser:            parserCreator(),
-		emitterForEvents:  newEventEmitter(),
-		emitterForConnect: newEmitter[*NamespaceConnectFunc](),
+		name:                     name,
+		server:                   server,
+		sockets:                  socketStore,
+		parser:                   parserCreator(),
+		eventHandlers:            newEventHandlerStore(),
+		namespaceConnectHandlers: newHandlerStore[*NamespaceConnectFunc](),
 	}
 	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
 	return nsp
@@ -60,22 +60,22 @@ func (n *Namespace) OnEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
 		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	n.emitterForEvents.On(eventName, newEventHandler(handler))
+	n.eventHandlers.On(eventName, newEventHandler(handler))
 }
 
 func (n *Namespace) OnceEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
 		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	n.emitterForEvents.Once(eventName, newEventHandler(handler))
+	n.eventHandlers.Once(eventName, newEventHandler(handler))
 }
 
 func (n *Namespace) OffEvent(eventName string, handler ...any) {
-	n.emitterForEvents.Off(eventName, handler...)
+	n.eventHandlers.Off(eventName, handler...)
 }
 
 func (n *Namespace) OffAll() {
-	n.emitterForEvents.OffAll()
+	n.eventHandlers.OffAll()
 }
 
 // Emits an event to all connected clients in the given namespace.
@@ -108,7 +108,7 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 	for i, v := range _v {
 		values[i] = reflect.ValueOf(v)
 	}
-	handlers := n.emitterForEvents.GetHandlers(eventName)
+	handlers := n.eventHandlers.GetAll(eventName)
 
 	go func() {
 		for _, handler := range handlers {
@@ -262,7 +262,7 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 		return err
 	}
 
-	connectHandlers := n.emitterForConnect.GetHandlers()
+	connectHandlers := n.namespaceConnectHandlers.GetAll()
 	go func() {
 		for _, handler := range connectHandlers {
 			(*handler)(socket)

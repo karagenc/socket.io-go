@@ -2,29 +2,29 @@ package sio
 
 import "sync"
 
-type emitter[T comparable] struct {
+type handlerStore[T comparable] struct {
 	mu        sync.Mutex
 	funcs     []T
 	funcsOnce []T
 }
 
-func newEmitter[T comparable]() *emitter[T] {
-	return new(emitter[T])
+func newHandlerStore[T comparable]() *handlerStore[T] {
+	return new(handlerStore[T])
 }
 
-func (e *emitter[T]) On(handler T) {
+func (e *handlerStore[T]) On(handler T) {
 	e.mu.Lock()
 	e.funcs = append(e.funcs, handler)
 	e.mu.Unlock()
 }
 
-func (e *emitter[T]) Once(handler T) {
+func (e *handlerStore[T]) Once(handler T) {
 	e.mu.Lock()
 	e.funcsOnce = append(e.funcsOnce, handler)
 	e.mu.Unlock()
 }
 
-func (e *emitter[T]) Off(handler ...T) {
+func (e *handlerStore[T]) Off(handler ...T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -49,14 +49,14 @@ func (e *emitter[T]) Off(handler ...T) {
 	}
 }
 
-func (e *emitter[T]) OffAll() {
+func (e *handlerStore[T]) OffAll() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.funcs = nil
 	e.funcsOnce = nil
 }
 
-func (e *emitter[T]) GetHandlers() (handlers []T) {
+func (e *handlerStore[T]) GetAll() (handlers []T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

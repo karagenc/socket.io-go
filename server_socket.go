@@ -23,8 +23,8 @@ type serverSocket struct {
 	nsp     *Namespace
 	adapter Adapter
 
-	emitterForEvents *eventEmitter
-	parser           parser.Parser
+	eventHandlers *eventHandlerStore
+	parser        parser.Parser
 
 	acks   map[uint64]*ackHandler
 	acksMu sync.Mutex
@@ -42,12 +42,12 @@ type serverSocket struct {
 func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
 	adapter := nsp.Adapter()
 	s := &serverSocket{
-		server:           server,
-		conn:             c,
-		nsp:              nsp,
-		adapter:          adapter,
-		parser:           parser,
-		emitterForEvents: newEventEmitter(),
+		server:        server,
+		conn:          c,
+		nsp:           nsp,
+		adapter:       adapter,
+		parser:        parser,
+		eventHandlers: newEventHandlerStore(),
 	}
 
 	s.join = func(room ...Room) {
@@ -129,7 +129,7 @@ func (s *serverSocket) Use(f any) {
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.emitterForEvents.GetHandlers(eventName)
+		handlers := s.eventHandlers.GetAll(eventName)
 
 		go func() {
 			ackSent := false
@@ -357,7 +357,7 @@ func (s *serverSocket) onConnect() error {
 
 // Convenience method for emitting events to the user.
 func (s *serverSocket) emitReserved(eventName string, v ...any) {
-	handlers := s.emitterForEvents.GetHandlers(eventName)
+	handlers := s.eventHandlers.GetAll(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
 		values[i] = reflect.ValueOf(v)
@@ -378,7 +378,7 @@ func (s *serverSocket) onError(err error) {
 
 	errValue := reflect.ValueOf(err)
 
-	handlers := s.emitterForEvents.GetHandlers("error")
+	handlers := s.eventHandlers.GetAll("error")
 	for _, handler := range handlers {
 		_, err := handler.Call(errValue)
 		if err != nil {
@@ -528,22 +528,22 @@ func (s *serverSocket) OnEvent(eventName string, handler any) {
 	if IsEventReservedForServer(eventName) {
 		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	s.emitterForEvents.On(eventName, newEventHandler(handler))
+	s.eventHandlers.On(eventName, newEventHandler(handler))
 }
 
 func (s *serverSocket) OnceEvent(eventName string, handler any) {
 	if IsEventReservedForServer(eventName) {
 		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	s.emitterForEvents.Once(eventName, newEventHandler(handler))
+	s.eventHandlers.Once(eventName, newEventHandler(handler))
 }
 
 func (s *serverSocket) OffEvent(eventName string, handler ...any) {
-	s.emitterForEvents.Off(eventName, handler...)
+	s.eventHandlers.Off(eventName, handler...)
 }
 
 func (s *serverSocket) OffAll() {
-	s.emitterForEvents.OffAll()
+	s.eventHandlers.OffAll()
 }
 
 func (s *serverSocket) Disconnect(close bool) {

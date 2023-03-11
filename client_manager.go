@@ -68,10 +68,10 @@ type Manager struct {
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
 
-	sockets *clientSocketStore
-	emitter *eventEmitter
-	backoff *backoff
-	conn    *clientConn
+	sockets       *clientSocketStore
+	eventHandlers *eventHandlerStore
+	backoff       *backoff
+	conn          *clientConn
 
 	skipReconnect   bool
 	skipReconnectMu sync.RWMutex
@@ -103,8 +103,8 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
-		sockets: newClientSocketStore(),
-		emitter: newEventEmitter(),
+		sockets:       newClientSocketStore(),
+		eventHandlers: newEventHandlerStore(),
 	}
 
 	if config.ReconnectionDelay != nil {
@@ -174,7 +174,7 @@ func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSoc
 }
 
 func (m *Manager) OffAll() {
-	m.emitter.OffAll()
+	m.eventHandlers.OffAll()
 }
 
 func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
@@ -226,7 +226,7 @@ func (m *Manager) emitReserved(eventName string, v ...any) {
 		socket.invokeSubEvents(eventName, v...)
 	}
 
-	handlers := m.emitter.GetHandlers(eventName)
+	handlers := m.eventHandlers.GetAll(eventName)
 	values := make([]reflect.Value, len(v))
 	for i := range values {
 		values[i] = reflect.ValueOf(v)
@@ -247,7 +247,7 @@ func (m *Manager) onError(err error) {
 
 	errValue := reflect.ValueOf(err)
 
-	handlers := m.emitter.GetHandlers("error")
+	handlers := m.eventHandlers.GetAll("error")
 	go func() {
 		for _, handler := range handlers {
 			_, err := handler.Call(errValue)
