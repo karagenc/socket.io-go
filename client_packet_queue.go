@@ -74,11 +74,15 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 		packet.pending = false
 		packet.mu.Unlock()
 		pq.drainQueue(false)
-		return nil // TODO: Should this be kept nil?
+		return nil
 	}
 
 	if haveAck {
 		err := doesAckHandlerHasAnError(f)
+		if err != nil {
+			panic(err)
+		}
+		err = doesAckHandlerHasReturnValues(f)
 		if err != nil {
 			panic(err)
 		}

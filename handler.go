@@ -55,9 +55,8 @@ func (f *eventHandler) Call(args ...reflect.Value) (ret []reflect.Value, err err
 }
 
 type ackHandler struct {
-	rv         reflect.Value
-	inputArgs  []reflect.Type
-	outputArgs []reflect.Type
+	rv        reflect.Value
+	inputArgs []reflect.Type
 
 	hasError bool
 
@@ -84,16 +83,15 @@ func newAckHandler(f any, hasError bool) *ackHandler {
 		inputArgs[i] = rt.In(i)
 	}
 
-	outputArgs := make([]reflect.Type, rt.NumOut())
-	for i := range outputArgs {
-		outputArgs[i] = rt.Out(i)
+	err := doesAckHandlerHasReturnValues(f)
+	if err != nil {
+		panic(err)
 	}
 
 	return &ackHandler{
-		rv:         rv,
-		inputArgs:  inputArgs,
-		outputArgs: outputArgs,
-		hasError:   hasError,
+		rv:        rv,
+		inputArgs: inputArgs,
+		hasError:  hasError,
 	}
 }
 
@@ -192,6 +190,19 @@ func doesAckHandlerHasAnError(f any) error {
 	}
 	if rt.In(0).Kind() != reflect.Interface || !rt.In(0).Implements(reflectError) {
 		return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
+	}
+	return nil
+}
+
+func doesAckHandlerHasReturnValues(f any) error {
+	rt := reflect.TypeOf(f)
+
+	if rt.Kind() != reflect.Func {
+		return fmt.Errorf("sio: function expected")
+	}
+
+	if rt.NumOut() != 0 {
+		return fmt.Errorf("sio: ack handler must not have a return value")
 	}
 	return nil
 }
