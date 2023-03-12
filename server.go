@@ -68,6 +68,8 @@ type Server struct {
 	connectionStateRecovery ServerConnectionStateRecovery
 
 	debug DebugFunc
+
+	newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -81,6 +83,7 @@ func NewServer(config *ServerConfig) *Server {
 		namespaces:              newNamespaceStore(),
 		acceptAnyNamespace:      config.AcceptAnyNamespace,
 		connectionStateRecovery: config.ServerConnectionStateRecovery,
+		newNamespaceHandlers:    newHandlerStore[*NamespaceNewNamespaceFunc](),
 	}
 
 	if config.DebugFunc != nil {
@@ -120,9 +123,11 @@ func (s *Server) Of(namespace string) *Namespace {
 	}
 	n, created := s.namespaces.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
 	if created && namespace != "/" {
-		for _, handler := range s.Of("/").newNamespaceHandlers.GetAll() {
-			(*handler)(n)
-		}
+		go func() {
+			for _, handler := range s.newNamespaceHandlers.GetAll() {
+				(*handler)(n)
+			}
+		}()
 	}
 	return n
 }

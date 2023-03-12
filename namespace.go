@@ -26,22 +26,20 @@ type Namespace struct {
 	ackID uint64
 	ackMu sync.Mutex
 
-	eventHandlers        *eventHandlerStore
-	connectionHandlers   *handlerStore[*NamespaceConnectionFunc]
-	newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
+	eventHandlers      *eventHandlerStore
+	connectionHandlers *handlerStore[*NamespaceConnectionFunc]
 }
 
 func newNamespace(name string, server *Server, debug DebugFunc, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
-		name:                 name,
-		server:               server,
-		debug:                debug,
-		sockets:              socketStore,
-		parser:               parserCreator(),
-		eventHandlers:        newEventHandlerStore(),
-		connectionHandlers:   newHandlerStore[*NamespaceConnectionFunc](),
-		newNamespaceHandlers: newHandlerStore[*NamespaceNewNamespaceFunc](),
+		name:               name,
+		server:             server,
+		debug:              debug,
+		sockets:            socketStore,
+		parser:             parserCreator(),
+		eventHandlers:      newEventHandlerStore(),
+		connectionHandlers: newHandlerStore[*NamespaceConnectionFunc](),
 	}
 	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
 	return nsp

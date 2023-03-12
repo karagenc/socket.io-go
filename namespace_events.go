@@ -24,8 +24,7 @@ func (n *Namespace) OffAll() {
 }
 
 type (
-	NamespaceConnectionFunc   func(socket ServerSocket)
-	NamespaceNewNamespaceFunc func(namespace *Namespace)
+	NamespaceConnectionFunc func(socket ServerSocket)
 )
 
 func (n *Namespace) OnConnection(f NamespaceConnectionFunc) {
@@ -42,29 +41,4 @@ func (n *Namespace) OffConnection(_f ...NamespaceConnectionFunc) {
 		f[i] = &_f[i]
 	}
 	n.connectionHandlers.Off(f...)
-}
-
-func (n *Namespace) OnNewNamespace(f NamespaceNewNamespaceFunc) {
-	if n.name != "/" {
-		panic("sio: OnNewNamespace is for `/` namespace only")
-	}
-	n.newNamespaceHandlers.On(&f)
-}
-
-func (n *Namespace) OnceNewNamespace(f NamespaceNewNamespaceFunc) {
-	if n.name != "/" {
-		panic("sio: OnNewNamespace is for `/` namespace only")
-	}
-	n.newNamespaceHandlers.Once(&f)
-}
-
-func (n *Namespace) OffNewNamespace(_f ...NamespaceNewNamespaceFunc) {
-	if n.name != "/" {
-		panic("sio: OnNewNamespace is for `/` namespace only")
-	}
-	f := make([]*NamespaceNewNamespaceFunc, len(_f))
-	for i := range f {
-		f[i] = &_f[i]
-	}
-	n.newNamespaceHandlers.Off(f...)
 }
