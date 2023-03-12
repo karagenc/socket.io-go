@@ -9,8 +9,6 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type NamespaceConnectFunc func(socket ServerSocket)
-
 type Namespace struct {
 	name   string
 	server *Server
@@ -28,20 +26,20 @@ type Namespace struct {
 	ackID uint64
 	ackMu sync.Mutex
 
-	eventHandlers            *eventHandlerStore
-	namespaceConnectHandlers *handlerStore[*NamespaceConnectFunc]
+	eventHandlers   *eventHandlerStore
+	connectHandlers *handlerStore[*NamespaceConnectFunc]
 }
 
 func newNamespace(name string, server *Server, debug DebugFunc, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
-		name:                     name,
-		server:                   server,
-		debug:                    debug,
-		sockets:                  socketStore,
-		parser:                   parserCreator(),
-		eventHandlers:            newEventHandlerStore(),
-		namespaceConnectHandlers: newHandlerStore[*NamespaceConnectFunc](),
+		name:            name,
+		server:          server,
+		debug:           debug,
+		sockets:         socketStore,
+		parser:          parserCreator(),
+		eventHandlers:   newEventHandlerStore(),
+		connectHandlers: newHandlerStore[*NamespaceConnectFunc](),
 	}
 	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
 	return nsp
@@ -57,28 +55,6 @@ func (n *Namespace) Use(f NspMiddlewareFunc) {
 	n.middlewareFuncsMu.Lock()
 	defer n.middlewareFuncsMu.Unlock()
 	n.middlewareFuncs = append(n.middlewareFuncs, f)
-}
-
-func (n *Namespace) OnEvent(eventName string, handler any) {
-	if IsEventReservedForNsp(eventName) {
-		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
-	}
-	n.eventHandlers.On(eventName, newEventHandler(handler))
-}
-
-func (n *Namespace) OnceEvent(eventName string, handler any) {
-	if IsEventReservedForNsp(eventName) {
-		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
-	}
-	n.eventHandlers.Once(eventName, newEventHandler(handler))
-}
-
-func (n *Namespace) OffEvent(eventName string, handler ...any) {
-	n.eventHandlers.Off(eventName, handler...)
-}
-
-func (n *Namespace) OffAll() {
-	n.eventHandlers.OffAll()
 }
 
 // Emits an event to all connected clients in the given namespace.
@@ -265,7 +241,7 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 		return err
 	}
 
-	connectHandlers := n.namespaceConnectHandlers.GetAll()
+	connectHandlers := n.connectHandlers.GetAll()
 	go func() {
 		for _, handler := range connectHandlers {
 			(*handler)(socket)
