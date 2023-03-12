@@ -37,6 +37,22 @@ func (m *Manager) OffOpen(_f ...ManagerOpenFunc) {
 	m.openHandlers.Off(f...)
 }
 
+func (m *Manager) OnPing(f ManagerPingFunc) {
+	m.pingHandlers.On(&f)
+}
+
+func (m *Manager) OncePing(f ManagerPingFunc) {
+	m.pingHandlers.Once(&f)
+}
+
+func (m *Manager) OffPing(_f ...ManagerPingFunc) {
+	f := make([]*ManagerPingFunc, len(_f))
+	for i := range f {
+		f[i] = &_f[i]
+	}
+	m.pingHandlers.Off(f...)
+}
+
 func (m *Manager) OnError(f ManagerErrorFunc) {
 	m.errorHandlers.On(&f)
 }

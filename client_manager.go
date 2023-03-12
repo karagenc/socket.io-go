@@ -76,6 +76,7 @@ type Manager struct {
 	skipReconnectMu sync.RWMutex
 
 	openHandlers             *handlerStore[*ManagerOpenFunc]
+	pingHandlers             *handlerStore[*ManagerPingFunc]
 	errorHandlers            *handlerStore[*ManagerErrorFunc]
 	closeHandlers            *handlerStore[*ManagerCloseFunc]
 	reconnectHandlers        *handlerStore[*ManagerReconnectFunc]
@@ -113,6 +114,7 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		sockets: newClientSocketStore(),
 
 		openHandlers:             newHandlerStore[*ManagerOpenFunc](),
+		pingHandlers:             newHandlerStore[*ManagerPingFunc](),
 		errorHandlers:            newHandlerStore[*ManagerErrorFunc](),
 		closeHandlers:            newHandlerStore[*ManagerCloseFunc](),
 		reconnectHandlers:        newHandlerStore[*ManagerReconnectFunc](),
@@ -201,7 +203,11 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 			}
 
 		case eioparser.PacketTypePing:
-			m.emitReserved("ping")
+			go func() {
+				for _, handler := range m.pingHandlers.GetAll() {
+					(*handler)()
+				}
+			}()
 		}
 	}
 }
