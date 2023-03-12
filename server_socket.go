@@ -24,8 +24,7 @@ type serverSocket struct {
 	nsp     *Namespace
 	adapter Adapter
 
-	eventHandlers *eventHandlerStore
-	parser        parser.Parser
+	parser parser.Parser
 
 	acks   map[uint64]*ackHandler
 	acksMu sync.Mutex
@@ -37,18 +36,27 @@ type serverSocket struct {
 	joinMu sync.Mutex
 
 	closeOnce sync.Once
+
+	eventHandlers         *eventHandlerStore
+	errorHandlers         *handlerStore[*ServerSocketErrorFunc]
+	disconnectingHandlers *handlerStore[*ServerSocketDisconnectingFunc]
+	disconnectHandlers    *handlerStore[*ServerSocketDisconnectFunc]
 }
 
 // previousSession can be nil
 func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
 	adapter := nsp.Adapter()
 	s := &serverSocket{
-		server:        server,
-		conn:          c,
-		nsp:           nsp,
-		adapter:       adapter,
-		parser:        parser,
-		eventHandlers: newEventHandlerStore(),
+		server:  server,
+		conn:    c,
+		nsp:     nsp,
+		adapter: adapter,
+		parser:  parser,
+
+		eventHandlers:         newEventHandlerStore(),
+		errorHandlers:         newHandlerStore[*ServerSocketErrorFunc](),
+		disconnectingHandlers: newHandlerStore[*ServerSocketDisconnectingFunc](),
+		disconnectHandlers:    newHandlerStore[*ServerSocketDisconnectFunc](),
 	}
 
 	s.join = func(room ...Room) {
@@ -560,28 +568,6 @@ func (s *serverSocket) sendAckPacket(id uint64, values []reflect.Value) {
 	}
 
 	s.conn.sendBuffers(buffers...)
-}
-
-func (s *serverSocket) OnEvent(eventName string, handler any) {
-	if IsEventReservedForServer(eventName) {
-		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
-	}
-	s.eventHandlers.On(eventName, newEventHandler(handler))
-}
-
-func (s *serverSocket) OnceEvent(eventName string, handler any) {
-	if IsEventReservedForServer(eventName) {
-		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
-	}
-	s.eventHandlers.Once(eventName, newEventHandler(handler))
-}
-
-func (s *serverSocket) OffEvent(eventName string, handler ...any) {
-	s.eventHandlers.Off(eventName, handler...)
-}
-
-func (s *serverSocket) OffAll() {
-	s.eventHandlers.OffAll()
 }
 
 func (s *serverSocket) Disconnect(close bool) {
