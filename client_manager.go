@@ -68,13 +68,21 @@ type Manager struct {
 	reconnectionDelayMax time.Duration
 	randomizationFactor  float32
 
-	sockets       *clientSocketStore
-	eventHandlers *eventHandlerStore
-	backoff       *backoff
-	conn          *clientConn
+	sockets *clientSocketStore
+	backoff *backoff
+	conn    *clientConn
 
 	skipReconnect   bool
 	skipReconnectMu sync.RWMutex
+
+	eventHandlers            *eventHandlerStore
+	openHandlers             *handlerStore[*ManagerOpenFunc]
+	errorHandlers            *handlerStore[*ManagerErrorFunc]
+	closeHandlers            *handlerStore[*ManagerCloseFunc]
+	reconnectHandlers        *handlerStore[*ManagerReconnectFunc]
+	reconnectAttemptHandlers *handlerStore[*ManagerReconnectAttemptFunc]
+	reconnectErrorHandlers   *handlerStore[*ManagerReconnectErrorFunc]
+	reconnectFailedHandlers  *handlerStore[*ManagerReconnectFailedFunc]
 }
 
 const (
@@ -103,8 +111,16 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
-		sockets:       newClientSocketStore(),
-		eventHandlers: newEventHandlerStore(),
+		sockets: newClientSocketStore(),
+
+		eventHandlers:            newEventHandlerStore(),
+		openHandlers:             newHandlerStore[*ManagerOpenFunc](),
+		errorHandlers:            newHandlerStore[*ManagerErrorFunc](),
+		closeHandlers:            newHandlerStore[*ManagerCloseFunc](),
+		reconnectHandlers:        newHandlerStore[*ManagerReconnectFunc](),
+		reconnectAttemptHandlers: newHandlerStore[*ManagerReconnectAttemptFunc](),
+		reconnectErrorHandlers:   newHandlerStore[*ManagerReconnectErrorFunc](),
+		reconnectFailedHandlers:  newHandlerStore[*ManagerReconnectFailedFunc](),
 	}
 
 	if config.DebugFunc != nil {
