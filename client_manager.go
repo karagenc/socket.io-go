@@ -203,11 +203,15 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 			}
 
 		case eioparser.PacketTypePing:
-			go func() {
-				for _, handler := range m.pingHandlers.GetAll() {
-					(*handler)()
-				}
-			}()
+			handlers := m.pingHandlers.GetAll()
+			// Avoid unnecessary overhead of creating a goroutine.
+			if len(handlers) > 0 {
+				go func() {
+					for _, handler := range handlers {
+						(*handler)()
+					}
+				}()
+			}
 		}
 	}
 }
