@@ -20,6 +20,7 @@ func (n *Namespace) OffEvent(eventName string, handler ...any) {
 
 func (n *Namespace) OffAll() {
 	n.eventHandlers.OffAll()
+	n.connectionHandlers.OffAll()
 }
 
 type (

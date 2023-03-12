@@ -75,7 +75,6 @@ type Manager struct {
 	skipReconnect   bool
 	skipReconnectMu sync.RWMutex
 
-	eventHandlers            *eventHandlerStore
 	openHandlers             *handlerStore[*ManagerOpenFunc]
 	errorHandlers            *handlerStore[*ManagerErrorFunc]
 	closeHandlers            *handlerStore[*ManagerCloseFunc]
@@ -113,7 +112,6 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 
 		sockets: newClientSocketStore(),
 
-		eventHandlers:            newEventHandlerStore(),
 		openHandlers:             newHandlerStore[*ManagerOpenFunc](),
 		errorHandlers:            newHandlerStore[*ManagerErrorFunc](),
 		closeHandlers:            newHandlerStore[*ManagerCloseFunc](),
@@ -187,10 +185,6 @@ func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSoc
 		m.sockets.Set(socket)
 	}
 	return socket
-}
-
-func (m *Manager) OffAll() {
-	m.eventHandlers.OffAll()
 }
 
 func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {

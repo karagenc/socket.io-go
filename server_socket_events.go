@@ -20,6 +20,9 @@ func (s *serverSocket) OffEvent(eventName string, handler ...any) {
 
 func (s *serverSocket) OffAll() {
 	s.eventHandlers.OffAll()
+	s.errorHandlers.OffAll()
+	s.disconnectingHandlers.OffAll()
+	s.disconnectHandlers.OffAll()
 }
 
 type (

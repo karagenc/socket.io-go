@@ -1,5 +1,15 @@
 package sio
 
+func (m *Manager) OffAll() {
+	m.openHandlers.OffAll()
+	m.errorHandlers.OffAll()
+	m.closeHandlers.OffAll()
+	m.reconnectHandlers.OffAll()
+	m.reconnectAttemptHandlers.OffAll()
+	m.reconnectErrorHandlers.OffAll()
+	m.reconnectFailedHandlers.OffAll()
+}
+
 type (
 	ManagerOpenFunc             func()
 	ManagerPingFunc             func()
