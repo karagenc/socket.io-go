@@ -49,14 +49,6 @@ func (n *Namespace) Name() string { return n.name }
 
 func (n *Namespace) Adapter() Adapter { return n.adapter }
 
-type NspMiddlewareFunc func(socket ServerSocket, handshake *Handshake) error
-
-func (n *Namespace) Use(f NspMiddlewareFunc) {
-	n.middlewareFuncsMu.Lock()
-	defer n.middlewareFuncsMu.Unlock()
-	n.middlewareFuncs = append(n.middlewareFuncs, f)
-}
-
 // Emits an event to all connected clients in the given namespace.
 func (n *Namespace) Emit(eventName string, v ...any) {
 	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
@@ -214,19 +206,6 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	}
 
 	return socket, n.doConnect(socket)
-}
-
-func (n *Namespace) runMiddlewares(socket *serverSocket, handshake *Handshake) error {
-	n.middlewareFuncsMu.RLock()
-	defer n.middlewareFuncsMu.RUnlock()
-
-	for _, f := range n.middlewareFuncs {
-		err := f(socket, handshake)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (n *Namespace) doConnect(socket *serverSocket) error {
