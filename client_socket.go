@@ -54,7 +54,10 @@ type clientSocket struct {
 	receiveBuffer   []*clientEvent
 	receiveBufferMu sync.Mutex
 
-	eventHandlers *eventHandlerStore
+	eventHandlers        *eventHandlerStore
+	connectHandlers      *handlerStore[*ClientSocketConnectFunc]
+	connectErrorHandlers *handlerStore[*ClientSocketConnectErrorFunc]
+	disconnectHandlers   *handlerStore[*ClientSocketDisconnectFunc]
 
 	acks   map[uint64]*ackHandler
 	ackID  uint64
@@ -68,13 +71,17 @@ type clientSocket struct {
 
 func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace string, parser parser.Parser) *clientSocket {
 	s := &clientSocket{
-		config:        config,
-		namespace:     namespace,
-		manager:       manager,
-		parser:        parser,
-		auth:          newAuth(),
-		eventHandlers: newEventHandlerStore(),
-		acks:          make(map[uint64]*ackHandler),
+		config:    config,
+		namespace: namespace,
+		manager:   manager,
+		parser:    parser,
+		auth:      newAuth(),
+		acks:      make(map[uint64]*ackHandler),
+
+		eventHandlers:        newEventHandlerStore(),
+		connectHandlers:      newHandlerStore[*ClientSocketConnectFunc](),
+		connectErrorHandlers: newHandlerStore[*ClientSocketConnectErrorFunc](),
+		disconnectHandlers:   newHandlerStore[*ClientSocketDisconnectFunc](),
 	}
 	s.packetQueue = newClientPacketQueue(s)
 	s.setRecovered(false)
@@ -579,28 +586,6 @@ func (s *clientSocket) onClose(reason Reason) {
 	s.connected = false
 	s.connectedMu.Unlock()
 	s.emitReserved("disconnect")
-}
-
-func (s *clientSocket) OnEvent(eventName string, handler any) {
-	if IsEventReservedForClient(eventName) {
-		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
-	}
-	s.eventHandlers.On(eventName, newEventHandler(handler))
-}
-
-func (s *clientSocket) OnceEvent(eventName string, handler any) {
-	if IsEventReservedForClient(eventName) {
-		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
-	}
-	s.eventHandlers.Once(eventName, newEventHandler(handler))
-}
-
-func (s *clientSocket) OffEvent(eventName string, handler ...any) {
-	s.eventHandlers.Off(eventName, handler...)
-}
-
-func (s *clientSocket) OffAll() {
-	s.eventHandlers.OffAll()
 }
 
 func (s *clientSocket) Emit(eventName string, v ...any) {
