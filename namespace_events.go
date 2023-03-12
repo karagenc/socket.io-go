@@ -23,21 +23,38 @@ func (n *Namespace) OffAll() {
 }
 
 type (
-	NamespaceConnectFunc func(socket ServerSocket)
+	NamespaceConnectionFunc   func(socket ServerSocket)
+	NamespaceNewNamespaceFunc func(namespace *Namespace)
 )
 
-func (n *Namespace) OnConnect(f NamespaceConnectFunc) {
-	n.connectHandlers.On(&f)
+func (n *Namespace) OnConnection(f NamespaceConnectionFunc) {
+	n.connectionHandlers.On(&f)
 }
 
-func (n *Namespace) OnceConnect(f NamespaceConnectFunc) {
-	n.connectHandlers.Once(&f)
+func (n *Namespace) OnceConnection(f NamespaceConnectionFunc) {
+	n.connectionHandlers.Once(&f)
 }
 
-func (n *Namespace) OffConnect(_f ...NamespaceConnectFunc) {
-	f := make([]*NamespaceConnectFunc, len(_f))
+func (n *Namespace) OffConnection(_f ...NamespaceConnectionFunc) {
+	f := make([]*NamespaceConnectionFunc, len(_f))
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	n.connectHandlers.Off(f...)
+	n.connectionHandlers.Off(f...)
+}
+
+func (n *Namespace) OnNewNamespace(f NamespaceNewNamespaceFunc) {
+	n.newNamespaceHandlers.On(&f)
+}
+
+func (n *Namespace) OnceNewNamespace(f NamespaceNewNamespaceFunc) {
+	n.newNamespaceHandlers.Once(&f)
+}
+
+func (n *Namespace) OffNewNamespace(_f ...NamespaceNewNamespaceFunc) {
+	f := make([]*NamespaceNewNamespaceFunc, len(_f))
+	for i := range f {
+		f[i] = &_f[i]
+	}
+	n.newNamespaceHandlers.Off(f...)
 }
