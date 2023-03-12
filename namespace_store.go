@@ -38,15 +38,17 @@ func (s *namespaceStore) Get(name string) (nsp *Namespace, ok bool) {
 	return
 }
 
-func (s *namespaceStore) GetOrCreate(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
+func (s *namespaceStore) GetOrCreate(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) (namespace *Namespace, created bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	nsp, ok := s.nsps[name]
+	var ok bool
+	namespace, ok = s.nsps[name]
 	if !ok {
-		nsp = newNamespace(name, server, server.debug, adapterCreator, parserCreator)
-		s.nsps[nsp.Name()] = nsp
+		namespace = newNamespace(name, server, server.debug, adapterCreator, parserCreator)
+		s.nsps[namespace.Name()] = namespace
+		created = true
 	}
-	return nsp
+	return
 }
 
 func (s *namespaceStore) Remove(name string) {

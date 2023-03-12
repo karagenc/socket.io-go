@@ -118,7 +118,13 @@ func (s *Server) Of(namespace string) *Namespace {
 	if len(namespace) != 0 && namespace[0] != '/' {
 		namespace = "/" + namespace
 	}
-	return s.namespaces.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
+	n, created := s.namespaces.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
+	if created && namespace != "/" {
+		for _, handler := range s.Of("/").newNamespaceHandlers.GetAll() {
+			(*handler)(n)
+		}
+	}
+	return n
 }
 
 // Alias of: s.Of("/").Use(...)

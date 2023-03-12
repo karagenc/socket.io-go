@@ -103,7 +103,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	)
 
 	if c.server.acceptAnyNamespace {
-		nsp = c.server.namespaces.GetOrCreate(header.Namespace, c.server, c.server.adapterCreator, c.server.parserCreator)
+		nsp, _ = c.server.namespaces.GetOrCreate(header.Namespace, c.server, c.server.adapterCreator, c.server.parserCreator)
 	} else {
 		nsp, ok = c.server.namespaces.Get(header.Namespace)
 		if !ok {
