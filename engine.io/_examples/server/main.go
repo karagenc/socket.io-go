@@ -41,7 +41,7 @@ func onSocket(socket eio.ServerSocket) *eio.Callbacks {
 		OnError: func(err error) {
 			fmt.Printf("Socket error: %v\n", err)
 		},
-		OnClose: func(reason string, err error) {
+		OnClose: func(reason eio.Reason, err error) {
 			if err == nil {
 				fmt.Printf("Socket closed: %s\n", reason)
 			} else {

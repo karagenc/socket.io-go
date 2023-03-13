@@ -25,7 +25,7 @@ func onError(err error) {
 	fmt.Printf("Socket error: %v\n", err)
 }
 
-func onClose(reason string, err error) {
+func onClose(reason eio.Reason, err error) {
 	if err == nil {
 		fmt.Printf("Socket closed: %s\n", reason)
 	} else {
