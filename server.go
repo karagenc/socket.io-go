@@ -262,6 +262,7 @@ func (s *Server) IsClosed() bool {
 	return s.eio.IsClosed()
 }
 
+// Shut down the server. Server cannot be restarted once it is closed.
 func (s *Server) Close() error {
 	for _, _socket := range s.Sockets() {
 		socket := _socket.(*serverSocket)

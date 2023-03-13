@@ -182,6 +182,9 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 }
 
 func (s *Server) Run() error {
+	if s.IsClosed() {
+		return fmt.Errorf("eio: server is closed. a socket.io server cannot be restarted")
+	}
 	if s.pingInterval < 1*time.Second {
 		return fmt.Errorf("eio: pingInterval must be equal or greater than 1 second")
 	}
