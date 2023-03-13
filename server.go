@@ -137,35 +137,34 @@ func (s *Server) Use(f NspMiddlewareFunc) {
 	s.Of("/").Use(f)
 }
 
-// Alias of: s.Of("/").OnEvent(...)
-func (s *Server) OnEvent(eventName string, handler any) {
-	s.Of("/").OnEvent(eventName, handler)
+// Alias of: s.Of("/").OnConnection(...)
+func (s *Server) OnConnection(f NamespaceConnectionFunc) {
+	s.Of("/").OnConnection(f)
 }
 
-// Alias of: s.Of("/").OnceEvent(...)
-func (s *Server) OnceEvent(eventName string, handler any) {
-	s.Of("/").OnceEvent(eventName, handler)
+// Alias of: s.Of("/").OnceConnection(...)
+func (s *Server) OnceConnection(f NamespaceConnectionFunc) {
+	s.Of("/").OnceConnection(f)
 }
 
-// Alias of: s.Of("/").OffEvent(...)
-func (s *Server) OffEvent(eventName string, handler any) {
-	s.Of("/").OffEvent(eventName, handler)
+// Alias of: s.Of("/").OffConnection(...)
+func (s *Server) OffConnection(f ...NamespaceConnectionFunc) {
+	s.Of("/").OffConnection(f...)
 }
 
-// Alias of: s.Of("/").OffAll(...)
-func (s *Server) OffAll() {
-	s.Of("/").OffAll()
-}
-
+// Emits an event to all connected clients in the given namespace.
+//
+// Alias of: s.Of("/").Emit(...)
 func (s *Server) Emit(eventName string, v ...any) {
 	s.Of("/").Emit(eventName, v...)
 }
 
-// Alias of: s.Of("/").To(...)
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have joined the given room.
 //
 // To emit to multiple rooms, you can call `To` several times.
+//
+// Alias of: s.Of("/").To(...)
 func (s *Server) To(room ...Room) *BroadcastOperator {
 	return s.Of("/").To(room...)
 }
@@ -175,64 +174,64 @@ func (s *Server) In(room ...Room) *BroadcastOperator {
 	return s.Of("/").In(room...)
 }
 
-// Alias of: s.Of("/").To(...)
-//
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
+//
+// Alias of: s.Of("/").To(...)
 func (s *Server) Except(room ...Room) *BroadcastOperator {
 	return s.Of("/").Except(room...)
 }
 
-// Alias of: s.Of("/").Compress(...)
-//
 // Compression flag is unused at the moment, thus setting this will have no effect on compression.
+//
+// Alias of: s.Of("/").Compress(...)
 func (s *Server) Compress(compress bool) *BroadcastOperator {
 	return s.Of("/").Compress(compress)
 }
 
-// Alias of: s.Of("/").Local(...)
-//
 // Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
 //
 // See: https://socket.io/docs/v4/using-multiple-nodes
+//
+// Alias of: s.Of("/").Local(...)
 func (s *Server) Local() *BroadcastOperator {
 	return s.Of("/").Local()
 }
 
-// Alias of: s.Of("/").Sockets(...)
-//
 // Gets the sockets of the namespace.
 // Beware that this is local to the current node. For sockets across all nodes, use FetchSockets
+//
+// Alias of: s.Of("/").Sockets(...)
 func (s *Server) Sockets() []ServerSocket {
 	return s.Of("/").Sockets()
 }
 
-// Alias of: s.Of("/").FetchSockets(...)
-//
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
+//
+// Alias of: s.Of("/").FetchSockets(...)
 func (s *Server) FetchSockets(room ...string) []AdapterSocket {
 	return s.Of("/").FetchSockets()
 }
 
-// Alias of: s.Of("/").SocketsJoin(...)
-//
 // Makes the matching socket instances leave the specified rooms.
+//
+// Alias of: s.Of("/").SocketsJoin(...)
 func (s *Server) SocketsJoin(room ...Room) {
 	s.Of("/").SocketsJoin(room...)
 }
 
-// Alias of: s.Of("/").SocketsLeave(...)
-//
 // Makes the matching socket instances leave the specified rooms.
+//
+// Alias of: s.Of("/").SocketsLeave(...)
 func (s *Server) SocketsLeave(room ...Room) {
 	s.Of("/").SocketsLeave(room...)
 }
 
-// Alias of: s.Of("/").DisconnectSockets(...)
-//
 // Makes the matching socket instances disconnect from the namespace.
 //
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
+//
+// Alias of: s.Of("/").DisconnectSockets(...)
 func (s *Server) DisconnectSockets(close bool) {
 	s.Of("/").DisconnectSockets(close)
 }
@@ -242,6 +241,7 @@ func (s *Server) ServerSideEmit(eventName string, v ...any) {
 	s.Of("/").ServerSideEmit(eventName, v...)
 }
 
+// Start the server.
 func (s *Server) Run() error {
 	return s.eio.Run()
 }
