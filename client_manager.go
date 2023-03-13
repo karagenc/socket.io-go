@@ -234,16 +234,6 @@ func (m *Manager) onEIOClose(reason eio.Reason, err error) {
 	m.onClose(reason, err)
 }
 
-func (m *Manager) invokeSubEvents(eventName string, v ...any) {
-	// On original socket.io, events are also emitted to
-	// subevents registered by the socket.
-	//
-	// https://github.com/socketio/socket.io-client/blob/89175d0481fc7633c12bb5b233dc3421f87860ef/lib/socket.ts#L287
-	for _, socket := range m.sockets.GetAll() {
-		socket.invokeSubEvents(eventName, v...)
-	}
-}
-
 func (m *Manager) onError(err error) {
 	handlers := m.errorHandlers.GetAll()
 	// Avoid unnecessary overhead of creating a goroutine.

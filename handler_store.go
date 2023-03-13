@@ -6,6 +6,7 @@ type handlerStore[T comparable] struct {
 	mu        sync.Mutex
 	funcs     []T
 	funcsOnce []T
+	subs      []T
 }
 
 func newHandlerStore[T comparable]() *handlerStore[T] {
@@ -15,6 +16,18 @@ func newHandlerStore[T comparable]() *handlerStore[T] {
 func (e *handlerStore[T]) On(handler T) {
 	e.mu.Lock()
 	e.funcs = append(e.funcs, handler)
+	e.mu.Unlock()
+}
+
+func (e *handlerStore[T]) OnSubEvent(handler T) {
+	e.mu.Lock()
+	e.subs = append(e.subs, handler)
+	e.mu.Unlock()
+}
+
+func (e *handlerStore[T]) OffSubEvents() {
+	e.mu.Lock()
+	e.subs = nil
 	e.mu.Unlock()
 }
 
@@ -60,7 +73,8 @@ func (e *handlerStore[T]) GetAll() (handlers []T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	handlers = make([]T, 0, len(e.funcs)+len(e.funcsOnce))
+	handlers = make([]T, 0, len(e.subs)+len(e.funcs)+len(e.funcsOnce))
+	handlers = append(handlers, e.subs...)
 	handlers = append(handlers, e.funcs...)
 	handlers = append(handlers, e.funcsOnce...)
 	e.funcsOnce = nil

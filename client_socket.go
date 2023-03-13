@@ -63,8 +63,8 @@ type clientSocket struct {
 	ackID  uint64
 	acksMu sync.Mutex
 
-	subEventsEnabled   bool
-	subEventsEnabledMu sync.RWMutex
+	active   bool
+	activeMu sync.Mutex
 
 	packetQueue *clientPacketQueue
 }
@@ -133,9 +133,41 @@ func (s *clientSocket) Connected() bool {
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
 func (s *clientSocket) Active() bool {
-	s.subEventsEnabledMu.RLock()
-	defer s.subEventsEnabledMu.RUnlock()
-	return s.subEventsEnabled
+	s.activeMu.Lock()
+	defer s.activeMu.Unlock()
+	return s.active
+}
+
+func (s *clientSocket) registerSubEvents() {
+	var (
+		open ManagerOpenFunc = func() {
+			s.onOpen()
+		}
+		close ManagerCloseFunc = func(reason Reason, err error) {
+			s.onClose(reason)
+		}
+		error ManagerErrorFunc = func(err error) {
+			if !s.Connected() {
+				s.emitReserved("connect_error", err)
+			}
+		}
+	)
+
+	s.activeMu.Lock()
+	s.active = true
+	s.manager.openHandlers.OnSubEvent(&open)
+	s.manager.errorHandlers.OnSubEvent(&error)
+	s.manager.closeHandlers.OnSubEvent(&close)
+	s.activeMu.Unlock()
+}
+
+func (s *clientSocket) deregisterSubEvents() {
+	s.activeMu.Lock()
+	s.active = false
+	s.manager.openHandlers.OffSubEvents()
+	s.manager.errorHandlers.OffSubEvents()
+	s.manager.closeHandlers.OffSubEvents()
+	s.activeMu.Unlock()
 }
 
 func (s *clientSocket) Connect() {
@@ -147,9 +179,7 @@ func (s *clientSocket) Connect() {
 		return
 	}
 
-	s.subEventsEnabledMu.Lock()
-	s.subEventsEnabled = true
-	s.subEventsEnabledMu.Unlock()
+	s.registerSubEvents()
 
 	go func() {
 		s.manager.conn.stateMu.RLock()
@@ -194,39 +224,6 @@ func (s *clientSocket) SetAuth(v any) {
 func (s *clientSocket) onOpen() {
 	authData := s.auth.Get()
 	s.sendConnectPacket(authData)
-}
-
-func (s *clientSocket) invokeSubEvents(eventName string, v ...any) {
-	s.subEventsEnabledMu.RLock()
-	defer s.subEventsEnabledMu.RUnlock()
-	if !s.subEventsEnabled {
-		return
-	}
-
-	switch eventName {
-	case "open":
-		s.onOpen()
-	case "error":
-		if len(v) != 1 {
-			panic("sio: 1 argument was expected: err")
-		}
-		err, ok := v[0].(error)
-		if !ok {
-			panic("sio: type of the argument `err` must be error")
-		}
-		if !s.Connected() {
-			s.emitReserved("connect_error", err)
-		}
-	case "close":
-		if len(v) != 2 {
-			panic("sio: 2 arguments were expected: reason and err")
-		}
-		reason, ok := v[0].(Reason)
-		if !ok {
-			panic("sio: type of the argument `reason` must be string")
-		}
-		s.onClose(reason)
-	}
 }
 
 func (s *clientSocket) sendConnectPacket(authData any) {
@@ -575,9 +572,7 @@ func (s *clientSocket) onError(err error) {
 // this method ensures the `Client` (manager on original socket.io implementation)
 // stops tracking us and that reconnections don't get triggered for this.
 func (s *clientSocket) destroy() {
-	s.subEventsEnabledMu.Lock()
-	s.subEventsEnabled = false
-	s.subEventsEnabledMu.Unlock()
+	s.deregisterSubEvents()
 	s.manager.destroy(s)
 }
 
