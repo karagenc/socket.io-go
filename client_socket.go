@@ -64,7 +64,7 @@ type clientSocket struct {
 	acksMu sync.Mutex
 
 	subEventsEnabled   bool
-	subEventsEnabledMu sync.Mutex
+	subEventsEnabledMu sync.RWMutex
 
 	packetQueue *clientPacketQueue
 }
@@ -133,15 +133,15 @@ func (s *clientSocket) Connected() bool {
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
 func (s *clientSocket) Active() bool {
-	s.subEventsEnabledMu.Lock()
-	defer s.subEventsEnabledMu.Unlock()
+	s.subEventsEnabledMu.RLock()
+	defer s.subEventsEnabledMu.RUnlock()
 	return s.subEventsEnabled
 }
 
 func (s *clientSocket) Connect() {
-	s.connectedMu.Lock()
+	s.connectedMu.RLock()
 	connected := s.connected
-	s.connectedMu.Unlock()
+	s.connectedMu.RUnlock()
 
 	if connected {
 		return
@@ -197,8 +197,8 @@ func (s *clientSocket) onOpen() {
 }
 
 func (s *clientSocket) invokeSubEvents(eventName string, v ...any) {
-	s.subEventsEnabledMu.Lock()
-	defer s.subEventsEnabledMu.Unlock()
+	s.subEventsEnabledMu.RLock()
+	defer s.subEventsEnabledMu.RUnlock()
 	if !s.subEventsEnabled {
 		return
 	}
