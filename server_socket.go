@@ -364,23 +364,6 @@ func (s *serverSocket) onConnect() error {
 	return nil
 }
 
-// Convenience method for emitting events to the user.
-func (s *serverSocket) emitReserved(eventName string, v ...any) {
-	handlers := s.eventHandlers.GetAll(eventName)
-	values := make([]reflect.Value, len(v))
-	for i := range values {
-		values[i] = reflect.ValueOf(v)
-	}
-
-	for _, handler := range handlers {
-		_, err := handler.Call(values...)
-		if err != nil {
-			s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-			return
-		}
-	}
-}
-
 func (s *serverSocket) onError(err error) {
 	handlers := s.errorHandlers.GetAll()
 	if len(handlers) > 0 {
@@ -400,7 +383,9 @@ func (s *serverSocket) onClose(reason Reason) {
 		if !s.Connected() {
 			return
 		}
-		s.emitReserved("disconnecting", reason)
+		for _, handler := range s.disconnectingHandlers.GetAll() {
+			(*handler)(reason)
+		}
 
 		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
 			rooms, ok := s.adapter.SocketRooms(s.ID())
@@ -425,7 +410,9 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.connectedMu.Lock()
 		s.connected = false
 		s.connectedMu.Unlock()
-		s.emitReserved("disconnect", reason)
+		for _, handler := range s.disconnectHandlers.GetAll() {
+			(*handler)(reason)
+		}
 	})
 }
 
