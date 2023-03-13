@@ -148,7 +148,9 @@ func (s *clientSocket) registerSubEvents() {
 		}
 		error ManagerErrorFunc = func(err error) {
 			if !s.Connected() {
-				s.emitReserved("connect_error", err)
+				for _, handler := range s.connectErrorHandlers.GetAll() {
+					(*handler)(err)
+				}
 			}
 		}
 	)
@@ -319,7 +321,9 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 
 func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
 	connectError := func(err error) {
-		s.emitReserved("connect_error", fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
+		for _, handler := range s.connectErrorHandlers.GetAll() {
+			(*handler)(fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
+		}
 	}
 
 	var v *sidInfo
@@ -359,7 +363,9 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.connectedMu.Unlock()
 
 	s.emitBuffered()
-	s.emitReserved("connect")
+	for _, handler := range s.connectHandlers.GetAll() {
+		(*handler)()
+	}
 	s.packetQueue.drainQueue(true)
 }
 
@@ -436,7 +442,9 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		return
 	}
 
-	s.emitReserved("connect_error", fmt.Errorf("sio: %s", v.Message))
+	for _, handler := range s.connectErrorHandlers.GetAll() {
+		(*handler)(fmt.Errorf("sio: %s", v.Message))
+	}
 }
 
 func (s *clientSocket) onDisconnect() {
@@ -546,23 +554,6 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	}
 }
 
-// Convenience method for emitting events to the user.
-func (s *clientSocket) emitReserved(eventName string, v ...any) {
-	handlers := s.eventHandlers.GetAll(eventName)
-	values := make([]reflect.Value, len(v))
-	for i := range values {
-		values[i] = reflect.ValueOf(v)
-	}
-
-	for _, handler := range handlers {
-		_, err := handler.Call(values...)
-		if err != nil {
-			s.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-			return
-		}
-	}
-}
-
 func (s *clientSocket) onError(err error) {
 	// In original socket.io, errors are emitted only on `Manager` (`Client` in this implementation).
 	s.manager.onError(err)
@@ -580,7 +571,9 @@ func (s *clientSocket) onClose(reason Reason) {
 	s.connectedMu.Lock()
 	s.connected = false
 	s.connectedMu.Unlock()
-	s.emitReserved("disconnect")
+	for _, handler := range s.disconnectHandlers.GetAll() {
+		(*handler)(reason)
+	}
 }
 
 func (s *clientSocket) Emit(eventName string, v ...any) {
