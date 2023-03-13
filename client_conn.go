@@ -74,10 +74,14 @@ func (c *clientConn) Connect(again bool) (err error) {
 		c.manager.parser.Reset()
 
 		c.state = clientConnStateDisconnected
-		c.manager.emitReserved("error", err)
+
+		for _, handler := range c.manager.errorHandlers.GetAll() {
+			(*handler)(err)
+		}
 		return err
 	}
 	c.eio = _eio
+	c.state = clientConnStateConnected
 
 	c.manager.parserMu.Lock()
 	defer c.manager.parserMu.Unlock()
@@ -85,7 +89,9 @@ func (c *clientConn) Connect(again bool) (err error) {
 
 	go pollAndSend(c.eio, c.eioPacketQueue)
 
-	c.manager.emitReserved("open")
+	for _, handler := range c.manager.openHandlers.GetAll() {
+		(*handler)()
+	}
 	return
 }
 
@@ -126,20 +132,23 @@ func (c *clientConn) Reconnect(again bool) {
 
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
 		c.manager.backoff.Reset()
-		c.manager.emitReserved("reconnect_failed")
 		c.state = clientConnStateDisconnected
+		for _, handler := range c.manager.reconnectFailedHandlers.GetAll() {
+			(*handler)()
+		}
 		return
 	}
 
-	backoffDuration := c.manager.backoff.Duration()
-	time.Sleep(backoffDuration)
+	time.Sleep(c.manager.backoff.Duration())
 
 	if c.manager.skipReconnect {
 		return
 	}
 
 	attempts = c.manager.backoff.Attempts()
-	c.manager.emitReserved("reconnect_attempt", attempts)
+	for _, handler := range c.manager.reconnectAttemptHandlers.GetAll() {
+		(*handler)(attempts)
+	}
 
 	if c.manager.skipReconnect {
 		return
@@ -147,15 +156,23 @@ func (c *clientConn) Reconnect(again bool) {
 
 	err := c.Connect(again)
 	if err != nil {
-		c.manager.emitReserved("reconnect", err)
 		c.state = clientConnStateDisconnected
+		for _, handler := range c.manager.reconnectErrorHandlers.GetAll() {
+			(*handler)(err)
+		}
 		c.Reconnect(true)
 		return
 	}
 
-	attempts = c.manager.backoff.Attempts()
+	c.onReconnect()
+}
+
+func (c *clientConn) onReconnect() {
+	attempts := c.manager.backoff.Attempts()
 	c.manager.backoff.Reset()
-	c.manager.emitReserved("reconnect", attempts)
+	for _, handler := range c.manager.reconnectHandlers.GetAll() {
+		(*handler)(attempts)
+	}
 }
 
 func (c *clientConn) Packet(packets ...*eioparser.Packet) {

@@ -1,8 +1,6 @@
 package sio
 
 import (
-	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -236,8 +234,7 @@ func (m *Manager) onEIOClose(reason eio.Reason, err error) {
 	m.onClose(reason, err)
 }
 
-// Convenience method for emitting events to the user.
-func (m *Manager) emitReserved(eventName string, v ...any) {
+func (m *Manager) invokeSubEvents(eventName string, v ...any) {
 	// On original socket.io, events are also emitted to
 	// subevents registered by the socket.
 	//
@@ -245,24 +242,11 @@ func (m *Manager) emitReserved(eventName string, v ...any) {
 	for _, socket := range m.sockets.GetAll() {
 		socket.invokeSubEvents(eventName, v...)
 	}
-
-	handlers := m.eventHandlers.GetAll(eventName)
-	values := make([]reflect.Value, len(v))
-	for i := range values {
-		values[i] = reflect.ValueOf(v)
-	}
-
-	for _, handler := range handlers {
-		_, err := handler.Call(values...)
-		if err != nil {
-			m.onError(wrapInternalError(fmt.Errorf("emitReserved: %s", err)))
-			return
-		}
-	}
 }
 
 func (m *Manager) onError(err error) {
 	handlers := m.errorHandlers.GetAll()
+	// Avoid unnecessary overhead of creating a goroutine.
 	if len(handlers) > 0 {
 		go func() {
 			for _, handler := range handlers {
@@ -286,7 +270,10 @@ func (m *Manager) onClose(reason Reason, err error) {
 	defer m.parserMu.Unlock()
 	m.parser.Reset()
 	m.backoff.Reset()
-	m.emitReserved("close", reason, err)
+
+	for _, handler := range m.closeHandlers.GetAll() {
+		(*handler)(reason, err)
+	}
 
 	m.skipReconnectMu.RLock()
 	skipReconnect := m.skipReconnect
