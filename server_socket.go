@@ -382,20 +382,13 @@ func (s *serverSocket) emitReserved(eventName string, v ...any) {
 }
 
 func (s *serverSocket) onError(err error) {
-	// emitReserved is not used because if an error would happen in handler.Call
-	// onError would be called recursively.
-
-	errValue := reflect.ValueOf(err)
-
-	handlers := s.eventHandlers.GetAll("error")
-	for _, handler := range handlers {
-		_, err := handler.Call(errValue)
-		if err != nil {
-			// This should panic.
-			// If you cannot handle the error via `onError`
-			// then what option do you have?
-			panic(fmt.Errorf("sio: %w", err))
-		}
+	handlers := s.errorHandlers.GetAll()
+	if len(handlers) > 0 {
+		go func() {
+			for _, handler := range handlers {
+				(*handler)(err)
+			}
+		}()
 	}
 }
 
