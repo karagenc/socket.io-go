@@ -45,6 +45,8 @@ type clientSocket struct {
 
 	closeChan chan struct{}
 	closeOnce sync.Once
+
+	debug Debugger
 }
 
 func (s *clientSocket) Connect(transports []string) (err error) {
@@ -65,12 +67,14 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 			err = fmt.Errorf("eio: invalid transport name: %s", name)
 			return
 		}
+		s.debug.Log("Transport is set to", name)
 
 		c.Set(s.onPacket, s.onTransportClose)
 
 		var hr *parser.HandshakeResponse
 		hr, err = s.transport.Handshake()
 		if err != nil {
+			s.debug.Log("Handshake failed", err)
 			continue
 		}
 
@@ -78,6 +82,8 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 		s.upgrades = hr.Upgrades
 		s.pingInterval = hr.GetPingInterval()
 		s.pingTimeout = hr.GetPingTimeout()
+		s.debug.Log("pingInterval", s.pingInterval)
+		s.debug.Log("pingTimeout", s.pingTimeout)
 		go s.transport.Run()
 		break
 	}
@@ -112,10 +118,13 @@ func (s *clientSocket) handleTimeout() {
 
 		select {
 		case <-s.pingChan:
+			s.debug.Log("handleTimeout", "ping received")
 		case <-time.After(timeout):
+			s.debug.Log("handleTimeout", "timed out")
 			s.close(ReasonPingTimeout, nil)
 			return
 		case <-s.closeChan:
+			s.debug.Log("handleTimeout", "socket was closed")
 			return
 		}
 	}
@@ -123,12 +132,17 @@ func (s *clientSocket) handleTimeout() {
 
 func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	if s.TransportName() == "websocket" {
+		s.debug.Log("maybeUpgrade", "current transport is websocket. already upgraded")
 		return
 	} else if !findTransport(upgrades, "websocket") {
+		s.debug.Log("maybeUpgrade", "couldn't find 'websocket' in handshake received from server")
 		return
 	} else if !findTransport(transports, "websocket") {
+		s.debug.Log("maybeUpgrade", "couldn't find 'websocket' in `Transports` configuration option")
 		return
 	}
+
+	s.debug.Log("maybeUpgrade", "upgrading")
 
 	c := transport.NewCallbacks()
 	t := _websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
@@ -136,6 +150,8 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	once := new(sync.Once)
 
 	onPacket := func(packet *parser.Packet) {
+		s.debug.Log("maybeUpgrade", "packet received", packet)
+
 		switch packet.Type {
 		case parser.PacketTypePong:
 			if string(packet.Data) != "probe" {
@@ -169,6 +185,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	go func() {
 		select {
 		case <-done:
+			s.debug.Log("maybeUpgrade", "channel `done` is triggered")
 			return
 		case <-time.After(s.upgradeTimeout):
 			t.Close()
@@ -204,7 +221,7 @@ func (s *clientSocket) upgradeTo(t ClientTransport) {
 	old.Discard()
 
 	t.Send(p)
-
+	s.debug.Log("upgradeTo", "upgraded to", t.Name())
 	go s.upgradeDone(t.Name()) // Don't block
 }
 
@@ -253,6 +270,8 @@ func (s *clientSocket) onError(err error) {
 }
 
 func (s *clientSocket) onTransportClose(name string, err error) {
+	s.debug.Log("Transport", name, "closed")
+
 	select {
 	case <-s.closeChan:
 		return
@@ -284,6 +303,7 @@ func (s *clientSocket) Send(packets ...*parser.Packet) {
 
 func (s *clientSocket) close(reason Reason, err error) {
 	s.closeOnce.Do(func() {
+		s.debug.Log("Closing. Reason", reason)
 		close(s.closeChan)
 		defer s.callbacks.OnClose(reason, err)
 

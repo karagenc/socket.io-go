@@ -99,6 +99,9 @@ type ServerConfig struct {
 	// Callback function for Engine.IO server errors.
 	// You may use this function to log server errors.
 	OnError ErrorCallback
+
+	// For debugging purposes. Leave it nil if it is of no use.
+	Debugger Debugger
 }
 
 type Server struct {

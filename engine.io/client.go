@@ -36,6 +36,9 @@ type ClientConfig struct {
 
 	// Custom WebSocket dialer to use.
 	WebSocketDialOptions *websocket.DialOptions
+
+	// For debugging purposes. Leave it nil if it is of no use.
+	Debugger Debugger
 }
 
 func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSocket, error) {
@@ -59,8 +62,7 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 
 		callbacks: *callbacks,
 
-		pingChan: make(chan struct{}, 1),
-
+		pingChan:  make(chan struct{}, 1),
 		closeChan: make(chan struct{}),
 	}
 
@@ -88,6 +90,15 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 	if config.WebSocketDialOptions != nil {
 		socket.wsDialOptions = config.WebSocketDialOptions
 	}
+
+	if config.Debugger != nil {
+		socket.debug = config.Debugger
+	} else {
+		socket.debug = NewNoopDebugger()
+	}
+	socket.debug = socket.debug.WithDynamicContext("eio: client socket with ID", func() string {
+		return socket.ID()
+	})
 
 	var err error
 	socket.url, err = parseURL(rawURL)
