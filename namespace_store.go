@@ -44,7 +44,7 @@ func (s *namespaceStore) GetOrCreate(name string, server *Server, adapterCreator
 	var ok bool
 	namespace, ok = s.nsps[name]
 	if !ok {
-		namespace = newNamespace(name, server, server._debugFn, adapterCreator, parserCreator)
+		namespace = newNamespace(name, server, adapterCreator, parserCreator)
 		s.nsps[namespace.Name()] = namespace
 		created = true
 	}

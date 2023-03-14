@@ -31,14 +31,10 @@ type serverConn struct {
 	parser   parser.Parser
 
 	closeOnce sync.Once
-	debug     func(v ...any)
+	debug     Debugger
 }
 
-func newServerConn(server *Server, _eio eio.ServerSocket, _debug DebugFunc, creator parser.Creator) (*serverConn, *eio.Callbacks) {
-	debug := func(v ...any) {
-		_debug("serverConn with engine.io ID", _eio.ID(), v...)
-	}
-
+func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
 	c := &serverConn{
 		eio:            _eio,
 		eioPacketQueue: newPacketQueue(),
@@ -48,7 +44,7 @@ func newServerConn(server *Server, _eio eio.ServerSocket, _debug DebugFunc, crea
 		nsps:    newNamespaceStore(),
 
 		parser: creator(),
-		debug:  debug,
+		debug:  server.debug.withContext("serverConn with engine.io ID: " + _eio.ID()),
 	}
 
 	callbacks := &eio.Callbacks{
@@ -62,10 +58,10 @@ func newServerConn(server *Server, _eio eio.ServerSocket, _debug DebugFunc, crea
 	go func() {
 		time.Sleep(server.connectTimeout)
 		if c.nsps.Len() == 0 {
-			c.debug("No namespace joined yet, close the client")
+			c.debug.Log("No namespace joined yet, close the client")
 			c.Close()
 		} else {
-			c.debug("The client has already joined a namespace, nothing to do")
+			c.debug.Log("The client has already joined a namespace, nothing to do")
 		}
 	}()
 
@@ -101,7 +97,7 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 			c.onFatalError(err)
 		}
 	} else {
-		c.debug("Invalid state", "packet type", header.Type)
+		c.debug.Log("Invalid state", "packet type", header.Type)
 		c.Close()
 	}
 }
@@ -121,7 +117,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 			return
 		}
 	}
-	c.debug("Connecting to namespace", nsp.name)
+	c.debug.Log("Connecting to namespace", nsp.name)
 
 	var auth json.RawMessage
 	at := reflect.TypeOf(&auth)
@@ -140,7 +136,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 
 	socket, err := nsp.add(c, auth)
 	if err != nil {
-		c.debug("Connection to namespace", nsp.name, "was denied")
+		c.debug.Log("Connection to namespace", nsp.name, "was denied")
 		c.connectError(err, nsp.Name())
 		return
 	}
@@ -226,7 +222,7 @@ func (c *serverConn) Remove(socket *serverSocket) {
 		c.sockets.RemoveByID(socket.ID())
 		c.nsps.Remove(socket.Namespace().Name())
 	} else {
-		c.debug("Ignored remove")
+		c.debug.Log("Ignored remove")
 	}
 }
 
@@ -237,7 +233,7 @@ func (c *serverConn) DisconnectAll() {
 }
 
 func (c *serverConn) Close() {
-	c.debug("Closing engine.io")
+	c.debug.Log("Closing engine.io")
 	c.eio.Close()
 	c.eioPacketQueue.Reset()
 	c.onClose("forced server close", nil)

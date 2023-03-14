@@ -36,7 +36,7 @@ type serverSocket struct {
 	joinMu sync.Mutex
 
 	closeOnce sync.Once
-	debug     func(v ...any)
+	debug     Debugger
 
 	eventHandlers         *eventHandlerStore
 	errorHandlers         *handlerStore[*ServerSocketErrorFunc]
@@ -45,22 +45,14 @@ type serverSocket struct {
 }
 
 // previousSession can be nil
-func newServerSocket(server *Server, c *serverConn, nsp *Namespace, _debug DebugFunc, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
-	var (
-		id    SocketID
-		debug = func(v ...any) {
-			_debug("Server socket with  ID", string(id), v...)
-		}
-		adapter = nsp.Adapter()
-	)
-
+func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
+	adapter := nsp.Adapter()
 	s := &serverSocket{
 		server:  server,
 		conn:    c,
 		nsp:     nsp,
 		adapter: adapter,
 		parser:  parser,
-		debug:   debug,
 
 		eventHandlers:         newEventHandlerStore(),
 		errorHandlers:         newHandlerStore[*ServerSocketErrorFunc](),
@@ -69,7 +61,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, _debug Debug
 	}
 
 	s.join = func(room ...Room) {
-		s.debug("Joining room(s)", room)
+		s.debug.Log("Joining room(s)", room)
 		adapter.AddAll(s.ID(), room)
 	}
 
@@ -101,7 +93,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, _debug Debug
 			s.pid = PrivateSessionID(id)
 		}
 	}
-	id = s.id
+	s.debug = server.debug.withContext("Server socket with  ID: " + string(s.id))
 	return s, nil
 }
 
@@ -163,7 +155,7 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 				}
 				ackSent = true
 				ackSentMu.Unlock()
-				s.debug("Sending ack with ID", id)
+				s.debug.Log("Sending ack with ID", id)
 				s.sendAckPacket(id, ret)
 			}
 
@@ -184,7 +176,7 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 }
 
 func (s *serverSocket) onDisconnect() {
-	s.debug("Got disconnect packet")
+	s.debug.Log("Got disconnect packet")
 	s.onClose("client namespace disconnect")
 }
 
@@ -213,7 +205,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	}
 
 	if !s.Connected() {
-		s.debug("ignore packet received after disconnection")
+		s.debug.Log("ignore packet received after disconnection")
 		return
 	}
 
@@ -266,7 +258,7 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	s.debug("Calling ack with ID", *header.ID)
+	s.debug.Log("Calling ack with ID", *header.ID)
 
 	s.acksMu.Lock()
 	ack, ok := s.acks[*header.ID]
@@ -312,7 +304,7 @@ func (s *serverSocket) Join(room ...Room) {
 }
 
 func (s *serverSocket) Leave(room Room) {
-	s.debug("Leaving room", room)
+	s.debug.Log("Leaving room", room)
 	s.adapter.Delete(s.ID(), room)
 }
 
@@ -354,7 +346,7 @@ type sidInfo struct {
 }
 
 func (s *serverSocket) onConnect() error {
-	s.debug("Socket connected. Locking mutex and writing packet")
+	s.debug.Log("Socket connected. Locking mutex and writing packet")
 	s.connectedMu.Lock()
 	defer s.connectedMu.Unlock()
 
@@ -394,13 +386,13 @@ func (s *serverSocket) onError(err error) {
 }
 
 func (s *serverSocket) onClose(reason Reason) {
-	s.debug("Going to close the socket if it is not already closed")
+	s.debug.Log("Going to close the socket if it is not already closed")
 
 	// Server socket is one-time, it cannot be reconnected.
 	// We don't want it to close more than once,
 	// so we use sync.Once to avoid running onClose more than once.
 	s.closeOnce.Do(func() {
-		s.debug("Going to close the socket. It is not already closed")
+		s.debug.Log("Going to close the socket. It is not already closed")
 		if !s.Connected() {
 			return
 		}
@@ -409,7 +401,7 @@ func (s *serverSocket) onClose(reason Reason) {
 		}
 
 		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
-			s.debug("Connection state recovery is enabled")
+			s.debug.Log("Connection state recovery is enabled")
 			rooms, ok := s.adapter.SocketRooms(s.ID())
 			if !ok {
 				rooms = mapset.NewThreadUnsafeSet[Room]()
@@ -492,7 +484,7 @@ func (s *serverSocket) emit(eventName string, timeout time.Duration, volatile, f
 // 0 as the timeout argument means there is no timeout.
 func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint64) {
 	id = s.nsp.nextAckID()
-	s.debug("Registering ack with ID", id)
+	s.debug.Log("Registering ack with ID", id)
 	if timeout == 0 {
 		s.acksMu.Lock()
 		s.acks[id] = newAckHandler(f, false)
@@ -506,7 +498,7 @@ func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 	}
 
 	h := newAckHandlerWithTimeout(f, timeout, func() {
-		s.debug("Ack with ID", id, "timed out")
+		s.debug.Log("Ack with ID", id, "timed out")
 		s.acksMu.Lock()
 		delete(s.acks, id)
 		s.acksMu.Unlock()

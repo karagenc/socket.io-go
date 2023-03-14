@@ -35,7 +35,7 @@ type ServerConfig struct {
 	ServerConnectionStateRecovery ServerConnectionStateRecovery
 
 	// For debugging purposes. Leave it nil if it is of no use.
-	DebugFunc DebugFunc
+	Debugger Debugger
 }
 
 type ServerConnectionStateRecovery struct {
@@ -67,8 +67,7 @@ type Server struct {
 
 	connectionStateRecovery ServerConnectionStateRecovery
 
-	debug    func(v ...any)
-	_debugFn DebugFunc
+	debug Debugger
 
 	newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
 }
@@ -87,15 +86,12 @@ func NewServer(config *ServerConfig) *Server {
 		newNamespaceHandlers:    newHandlerStore[*NamespaceNewNamespaceFunc](),
 	}
 
-	if config.DebugFunc != nil {
-		server._debugFn = config.DebugFunc
-		server.debug = func(v ...any) {
-			config.DebugFunc("Server", "", v...)
-		}
+	if config.Debugger != nil {
+		server.debug = config.Debugger
 	} else {
-		server._debugFn = NoopDebugFunc
-		server.debug = func(v ...any) {}
+		server.debug = noopDebugger{}
 	}
+	server.debug = server.debug.withContext("Server")
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 
@@ -118,7 +114,7 @@ func NewServer(config *ServerConfig) *Server {
 }
 
 func (s *Server) onEIOSocket(eioSocket eio.ServerSocket) *eio.Callbacks {
-	_, callbacks := newServerConn(s, eioSocket, s._debugFn, s.parserCreator)
+	_, callbacks := newServerConn(s, eioSocket, s.parserCreator)
 	return callbacks
 }
 
