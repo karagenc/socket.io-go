@@ -163,6 +163,8 @@ type authRecoveryFields struct {
 }
 
 func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, error) {
+	n.debug.Log("Adding a new socket to namespace", n.name)
+
 	var (
 		handshake = &Handshake{
 			Time: time.Now(),
@@ -184,6 +186,8 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			n.debug.Log("`session` is nil")
 		}
 	}
 
@@ -229,7 +233,11 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 }
 
 func (n *Namespace) remove(socket *serverSocket) {
-	n.sockets.Remove(socket.ID())
+	if _, ok := n.sockets.Get(socket.ID()); ok {
+		n.sockets.Remove(socket.ID())
+	} else {
+		n.debug.Log("Ignoring remove for", socket.ID())
+	}
 }
 
 func (n *Namespace) nextAckID() uint64 {
