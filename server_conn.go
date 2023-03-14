@@ -49,8 +49,10 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 
 	callbacks := &eio.Callbacks{
 		OnPacket: c.onEIOPacket,
-		OnError:  c.onFatalError,
-		OnClose:  c.onClose,
+		OnError: func(err error) {
+			c.debug.Log("eio error", err)
+		},
+		OnClose: c.onClose,
 	}
 
 	go pollAndSend(c.eio, c.eioPacketQueue)
