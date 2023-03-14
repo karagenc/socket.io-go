@@ -34,7 +34,7 @@ func newClientConn(manager *Manager) *clientConn {
 	return &clientConn{
 		eioPacketQueue: newPacketQueue(),
 		manager:        manager,
-		debug:          manager.debug.withContext("clientConn with URL: " + concatURL(manager.url)),
+		debug:          manager.debug.WithContext("clientConn with URL: " + concatURL(manager.url)),
 	}
 }
 

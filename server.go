@@ -35,6 +35,8 @@ type ServerConfig struct {
 	ServerConnectionStateRecovery ServerConnectionStateRecovery
 
 	// For debugging purposes. Leave it nil if it is of no use.
+	//
+	// This only applies to Socket.IO. For Engine.IO, use EIO.Debugger.
 	Debugger Debugger
 }
 
@@ -89,9 +91,9 @@ func NewServer(config *ServerConfig) *Server {
 	if config.Debugger != nil {
 		server.debug = config.Debugger
 	} else {
-		server.debug = noopDebugger{}
+		server.debug = newNoopDebugger()
 	}
-	server.debug = server.debug.withContext("Server")
+	server.debug = server.debug.WithContext("Server")
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 

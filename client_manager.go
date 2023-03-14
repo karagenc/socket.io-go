@@ -45,6 +45,8 @@ type ManagerConfig struct {
 	RandomizationFactor *float32
 
 	// For debugging purposes. Leave it nil if it is of no use.
+	//
+	// This only applies to Socket.IO. For Engine.IO, use EIO.Debugger.
 	Debugger Debugger
 }
 
@@ -124,10 +126,10 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 	if config.Debugger != nil {
 		io.debug = config.Debugger
 	} else {
-		io.debug = noopDebugger{}
+		io.debug = newNoopDebugger()
 	}
 
-	io.debug = io.debug.withContext("Manager with URL: " + concatURL(url))
+	io.debug = io.debug.WithContext("Manager with URL: " + concatURL(url))
 
 	if config.ReconnectionDelay != nil {
 		io.reconnectionDelay = *config.ReconnectionDelay

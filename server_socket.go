@@ -93,7 +93,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 			s.pid = PrivateSessionID(id)
 		}
 	}
-	s.debug = server.debug.withContext("Server socket with ID: " + string(s.id))
+	s.debug = server.debug.WithContext("Server socket with ID: " + string(s.id))
 	return s, nil
 }
 

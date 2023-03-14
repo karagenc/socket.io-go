@@ -85,7 +85,7 @@ func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace str
 		connectErrorHandlers: newHandlerStore[*ClientSocketConnectErrorFunc](),
 		disconnectHandlers:   newHandlerStore[*ClientSocketDisconnectFunc](),
 	}
-	s.debug = manager.debug.withDynamicContext("clientSocket", func() string {
+	s.debug = manager.debug.WithDynamicContext("clientSocket", func() string {
 		return string(s.ID())
 	})
 	s.packetQueue = newClientPacketQueue(s)
