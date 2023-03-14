@@ -5,14 +5,29 @@ import (
 	"os"
 )
 
-type DebugFunc = func(main string, context string, v ...any)
+type Debugger interface {
+	Log(main string, v ...any)
+	withContext(context string) Debugger
+}
 
-func NoopDebugFunc(main string, context string, v ...any) {}
+type noopDebugger struct{}
 
-func PrintDebugFunc(main string, context string, _v ...any) {
+func (d noopDebugger) Log(main string, _v ...any) {}
+
+func (d noopDebugger) withContext(context string) Debugger { return d }
+
+type printDebugger struct {
+	context string
+}
+
+func NewPrintDebugger() Debugger {
+	return new(printDebugger)
+}
+
+func (d *printDebugger) Log(main string, _v ...any) {
 	fmt.Print(main)
-	if len(context) != 0 {
-		fmt.Print(context)
+	if len(d.context) != 0 {
+		fmt.Print(d.context)
 		fmt.Print(": ")
 	}
 	for _, v := range _v {
@@ -21,4 +36,9 @@ func PrintDebugFunc(main string, context string, _v ...any) {
 	}
 	fmt.Print("\n")
 	os.Stdout.Sync()
+}
+
+func (d printDebugger) withContext(context string) Debugger {
+	d.context = context
+	return &d
 }
