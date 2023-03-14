@@ -501,13 +501,6 @@ func (s *serverSocket) Timeout(timeout time.Duration) Emitter {
 	}
 }
 
-func (s *serverSocket) Volatile() Emitter {
-	return Emitter{
-		socket:   s,
-		volatile: true,
-	}
-}
-
 func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 	header := parser.PacketHeader{
 		Type:      typ,
