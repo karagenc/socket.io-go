@@ -31,6 +31,7 @@ type serverConn struct {
 	parser   parser.Parser
 
 	closeOnce sync.Once
+	debug     DebugFunc
 }
 
 func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
@@ -43,6 +44,7 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 		nsps:    newNamespaceStore(),
 
 		parser: creator(),
+		debug:  server.debug,
 	}
 
 	callbacks := &eio.Callbacks{
@@ -56,7 +58,10 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 	go func() {
 		time.Sleep(server.connectTimeout)
 		if c.nsps.Len() == 0 {
+			c.debug("No namespace joined yet, close the client")
 			c.Close()
+		} else {
+			c.debug("The client has already joined a namespace, nothing to do")
 		}
 	}()
 
@@ -92,6 +97,7 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 			c.onFatalError(err)
 		}
 	} else {
+		c.debug("Invalid state", "packet type", header.Type)
 		c.Close()
 	}
 }
@@ -111,6 +117,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 			return
 		}
 	}
+	c.debug("Connecting to namespace", nsp.name)
 
 	var auth json.RawMessage
 	at := reflect.TypeOf(&auth)
@@ -129,6 +136,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 
 	socket, err := nsp.add(c, auth)
 	if err != nil {
+		c.debug("Connection to namespace", nsp.name, "was denied")
 		c.connectError(err, nsp.Name())
 		return
 	}
@@ -210,8 +218,12 @@ func (c *serverConn) onClose(reason Reason, err error) {
 }
 
 func (c *serverConn) Remove(socket *serverSocket) {
-	c.nsps.Remove(socket.Namespace().Name())
-	c.sockets.RemoveByID(socket.ID())
+	if _, ok := c.sockets.GetByID(socket.ID()); ok {
+		c.sockets.RemoveByID(socket.ID())
+		c.nsps.Remove(socket.Namespace().Name())
+	} else {
+		c.debug("Ignored remove")
+	}
 }
 
 func (c *serverConn) DisconnectAll() {
@@ -221,6 +233,7 @@ func (c *serverConn) DisconnectAll() {
 }
 
 func (c *serverConn) Close() {
+	c.debug("Closing engine.io")
 	c.eio.Close()
 	c.eioPacketQueue.Reset()
 	c.onClose("forced server close", nil)
