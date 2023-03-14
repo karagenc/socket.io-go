@@ -27,12 +27,14 @@ type clientConn struct {
 	eioMu          sync.RWMutex
 
 	manager *Manager
+	debug   Debugger
 }
 
 func newClientConn(manager *Manager) *clientConn {
 	return &clientConn{
-		manager:        manager,
 		eioPacketQueue: newPacketQueue(),
+		manager:        manager,
+		debug:          manager.debug.withContext("clientConn with URL: " + concatURL(manager.url)),
 	}
 }
 

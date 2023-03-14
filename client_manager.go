@@ -127,12 +127,7 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		io.debug = noopDebugger{}
 	}
 
-	urlForDebugger := url
-	if len(urlForDebugger) > 20 {
-		urlForDebugger = urlForDebugger[:20] + "..."
-	}
-
-	io.debug = io.debug.withContext("Manager with URL: " + urlForDebugger)
+	io.debug = io.debug.withContext("Manager with URL: " + concatURL(url))
 
 	if config.ReconnectionDelay != nil {
 		io.reconnectionDelay = *config.ReconnectionDelay
@@ -285,4 +280,11 @@ func (m *Manager) Close() {
 	// Wait for disconnect packets to get sent
 	m.conn.eioPacketQueue.WaitForDrain(5 * time.Second)
 	m.conn.Disconnect()
+}
+
+func concatURL(url string) string {
+	if len(url) > 20 {
+		return url[:20] + "..."
+	}
+	return url
 }

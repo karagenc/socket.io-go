@@ -67,6 +67,8 @@ type clientSocket struct {
 	activeMu sync.Mutex
 
 	packetQueue *clientPacketQueue
+
+	debug Debugger
 }
 
 func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace string, parser parser.Parser) *clientSocket {
@@ -83,6 +85,9 @@ func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace str
 		connectErrorHandlers: newHandlerStore[*ClientSocketConnectErrorFunc](),
 		disconnectHandlers:   newHandlerStore[*ClientSocketDisconnectFunc](),
 	}
+	s.debug = manager.debug.withDynamicContext("clientSocket", func() string {
+		return string(s.ID())
+	})
 	s.packetQueue = newClientPacketQueue(s)
 	s.setRecovered(false)
 	s.SetAuth(config.Auth)
