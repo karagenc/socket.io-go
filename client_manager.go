@@ -45,13 +45,13 @@ type ManagerConfig struct {
 	RandomizationFactor *float32
 
 	// For debugging purposes. Leave it nil if it is of no use.
-	DebugFunc DebugFunc
+	Debugger Debugger
 }
 
 type Manager struct {
 	url       string
 	eioConfig eio.ClientConfig
-	debug     DebugFunc
+	debug     Debugger
 
 	// This mutex is used for protecting parser from concurrent calls.
 	// Due to the modular and concurrent nature of Engine.IO,
@@ -121,11 +121,18 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		reconnectFailedHandlers:  newHandlerStore[*ManagerReconnectFailedFunc](),
 	}
 
-	if config.DebugFunc != nil {
-		io.debug = config.DebugFunc
+	if config.Debugger != nil {
+		io.debug = config.Debugger
 	} else {
-		io.debug = NoopDebugFunc
+		io.debug = noopDebugger{}
 	}
+
+	urlForDebugger := url
+	if len(urlForDebugger) > 20 {
+		urlForDebugger = urlForDebugger[:20] + "..."
+	}
+
+	io.debug = io.debug.withContext("Manager with URL: " + urlForDebugger)
 
 	if config.ReconnectionDelay != nil {
 		io.reconnectionDelay = *config.ReconnectionDelay
