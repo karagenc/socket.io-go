@@ -31,10 +31,14 @@ type serverConn struct {
 	parser   parser.Parser
 
 	closeOnce sync.Once
-	debug     DebugFunc
+	debug     func(v ...any)
 }
 
-func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator) (*serverConn, *eio.Callbacks) {
+func newServerConn(server *Server, _eio eio.ServerSocket, _debug DebugFunc, creator parser.Creator) (*serverConn, *eio.Callbacks) {
+	debug := func(v ...any) {
+		_debug("serverConn with engine.io ID", _eio.ID(), v...)
+	}
+
 	c := &serverConn{
 		eio:            _eio,
 		eioPacketQueue: newPacketQueue(),
@@ -44,7 +48,7 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 		nsps:    newNamespaceStore(),
 
 		parser: creator(),
-		debug:  server.debug,
+		debug:  debug,
 	}
 
 	callbacks := &eio.Callbacks{

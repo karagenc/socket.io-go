@@ -67,7 +67,8 @@ type Server struct {
 
 	connectionStateRecovery ServerConnectionStateRecovery
 
-	debug DebugFunc
+	debug    func(v ...any)
+	_debugFn DebugFunc
 
 	newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
 }
@@ -87,9 +88,13 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	if config.DebugFunc != nil {
-		server.debug = config.DebugFunc
+		server._debugFn = config.DebugFunc
+		server.debug = func(v ...any) {
+			config.DebugFunc("Server", "", v...)
+		}
 	} else {
-		server.debug = NoopDebugFunc
+		server._debugFn = NoopDebugFunc
+		server.debug = func(v ...any) {}
 	}
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
@@ -113,7 +118,7 @@ func NewServer(config *ServerConfig) *Server {
 }
 
 func (s *Server) onEIOSocket(eioSocket eio.ServerSocket) *eio.Callbacks {
-	_, callbacks := newServerConn(s, eioSocket, s.parserCreator)
+	_, callbacks := newServerConn(s, eioSocket, s._debugFn, s.parserCreator)
 	return callbacks
 }
 

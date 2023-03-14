@@ -13,7 +13,7 @@ type Namespace struct {
 	name   string
 	server *Server
 
-	debug DebugFunc
+	debug func(v ...any)
 
 	sockets *NamespaceSocketStore
 
@@ -30,8 +30,11 @@ type Namespace struct {
 	connectionHandlers *handlerStore[*NamespaceConnectionFunc]
 }
 
-func newNamespace(name string, server *Server, debug DebugFunc, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
+func newNamespace(name string, server *Server, _debug DebugFunc, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
+	debug := func(v ...any) {
+		_debug("Namespace with name", name, v...)
+	}
 	nsp := &Namespace{
 		name:               name,
 		server:             server,
@@ -180,7 +183,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	if n.server.connectionStateRecovery.Enabled {
 		session := n.adapter.RestoreSession(PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
 		if session != nil {
-			socket, err = newServerSocket(n.server, c, n, c.parser, session)
+			socket, err = newServerSocket(n.server, c, n, n.server._debugFn, c.parser, session)
 			if err != nil {
 				return nil, err
 			}
@@ -190,7 +193,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	// If connection state recovery is disabled
 	// or for some reason socket couldn't be retrieved
 	if socket == nil {
-		socket, err = newServerSocket(n.server, c, n, c.parser, nil)
+		socket, err = newServerSocket(n.server, c, n, n.server._debugFn, c.parser, nil)
 		if err != nil {
 			return nil, err
 		}

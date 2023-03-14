@@ -36,7 +36,7 @@ type serverSocket struct {
 	joinMu sync.Mutex
 
 	closeOnce sync.Once
-	debug     DebugFunc
+	debug     func(v ...any)
 
 	eventHandlers         *eventHandlerStore
 	errorHandlers         *handlerStore[*ServerSocketErrorFunc]
@@ -45,15 +45,22 @@ type serverSocket struct {
 }
 
 // previousSession can be nil
-func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
-	adapter := nsp.Adapter()
+func newServerSocket(server *Server, c *serverConn, nsp *Namespace, _debug DebugFunc, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
+	var (
+		id    SocketID
+		debug = func(v ...any) {
+			_debug("Server socket with  ID", string(id), v...)
+		}
+		adapter = nsp.Adapter()
+	)
+
 	s := &serverSocket{
 		server:  server,
 		conn:    c,
 		nsp:     nsp,
 		adapter: adapter,
 		parser:  parser,
-		debug:   server.debug,
+		debug:   debug,
 
 		eventHandlers:         newEventHandlerStore(),
 		errorHandlers:         newHandlerStore[*ServerSocketErrorFunc](),
@@ -94,6 +101,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 			s.pid = PrivateSessionID(id)
 		}
 	}
+	id = s.id
 	return s, nil
 }
 
