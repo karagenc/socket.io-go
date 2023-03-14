@@ -105,6 +105,8 @@ func (c *clientConn) MaybeReconnectOnOpen() {
 }
 
 func (c *clientConn) Reconnect(again bool) {
+	c.debug.Log("`Reconnect` called. It's happening")
+
 	// again = Is this the first time we're doing reconnect?
 	// In other words: are we recursing?
 	if !again {
@@ -114,6 +116,7 @@ func (c *clientConn) Reconnect(again bool) {
 		c.manager.skipReconnectMu.RLock()
 		defer c.manager.skipReconnectMu.RUnlock()
 		if c.manager.skipReconnect {
+			c.debug.Log("Skipping reconnect")
 			return
 		}
 	}
@@ -133,6 +136,7 @@ func (c *clientConn) Reconnect(again bool) {
 	didAttemptsReachedMaxInt := c.manager.reconnectionAttempts == 0 && attempts == math.MaxUint32
 
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
+		c.debug.Log("Maximum attempts reached. Attempts made so far", attempts)
 		c.manager.backoff.Reset()
 		c.state = clientConnStateDisconnected
 		for _, handler := range c.manager.reconnectFailedHandlers.GetAll() {
@@ -141,9 +145,12 @@ func (c *clientConn) Reconnect(again bool) {
 		return
 	}
 
-	time.Sleep(c.manager.backoff.Duration())
+	delay := c.manager.backoff.Duration()
+	c.debug.Log("Delay before reconnect attempt", delay)
+	time.Sleep(delay)
 
 	if c.manager.skipReconnect {
+		c.debug.Log("Skipping reconnect")
 		return
 	}
 
@@ -153,11 +160,14 @@ func (c *clientConn) Reconnect(again bool) {
 	}
 
 	if c.manager.skipReconnect {
+		c.debug.Log("Skipping reconnect")
 		return
 	}
 
+	c.debug.Log("Attempting to reconnect")
 	err := c.Connect(again)
 	if err != nil {
+		c.debug.Log("Reconnect failed", err)
 		c.state = clientConnStateDisconnected
 		for _, handler := range c.manager.reconnectErrorHandlers.GetAll() {
 			(*handler)(err)
@@ -166,6 +176,7 @@ func (c *clientConn) Reconnect(again bool) {
 		return
 	}
 
+	c.debug.Log("Reconnect is successful")
 	c.onReconnect()
 }
 
@@ -184,6 +195,8 @@ func (c *clientConn) Packet(packets ...*eioparser.Packet) {
 }
 
 func (c *clientConn) Disconnect() {
+	c.debug.Log("Disconnecting")
+
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
 	c.state = clientConnStateDisconnected

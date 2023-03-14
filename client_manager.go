@@ -160,6 +160,7 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 }
 
 func (m *Manager) Open() {
+	m.debug.Log("Opening")
 	go func() {
 		err := m.conn.Connect(false)
 		if err != nil {
@@ -251,6 +252,7 @@ func (m *Manager) onError(err error) {
 func (m *Manager) destroy(socket *clientSocket) {
 	for _, socket := range m.sockets.GetAll() {
 		if socket.Active() {
+			m.debug.Log("Socket with ID", socket.ID(), "still active, skipping close")
 			return
 		}
 	}
@@ -258,6 +260,8 @@ func (m *Manager) destroy(socket *clientSocket) {
 }
 
 func (m *Manager) onClose(reason Reason, err error) {
+	m.debug.Log("Closed. Reason:", reason)
+
 	m.parserMu.Lock()
 	defer m.parserMu.Unlock()
 	m.parser.Reset()

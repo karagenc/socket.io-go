@@ -386,13 +386,13 @@ func (s *serverSocket) onError(err error) {
 }
 
 func (s *serverSocket) onClose(reason Reason) {
-	s.debug.Log("Going to close the socket if it is not already closed")
+	s.debug.Log("Going to close the socket if it is not already closed. Reason", reason)
 
 	// Server socket is one-time, it cannot be reconnected.
 	// We don't want it to close more than once,
 	// so we use sync.Once to avoid running onClose more than once.
 	s.closeOnce.Do(func() {
-		s.debug.Log("Going to close the socket. It is not already closed")
+		s.debug.Log("Going to close the socket. It is not already closed. Reason", reason)
 		if !s.Connected() {
 			return
 		}
@@ -498,7 +498,7 @@ func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 	}
 
 	h := newAckHandlerWithTimeout(f, timeout, func() {
-		s.debug.Log("Ack with ID", id, "timed out")
+		s.debug.Log("Timeout occured for ack with ID", id, "timeout", timeout)
 		s.acksMu.Lock()
 		delete(s.acks, id)
 		s.acksMu.Unlock()

@@ -207,6 +207,7 @@ func (s *clientSocket) Connect() {
 
 func (s *clientSocket) Disconnect() {
 	if s.Connected() {
+		s.debug.Log("Performing disconnect", s.namespace)
 		s.sendControlPacket(parser.PacketTypeDisconnect)
 	}
 
@@ -229,6 +230,7 @@ func (s *clientSocket) SetAuth(v any) {
 }
 
 func (s *clientSocket) onOpen() {
+	s.debug.Log("onOpen called. Connecting")
 	authData := s.auth.Get()
 	s.sendConnectPacket(authData)
 }
@@ -306,6 +308,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 				}
 				ackSent = true
 				ackSentMu.Unlock()
+				s.debug.Log("Sending ack with ID", id)
 				s.sendAckPacket(id, ret)
 			}
 
@@ -366,6 +369,8 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.connectedMu.Lock()
 	s.connected = true
 	s.connectedMu.Unlock()
+
+	s.debug.Log("Socket connected")
 
 	s.emitBuffered()
 	for _, handler := range s.connectHandlers.GetAll() {
@@ -453,6 +458,7 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 }
 
 func (s *clientSocket) onDisconnect() {
+	s.debug.Log("Server disconnect", s.namespace)
 	s.destroy()
 	s.onClose(ReasonIOServerDisconnect)
 }
@@ -523,6 +529,8 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
+	s.debug.Log("Calling ack with ID", *header.ID)
+
 	s.acksMu.Lock()
 	ack, ok := s.acks[*header.ID]
 	if ok {
@@ -573,6 +581,7 @@ func (s *clientSocket) destroy() {
 }
 
 func (s *clientSocket) onClose(reason Reason) {
+	s.debug.Log("Going to close the socket. Reason", reason)
 	s.connectedMu.Lock()
 	s.connected = false
 	s.connectedMu.Unlock()
@@ -627,6 +636,7 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		timeout = s.config.AckTimeout
 	}
 	id = s.nextAckID()
+	s.debug.Log("Registering ack with ID", id)
 	if timeout == 0 {
 		s.acksMu.Lock()
 		s.acks[id] = newAckHandler(f, false)
@@ -640,6 +650,7 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 	}
 
 	h := newAckHandlerWithTimeout(f, timeout, func() {
+		s.debug.Log("Timeout occured for ack with ID", id, "timeout", timeout)
 		s.acksMu.Lock()
 		delete(s.acks, id)
 		s.acksMu.Unlock()
@@ -651,6 +662,7 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		s.sendBufferMu.Lock()
 		for i, packet := range s.sendBuffer {
 			if packet.AckID != nil && *packet.AckID == id {
+				s.debug.Log("Removing packet with ack ID", id)
 				s.sendBuffer = remove(s.sendBuffer, i)
 			}
 		}
@@ -763,6 +775,8 @@ func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]by
 			}
 			s.sendBuffer = append(s.sendBuffer, buffers...)
 			s.sendBufferMu.Unlock()
+		} else {
+			s.debug.Log("Packet is discarded")
 		}
 	}
 }
