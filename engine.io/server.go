@@ -123,6 +123,8 @@ type Server struct {
 
 	closed    chan struct{}
 	closeOnce sync.Once
+
+	debug Debugger
 }
 
 func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
@@ -178,6 +180,13 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 		}
 	}
 
+	if config.Debugger != nil {
+		s.debug = config.Debugger
+	} else {
+		s.debug = NewNoopDebugger()
+	}
+	s.debug = s.debug.WithContext("eio: Server")
+
 	if s.onError == nil {
 		s.onError = func(err error) {}
 	}
@@ -211,6 +220,7 @@ func (s *Server) HTTPWriteTimeout() time.Duration {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.IsClosed() {
+		s.debug.Log("Connection received after server was closed")
 		w.WriteHeader(http.StatusTeapot)
 		return
 	}
@@ -305,6 +315,8 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.debug.Log("Transport is set to", n)
+
 	handshakePacket, err := newHandshakePacket(upgrades)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -314,10 +326,11 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 
 	err = t.Handshake(handshakePacket, w, r)
 	if err != nil {
+		s.debug.Log("Handshake error", err)
 		return
 	}
 
-	socket := newServerSocket(sid, upgrades, t, s.pingInterval, s.pingTimeout, s.store.Delete)
+	socket := newServerSocket(sid, upgrades, t, s.pingInterval, s.pingTimeout, s.debug, s.store.Delete)
 
 	callbacks := s.onSocket(socket)
 	socket.setCallbacks(callbacks)
@@ -335,6 +348,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *serverSocket, upgradeTo string) {
 	if upgradeTo != "websocket" {
+		s.debug.Log("Invalid upgradeTo", upgradeTo)
 		writeError(w, ErrorBadRequest)
 		return
 	}
@@ -347,12 +361,14 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 
 	err := t.Handshake(nil, w, r)
 	if err != nil {
+		s.debug.Log("Handshake error", err)
 		return
 	}
 
 	go func() {
 		select {
 		case <-done:
+			s.debug.Log("`done` triggered")
 			return
 		case <-time.After(s.upgradeTimeout):
 			t.Close()
@@ -361,6 +377,8 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 	}()
 
 	onPacket := func(packet *parser.Packet) {
+		s.debug.Log("Packet received", packet)
+
 		switch packet.Type {
 		case parser.PacketTypePing:
 			pong, err := parser.NewPacket(parser.PacketTypePong, false, []byte("probe"))
@@ -404,6 +422,8 @@ func (s *Server) IsClosed() bool {
 }
 
 func (s *Server) Close() error {
+	s.debug.Log("Closing")
+
 	// Prevent new clients from connecting.
 	s.closeOnce.Do(func() {
 		close(s.closed)

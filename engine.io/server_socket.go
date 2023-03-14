@@ -24,9 +24,11 @@ type serverSocket struct {
 	onClose   func(sid string)
 	closeChan chan struct{}
 	closeOnce sync.Once
+
+	debug Debugger
 }
 
-func newServerSocket(id string, upgrades []string, transport ServerTransport, pingInterval time.Duration, pingTimeout time.Duration, onClose func(sid string)) *serverSocket {
+func newServerSocket(id string, upgrades []string, transport ServerTransport, pingInterval time.Duration, pingTimeout time.Duration, debug Debugger, onClose func(sid string)) *serverSocket {
 	// The function below might be nil for testing purposes. See: sstore_test.go
 	if onClose == nil {
 		onClose = func(sid string) {}
@@ -44,6 +46,7 @@ func newServerSocket(id string, upgrades []string, transport ServerTransport, pi
 
 		closeChan: make(chan struct{}),
 		onClose:   onClose,
+		debug:     debug.WithContext("eio: server socket with ID: " + id),
 	}
 
 	s.setCallbacks(nil)
@@ -98,6 +101,8 @@ func (s *serverSocket) PingTimeout() time.Duration {
 }
 
 func (s *serverSocket) UpgradeTo(t ServerTransport) {
+	s.debug.Log("UpgradeTo", t.Name())
+
 	t.Callbacks().Set(s.onPacket, s.onTransportClose)
 
 	s.transportMu.Lock()
@@ -122,6 +127,7 @@ func (s *serverSocket) pingPong(pingInterval time.Duration, pingTimeout time.Dur
 
 		select {
 		case <-s.closeChan:
+			s.debug.Log("pingPong", "`closeChan` was closed")
 			return
 		default:
 		}
@@ -135,10 +141,13 @@ func (s *serverSocket) pingPong(pingInterval time.Duration, pingTimeout time.Dur
 
 		select {
 		case <-s.pongChan:
+			s.debug.Log("pingPong", "pong received")
 		case <-time.After(pingTimeout):
+			s.debug.Log("pingPong", "pingTimeout exceeded")
 			s.close(ReasonPingTimeout, nil)
 			return
 		case <-s.closeChan:
+			s.debug.Log("pingPong", "`closeChan` was closed")
 			return
 		}
 	}
@@ -183,6 +192,8 @@ func (s *serverSocket) Send(packets ...*parser.Packet) {
 }
 
 func (s *serverSocket) onTransportClose(name string, err error) {
+	s.debug.Log("Transport", name, "closed")
+
 	select {
 	case <-s.closeChan:
 		return
@@ -201,7 +212,10 @@ func (s *serverSocket) onTransportClose(name string, err error) {
 }
 
 func (s *serverSocket) close(reason Reason, err error) {
+	s.debug.Log("Going to close the socket if it is not already closed. Reason", reason)
+
 	s.closeOnce.Do(func() {
+		s.debug.Log("Going to close the socket. It is not already closed. Reason", reason)
 		close(s.closeChan)
 		defer s.onClose(s.id)
 

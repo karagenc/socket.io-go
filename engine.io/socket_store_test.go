@@ -24,7 +24,7 @@ func TestSocketStore(t *testing.T) {
 	for i := 0; i < max; i++ {
 		sid := strconv.Itoa(i)
 		ft := newFakeServerTransport()
-		socket := newServerSocket(sid, nil, ft, 0, 0, onClose)
+		socket := newServerSocket(sid, nil, ft, 0, 0, NewNoopDebugger(), onClose)
 
 		ok := store.Set(socket.ID(), socket)
 		assert.True(t, ok)

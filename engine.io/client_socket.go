@@ -302,8 +302,10 @@ func (s *clientSocket) Send(packets ...*parser.Packet) {
 }
 
 func (s *clientSocket) close(reason Reason, err error) {
+	s.debug.Log("Going to close the socket if it is not already closed. Reason", reason)
+
 	s.closeOnce.Do(func() {
-		s.debug.Log("Closing. Reason", reason)
+		s.debug.Log("Going to close the socket. It is not already closed. Reason", reason)
 		close(s.closeChan)
 		defer s.callbacks.OnClose(reason, err)
 
