@@ -313,6 +313,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 				sent = true
 				mu.Unlock()
 
+				s.debug.Log("Sending ack with ID", ackID)
 				s.sendAckPacket(ackID, values)
 			}
 
@@ -336,6 +337,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 				// and there is no response already sent,
 				// then send an empty acknowledgement.
 				if send {
+					s.debug.Log("Sending ack with ID", *header.ID)
 					s.sendAckPacket(*header.ID, nil)
 				}
 			}
@@ -436,6 +438,7 @@ func (s *clientSocket) emitBuffered() {
 			ackIDs[ackID] = true
 			mu.Unlock()
 
+			s.debug.Log("Sending ack with ID", ackID)
 			s.sendAckPacket(ackID, values)
 		}
 
@@ -456,6 +459,7 @@ func (s *clientSocket) emitBuffered() {
 			// and there is no response already sent,
 			// then send an empty acknowledgement.
 			if send {
+				s.debug.Log("Sending ack with ID", *event.header.ID)
 				s.sendAckPacket(*event.header.ID, nil)
 			}
 		}
@@ -562,7 +566,8 @@ func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHea
 		values = values[:len(values)-1] // Remove offset
 	}
 
-	if header.ID != nil && len(values) > 0 && values[len(values)-1].Kind() == reflect.Func {
+	ack, _ := handler.ack()
+	if header.ID != nil && ack {
 		hasAckFunc = true
 
 		// We already know that the last value of the handler is an ack function

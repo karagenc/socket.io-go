@@ -8,66 +8,43 @@ import (
 )
 
 type eventHandler struct {
-	rv         reflect.Value
-	inputArgs  []reflect.Type
-	outputArgs []reflect.Type
+	rv        reflect.Value
+	inputArgs []reflect.Type
 }
 
 func newEventHandler(f any) (*eventHandler, error) {
 	rv := reflect.ValueOf(f)
+	rt := rv.Type()
 
 	if rv.Kind() != reflect.Func {
 		return nil, fmt.Errorf("sio: function expected")
 	}
-
-	rt := rv.Type()
 
 	inputArgs := make([]reflect.Type, rt.NumIn())
 	for i := range inputArgs {
 		inputArgs[i] = rt.In(i)
 	}
 
-	outputArgs := make([]reflect.Type, rt.NumOut())
-	for i := range outputArgs {
-		outputArgs[i] = rt.Out(i)
+	if rt.NumOut() > 0 {
+		return nil, fmt.Errorf("sio: an event handler cannot have return values")
 	}
 
 	s := &eventHandler{
-		rv:         rv,
-		inputArgs:  inputArgs,
-		outputArgs: outputArgs,
+		rv:        rv,
+		inputArgs: inputArgs,
 	}
 	_, err := s.ack()
 	return s, err
 }
 
-type ackType int
-
-const (
-	ackNone ackType = iota
-	ackFunc
-	ackReturn
-)
-
-func (s *eventHandler) ack() (ackType ackType, err error) {
+func (s *eventHandler) ack() (ok bool, err error) {
 	if len(s.inputArgs) > 0 && s.inputArgs[len(s.inputArgs)-1].Kind() == reflect.Func {
-		// Check if we also have return values
-		if len(s.outputArgs) > 0 {
-			err = fmt.Errorf("sio: an event handler cannot have both return values and an ack function at the same time")
-			return
-		}
 		if s.inputArgs[len(s.inputArgs)-1].NumOut() > 0 {
-			err = fmt.Errorf("sio: an ack function of an event handler cannot have return values")
+			err = fmt.Errorf("sio: an acknowledgement function of an event handler cannot have return values")
 			return
 		}
-		ackType = ackFunc
-		return
+		ok = true
 	}
-	if len(s.outputArgs) > 0 {
-		ackType = ackReturn
-		return
-	}
-	ackType = ackNone
 	return
 }
 
@@ -99,15 +76,10 @@ type ackHandler struct {
 
 func newAckHandler(f any, hasError bool) (*ackHandler, error) {
 	rv := reflect.ValueOf(f)
+	rt := rv.Type()
 
 	if rv.Kind() != reflect.Func {
 		return nil, fmt.Errorf("sio: function expected")
-	}
-
-	rt := rv.Type()
-
-	if rt.NumIn() < 1 {
-		return nil, fmt.Errorf("sio: ack handler function must include at least 1 argument")
 	}
 
 	inputArgs := make([]reflect.Type, rt.NumIn())

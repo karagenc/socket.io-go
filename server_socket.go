@@ -144,23 +144,49 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		handlers := s.eventHandlers.GetAll(eventName)
 
 		go func() {
-			ackSent := false
-			ackSentMu := new(sync.Mutex)
+			var (
+				hasAckFunc bool // This doesn't need mutex
 
-			sendAck := func(id uint64, ret []reflect.Value) {
-				ackSentMu.Lock()
-				if ackSent {
-					ackSentMu.Unlock()
+				mu   sync.Mutex
+				sent bool
+			)
+
+			sendAck := func(ackID uint64, values []reflect.Value) {
+				mu.Lock()
+				if sent {
+					mu.Unlock()
 					return
 				}
-				ackSent = true
-				ackSentMu.Unlock()
-				s.debug.Log("Sending ack with ID", id)
-				s.sendAckPacket(id, ret)
+				sent = true
+				mu.Unlock()
+
+				s.debug.Log("Sending ack with ID", ackID)
+				s.sendAckPacket(ackID, values)
 			}
 
 			for _, handler := range handlers {
-				s.onEvent(handler, header, decode, sendAck)
+				_hasAckFunc := s.onEvent(handler, header, decode, sendAck)
+				if _hasAckFunc {
+					hasAckFunc = true
+				}
+			}
+			if header.ID != nil {
+				mu.Lock()
+				send := !hasAckFunc
+				if sent {
+					mu.Unlock()
+					return
+				}
+				sent = true
+				mu.Unlock()
+
+				// If there is no acknowledgement function
+				// and there is no response already sent,
+				// then send an empty acknowledgement.
+				if send {
+					s.debug.Log("Sending ack with ID", *header.ID)
+					s.sendAckPacket(*header.ID, nil)
+				}
 			}
 		}()
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
@@ -180,7 +206,7 @@ func (s *serverSocket) onDisconnect() {
 	s.onClose("client namespace disconnect")
 }
 
-func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck sendAckFunc) {
+func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck ackSendFunc) (hasAckFunc bool) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -209,15 +235,29 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		return
 	}
 
-	ret, err := handler.Call(values...)
+	ack, _ := handler.ack()
+	if header.ID != nil && ack {
+		hasAckFunc = true
+
+		// We already know that the last value of the handler is an ack function
+		// and it doesn't have a return value. So dismantle it, and create it with reflect.MakeFunc.
+		f := values[len(values)-1]
+		in, variadic := dismantleAckFunc(reflect.TypeOf(f))
+		rt := reflect.FuncOf(in, nil, variadic)
+
+		f = reflect.MakeFunc(rt, func(args []reflect.Value) (results []reflect.Value) {
+			sendAck(*header.ID, args)
+			return nil
+		})
+		values[len(values)-1] = f
+	}
+
+	_, err = handler.Call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
 	}
-
-	if header.ID != nil {
-		sendAck(*header.ID, ret)
-	}
+	return
 }
 
 func (s *serverSocket) callMiddlewares(values []reflect.Value) error {
