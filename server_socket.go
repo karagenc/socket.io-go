@@ -487,7 +487,11 @@ func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 	s.debug.Log("Registering ack with ID", id)
 	if timeout == 0 {
 		s.acksMu.Lock()
-		s.acks[id] = newAckHandler(f, false)
+		h, err := newAckHandler(f, false)
+		if err != nil {
+			panic(err)
+		}
+		s.acks[id] = h
 		s.acksMu.Unlock()
 		return
 	}
@@ -497,12 +501,15 @@ func (s *serverSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		panic(err)
 	}
 
-	h := newAckHandlerWithTimeout(f, timeout, func() {
+	h, err := newAckHandlerWithTimeout(f, timeout, func() {
 		s.debug.Log("Timeout occured for ack with ID", id, "timeout", timeout)
 		s.acksMu.Lock()
 		delete(s.acks, id)
 		s.acksMu.Unlock()
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	s.acksMu.Lock()
 	s.acks[id] = h

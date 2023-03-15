@@ -13,11 +13,11 @@ type eventHandler struct {
 	outputArgs []reflect.Type
 }
 
-func newEventHandler(f any) *eventHandler {
+func newEventHandler(f any) (*eventHandler, error) {
 	rv := reflect.ValueOf(f)
 
 	if rv.Kind() != reflect.Func {
-		panic("sio: function expected")
+		return nil, fmt.Errorf("sio: function expected")
 	}
 
 	rt := rv.Type()
@@ -32,11 +32,39 @@ func newEventHandler(f any) *eventHandler {
 		outputArgs[i] = rt.Out(i)
 	}
 
-	return &eventHandler{
+	s := &eventHandler{
 		rv:         rv,
 		inputArgs:  inputArgs,
 		outputArgs: outputArgs,
 	}
+	_, err := s.ack()
+	return s, err
+}
+
+type ackType int
+
+const (
+	ackNone ackType = iota
+	ackReturn
+	ackCallback
+)
+
+func (s *eventHandler) ack() (ackType ackType, err error) {
+	if len(s.inputArgs) > 0 && s.inputArgs[len(s.inputArgs)-1].Kind() == reflect.Func {
+		// Check if we also have return values
+		if len(s.outputArgs) > 0 {
+			err = fmt.Errorf("sio: an event handler cannot have both return values and an ack function at the same time.")
+			return
+		}
+		ackType = ackCallback
+		return
+	}
+	if len(s.outputArgs) > 0 {
+		ackType = ackReturn
+		return
+	}
+	ackType = ackNone
+	return
 }
 
 func (f *eventHandler) Call(args ...reflect.Value) (ret []reflect.Value, err error) {
@@ -65,17 +93,17 @@ type ackHandler struct {
 	mu       sync.Mutex
 }
 
-func newAckHandler(f any, hasError bool) *ackHandler {
+func newAckHandler(f any, hasError bool) (*ackHandler, error) {
 	rv := reflect.ValueOf(f)
 
 	if rv.Kind() != reflect.Func {
-		panic("sio: function expected")
+		return nil, fmt.Errorf("sio: function expected")
 	}
 
 	rt := rv.Type()
 
 	if rt.NumIn() < 1 {
-		panic("sio: ack handler function must include at least 1 argument")
+		return nil, fmt.Errorf("sio: ack handler function must include at least 1 argument")
 	}
 
 	inputArgs := make([]reflect.Type, rt.NumIn())
@@ -85,18 +113,21 @@ func newAckHandler(f any, hasError bool) *ackHandler {
 
 	err := doesAckHandlerHasReturnValues(f)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return &ackHandler{
 		rv:        rv,
 		inputArgs: inputArgs,
 		hasError:  hasError,
-	}
+	}, nil
 }
 
-func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) *ackHandler {
-	h := newAckHandler(f, true)
+func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) (*ackHandler, error) {
+	h, err := newAckHandler(f, true)
+	if err != nil {
+		return nil, err
+	}
 	go func() {
 		time.Sleep(timeout)
 		h.mu.Lock()
@@ -120,7 +151,7 @@ func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) 
 		}
 		h.rv.Call(args)
 	}()
-	return h
+	return h, nil
 }
 
 func (f *ackHandler) Call(args ...reflect.Value) (err error) {

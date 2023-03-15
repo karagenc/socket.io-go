@@ -4,14 +4,22 @@ func (s *clientSocket) OnEvent(eventName string, handler any) {
 	if IsEventReservedForClient(eventName) {
 		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	s.eventHandlers.On(eventName, newEventHandler(handler))
+	h, err := newEventHandler(handler)
+	if err != nil {
+		panic(err)
+	}
+	s.eventHandlers.On(eventName, h)
 }
 
 func (s *clientSocket) OnceEvent(eventName string, handler any) {
 	if IsEventReservedForClient(eventName) {
 		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	s.eventHandlers.Once(eventName, newEventHandler(handler))
+	h, err := newEventHandler(handler)
+	if err != nil {
+		panic(err)
+	}
+	s.eventHandlers.Once(eventName, h)
 }
 
 func (s *clientSocket) OffEvent(eventName string, handler ...any) {

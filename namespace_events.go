@@ -4,14 +4,22 @@ func (n *Namespace) OnEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
 		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	n.eventHandlers.On(eventName, newEventHandler(handler))
+	h, err := newEventHandler(handler)
+	if err != nil {
+		panic(err)
+	}
+	n.eventHandlers.On(eventName, h)
 }
 
 func (n *Namespace) OnceEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
 		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
 	}
-	n.eventHandlers.Once(eventName, newEventHandler(handler))
+	h, err := newEventHandler(handler)
+	if err != nil {
+		panic(err)
+	}
+	n.eventHandlers.Once(eventName, h)
 }
 
 func (n *Namespace) OffEvent(eventName string, handler ...any) {
