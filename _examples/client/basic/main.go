@@ -15,20 +15,20 @@ func main() {
 
 	fmt.Println("Init")
 
-	socket.On("connect", func() {
+	socket.OnConnect(func() {
 		fmt.Println("Connected!")
 	})
 
-	socket.On("reconnect", func() {
+	manager.OnReconnect(func(attempt uint32) {
 		fmt.Printf("reconnect happened\n")
 	})
 
-	socket.On("connect_error", func(err error) {
+	socket.OnConnectError(func(err error) {
 		fmt.Printf("connect error: %s\n", err)
 	})
 
 	//socket.Emit("echo", "Hello!")
-	socket.On("e", func(message string) {
+	socket.OnEvent("e", func(message string) {
 		fmt.Println(message)
 	})
 

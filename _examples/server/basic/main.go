@@ -23,9 +23,9 @@ func main() {
 		},
 	})
 
-	io.On("connect", func(socket sio.ServerSocket) {
+	io.OnConnection(func(socket sio.ServerSocket) {
 		fmt.Printf("New socket: %s\n", socket.ID())
-		socket.On("echo", func(message string) {
+		socket.OnEvent("echo", func(message string) {
 			fmt.Printf("Message: %s\n", message)
 		})
 	})

@@ -25,7 +25,7 @@ func main() {
 	})
 
 	r := io.Of("/")
-	r.On("connect", func(socket sio.ServerSocket) {
+	r.OnConnection(func(socket sio.ServerSocket) {
 		fmt.Printf("New socket: %s\n", socket.ID())
 	})
 

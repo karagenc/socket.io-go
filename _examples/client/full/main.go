@@ -10,12 +10,12 @@ import (
 const url = "http://127.0.0.1:3000/socket.io"
 
 var (
-	config = &sio.ClientConfig{
-		PreventAutoConnect: true,
+	config = &sio.ManagerConfig{
+		ReconnectionAttempts: 5,
 	}
 
-	client = sio.NewClient(url, config)
-	socket = client.Socket("/")
+	manager = sio.NewManager(url, config)
+	socket  = manager.Socket("/", nil)
 )
 
 type authData struct {
@@ -23,17 +23,17 @@ type authData struct {
 }
 
 func main() {
-	socket.On("echo", func(message string) (string, string) {
+	socket.OnEvent("echo", func(message string, ack func(string, string)) {
 		fmt.Printf("Echo received: %s\n", message)
-		return "Heyyo!", "Yaay!"
+		ack("Heyyo!", "Yaay!")
 	})
 
-	socket.On("binecho", func(message sio.Binary) (string, string) {
+	socket.OnEvent("binecho", func(message sio.Binary, ack func(string, string)) {
 		fmt.Printf("Binary echo received: %d %d\n", message[0], message[1])
-		return "Heyyo!", "Yaay!"
+		ack("Heyyo!", "Yaay!")
 	})
 
-	socket.On("connect", func() {
+	socket.OnConnect(func() {
 		fmt.Println("Connected!")
 	})
 
