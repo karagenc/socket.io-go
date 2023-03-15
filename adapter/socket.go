@@ -1,8 +1,5 @@
 package adapter
 
-// This is the equivalent of RemoteSocket
-//
-// See: https://github.com/socketio/socket.io/blob/7952312911e439f1e794760b50054565ece72845/lib/broadcast-operator.ts#L471
 type Socket interface {
 	ID() SocketID
 
@@ -19,18 +16,18 @@ type Socket interface {
 	// will only be broadcast to clients that have joined the given room.
 	//
 	// To emit to multiple rooms, you can call To several times.
-	To(room ...Room) BroadcastOperator
+	To(room ...Room) *BroadcastOperator
 
 	// Alias of To(...)
-	In(room ...Room) BroadcastOperator
+	In(room ...Room) *BroadcastOperator
 
 	// Sets a modifier for a subsequent event emission that the event
 	// will only be broadcast to clients that have not joined the given rooms.
-	Except(room ...Room) BroadcastOperator
+	Except(room ...Room) *BroadcastOperator
 
 	// Sets a modifier for a subsequent event emission that
 	// the event data will only be broadcast to every sockets but the sender.
-	Broadcast() BroadcastOperator
+	Broadcast() *BroadcastOperator
 
 	// Disconnect from namespace.
 	//

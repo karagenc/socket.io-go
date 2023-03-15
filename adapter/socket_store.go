@@ -1,14 +1,11 @@
 package adapter
 
 type SocketStore interface {
-	Get(sid SocketID) (so Socket, ok bool)
-
 	// Send Engine.IO packets to a specific socket.
-	SendBuffers(sid SocketID, buffers [][]byte)
+	SendBuffers(sid SocketID, buffers [][]byte) (ok bool)
 
+	Get(sid SocketID) (so Socket, ok bool)
 	GetAll() []Socket
-
-	Set(so Socket)
 
 	Remove(sid SocketID)
 }

@@ -13,6 +13,8 @@ import (
 
 const DefaultConnectTimeout = time.Second * 45
 
+type BroadcastOperator = adapter.BroadcastOperator
+
 type ServerConfig struct {
 	ParserCreator  parser.Creator
 	AdapterCreator adapter.Creator

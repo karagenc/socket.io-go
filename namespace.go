@@ -42,7 +42,7 @@ func newNamespace(name string, server *Server, adapterCreator adapter.Creator, p
 		eventHandlers:      newEventHandlerStore(),
 		connectionHandlers: newHandlerStore[*NamespaceConnectionFunc](),
 	}
-	nsp.adapter = adapterCreator(socketStore, parserCreator)
+	nsp.adapter = adapterCreator(newAdapterSocketStore(socketStore), parserCreator)
 	return nsp
 }
 
@@ -52,7 +52,7 @@ func (n *Namespace) Adapter() adapter.Adapter { return n.adapter }
 
 // Emits an event to all connected clients in the given namespace.
 func (n *Namespace) Emit(eventName string, v ...any) {
-	newBroadcastOperator(n.Name(), n.adapter, n.parser).Emit(eventName, v...)
+	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Emit(eventName, v...)
 }
 
 // Sends a message to the other Socket.IO servers of the cluster.
@@ -104,30 +104,30 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 //
 // To emit to multiple rooms, you can call `To` several times.
 func (n *Namespace) To(room ...Room) *BroadcastOperator {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).To(room...)
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).To(room...)
 }
 
 // Alias of To(...)
 func (n *Namespace) In(room ...Room) *BroadcastOperator {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).In(room...)
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).In(room...)
 }
 
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
 func (n *Namespace) Except(room ...Room) *BroadcastOperator {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Except(room...)
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Except(room...)
 }
 
 // Compression flag is unused at the moment, thus setting this will have no effect on compression.
 func (n *Namespace) Compress(compress bool) *BroadcastOperator {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Compress(compress)
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Compress(compress)
 }
 
 // Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
 //
 // See: https://socket.io/docs/v4/using-multiple-nodes
 func (n *Namespace) Local() *BroadcastOperator {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).Local()
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Local()
 }
 
 // Gets the sockets of the namespace.
@@ -138,24 +138,24 @@ func (n *Namespace) Sockets() []ServerSocket {
 
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
 func (n *Namespace) FetchSockets() []adapter.Socket {
-	return newBroadcastOperator(n.Name(), n.adapter, n.parser).FetchSockets()
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).FetchSockets()
 }
 
 // Makes the matching socket instances join the specified rooms.
 func (n *Namespace) SocketsJoin(room ...Room) {
-	newBroadcastOperator(n.Name(), n.adapter, n.parser).SocketsJoin(room...)
+	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).SocketsJoin(room...)
 }
 
 // Makes the matching socket instances leave the specified rooms.
 func (n *Namespace) SocketsLeave(room ...Room) {
-	newBroadcastOperator(n.Name(), n.adapter, n.parser).SocketsLeave(room...)
+	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).SocketsLeave(room...)
 }
 
 // Makes the matching socket instances disconnect from the namespace.
 //
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
 func (n *Namespace) DisconnectSockets(close bool) {
-	newBroadcastOperator(n.Name(), n.adapter, n.parser).DisconnectSockets(close)
+	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).DisconnectSockets(close)
 }
 
 type authRecoveryFields struct {
