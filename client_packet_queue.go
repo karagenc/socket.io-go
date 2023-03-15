@@ -93,7 +93,7 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 		if err != nil {
 			panic(err)
 		}
-		in, variadic := pq.dismantleAckFunc(rt)
+		in, variadic := dismantleAckFunc(rt)
 		ackF := reflect.MakeFunc(reflect.FuncOf(in, nil, variadic), replacementAck)
 		f = ackF.Interface()
 	} else {
@@ -133,13 +133,4 @@ func (pq *clientPacketQueue) drainQueue(force bool) {
 
 	pq.debug.Log("Sending packet with ID", packet.id, "try", tryCount)
 	pq.socket.emit("", 0, false, true, packet.v...)
-}
-
-func (pq *clientPacketQueue) dismantleAckFunc(rt reflect.Type) (in []reflect.Type, variadic bool) {
-	in = make([]reflect.Type, rt.NumIn())
-	for i := range in {
-		in[i] = rt.In(i)
-	}
-	variadic = rt.IsVariadic()
-	return
 }

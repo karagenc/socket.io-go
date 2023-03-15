@@ -45,18 +45,22 @@ type ackType int
 
 const (
 	ackNone ackType = iota
+	ackFunc
 	ackReturn
-	ackCallback
 )
 
 func (s *eventHandler) ack() (ackType ackType, err error) {
 	if len(s.inputArgs) > 0 && s.inputArgs[len(s.inputArgs)-1].Kind() == reflect.Func {
 		// Check if we also have return values
 		if len(s.outputArgs) > 0 {
-			err = fmt.Errorf("sio: an event handler cannot have both return values and an ack function at the same time.")
+			err = fmt.Errorf("sio: an event handler cannot have both return values and an ack function at the same time")
 			return
 		}
-		ackType = ackCallback
+		if s.inputArgs[len(s.inputArgs)-1].NumOut() > 0 {
+			err = fmt.Errorf("sio: an ack function of an event handler cannot have return values")
+			return
+		}
+		ackType = ackFunc
 		return
 	}
 	if len(s.outputArgs) > 0 {
@@ -206,6 +210,15 @@ func (f *ackHandler) CallWithError(e error, args ...reflect.Value) (err error) {
 
 	args = append([]reflect.Value{reflect.ValueOf(e)}, args...)
 	f.rv.Call(args)
+	return
+}
+
+func dismantleAckFunc(rt reflect.Type) (in []reflect.Type, variadic bool) {
+	in = make([]reflect.Type, rt.NumIn())
+	for i := range in {
+		in[i] = rt.In(i)
+	}
+	variadic = rt.IsVariadic()
 	return
 }
 

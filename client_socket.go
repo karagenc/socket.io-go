@@ -297,23 +297,15 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		handlers := s.eventHandlers.GetAll(eventName)
 
 		go func() {
-			ackSent := false
-			ackSentMu := new(sync.Mutex)
-
-			sendAck := func(id uint64, ret []reflect.Value) {
-				ackSentMu.Lock()
-				if ackSent {
-					ackSentMu.Unlock()
-					return
-				}
-				ackSent = true
-				ackSentMu.Unlock()
-				s.debug.Log("Sending ack with ID", id)
-				s.sendAckPacket(id, ret)
+			var ackSender *ackSender
+			if header.ID != nil {
+				ackSender = newAckSender(s)
 			}
-
 			for _, handler := range handlers {
-				s.onEvent(handler, header, decode, sendAck)
+				s.onEvent(handler, header, decode, ackSender)
+			}
+			if header.ID != nil {
+				ackSender.Finish(*header.ID)
 			}
 		}()
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
@@ -379,8 +371,6 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.packetQueue.drainQueue(true)
 }
 
-type sendAckFunc = func(id uint64, ret []reflect.Value)
-
 type sendBufferItem struct {
 	AckID  *uint64
 	Packet *eioparser.Packet
@@ -390,30 +380,30 @@ func (s *clientSocket) emitBuffered() {
 	s.receiveBufferMu.Lock()
 	defer s.receiveBufferMu.Unlock()
 
-	ackIDs := make(map[uint64]bool, len(s.receiveBuffer))
-	ackIDsMu := new(sync.Mutex)
+	ackSenders := make(map[uint64]*ackSender, len(s.receiveBuffer))
 	for _, event := range s.receiveBuffer {
+		var (
+			ackSender *ackSender
+			ok        bool
+		)
 		if event.header.ID != nil {
-			ackIDs[*event.header.ID] = false
+			// Check if there's already an event with the same ack ID.
+			//
+			// If there's an overlapping ack ID, chances are that we are reconnected.
+			// The best course of action is to use the same ackSender.
+			ackSender, ok = ackSenders[*event.header.ID]
+			if !ok {
+				ackSender = newAckSender(s)
+				ackSenders[*event.header.ID] = ackSender
+			}
 		}
-	}
-
-	sendAck := func(id uint64, ret []reflect.Value) {
-		ackIDsMu.Lock()
-		sent, ok := ackIDs[id]
-		if ok && sent {
-			ackIDsMu.Unlock()
-			return
-		}
-		ackIDs[id] = true
-		ackIDsMu.Unlock()
-		s.sendAckPacket(id, ret)
-	}
-
-	for _, event := range s.receiveBuffer {
-		s.callEvent(event.handler, event.header, event.values, sendAck)
+		s.callEvent(event.handler, event.header, event.values, ackSender)
 	}
 	s.receiveBuffer = nil
+
+	for ackID, manager := range ackSenders {
+		manager.Finish(ackID)
+	}
 
 	s.sendBufferMu.Lock()
 	defer s.sendBufferMu.Unlock()
@@ -469,7 +459,8 @@ type clientEvent struct {
 	values  []reflect.Value
 }
 
-func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck sendAckFunc) {
+// ackSender can be nil (depending on header.ID).
+func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, ackSender *ackSender) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -490,7 +481,7 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	s.connectedMu.RLock()
 	defer s.connectedMu.RUnlock()
 	if s.connected {
-		s.callEvent(handler, header, values, sendAck)
+		s.callEvent(handler, header, values, ackSender)
 	} else {
 		s.receiveBufferMu.Lock()
 		defer s.receiveBufferMu.Unlock()
@@ -502,7 +493,8 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	}
 }
 
-func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value, sendAck sendAckFunc) {
+// ackSender can be nil (depending on header.ID).
+func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value, ackSender *ackSender) {
 	// Set the lastOffset before calling the handler.
 	// An error can occur when the handler gets called,
 	// and we can miss setting the lastOffset.
@@ -512,14 +504,31 @@ func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHea
 		values = values[:len(values)-1] // Remove offset
 	}
 
+	ackType, _ := handler.ack()
+	if header.ID != nil && ackType == ackFunc {
+		ackSender.EventHasAnAckFunc()
+
+		// We already know that the last value of the handler is an ack function
+		// and it doesn't have a return value. So dismantle it, and create it with reflect.MakeFunc.
+		f := values[len(values)-1]
+		in, variadic := dismantleAckFunc(reflect.TypeOf(f))
+		rt := reflect.FuncOf(in, nil, variadic)
+
+		f = reflect.MakeFunc(rt, func(args []reflect.Value) (results []reflect.Value) {
+			ackSender.SendAck(*header.ID, args)
+			return nil
+		})
+		values[len(values)-1] = f
+	}
+
 	ret, err := handler.Call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
 	}
 
-	if header.ID != nil {
-		sendAck(*header.ID, ret)
+	if header.ID != nil && ackType == ackReturn {
+		ackSender.SendAck(*header.ID, ret)
 	}
 }
 
