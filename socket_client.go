@@ -2,6 +2,7 @@ package sio
 
 type ClientSocket interface {
 	Socket
+	ClientSocketEvents
 
 	// Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
 	Active() bool
@@ -25,7 +26,7 @@ type ClientSocket interface {
 	Volatile() Emitter
 }
 
-type ClientEvents interface {
+type ClientSocketEvents interface {
 	OnConnect(f ClientSocketConnectFunc)
 
 	OnceConnect(f ClientSocketConnectFunc)

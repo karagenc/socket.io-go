@@ -4,6 +4,7 @@ import mapset "github.com/deckarep/golang-set/v2"
 
 type ServerSocket interface {
 	Socket
+	ServerSocketEvents
 
 	// Retrieves the underlying Server.
 	Server() *Server
@@ -55,7 +56,7 @@ type ServerSocket interface {
 	Disconnect(close bool)
 }
 
-type ServerEvents interface {
+type ServerSocketEvents interface {
 	OnError(f ServerSocketErrorFunc)
 
 	OnceError(f ServerSocketErrorFunc)
