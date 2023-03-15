@@ -1,4 +1,4 @@
-package sio
+package adapter
 
 import (
 	"time"
@@ -7,7 +7,7 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type AdapterCreator func(namespace *Namespace, socketStore *NamespaceSocketStore, parserCreator parser.Creator) Adapter
+type Creator func(socketStore SocketStore, parserCreator parser.Creator) Adapter
 
 // A public ID, sent by the server at the beginning of
 // the Socket.IO session and which can be used for private messaging.
@@ -30,7 +30,7 @@ type Adapter interface {
 	// The return value 'rooms' is a thread safe mapset.Set.
 	SocketRooms(sid SocketID) (rooms mapset.Set[Room], ok bool)
 
-	FetchSockets(opts *BroadcastOptions) (sockets []AdapterSocket)
+	FetchSockets(opts *BroadcastOptions) (sockets []Socket)
 
 	AddSockets(opts *BroadcastOptions, rooms ...Room)
 	DelSockets(opts *BroadcastOptions, rooms ...Room)
@@ -45,48 +45,6 @@ type Adapter interface {
 	//
 	// Returns nil if there is no session or session has expired.
 	RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist
-}
-
-// This is the equivalent of RemoteSocket
-//
-// See: https://github.com/socketio/socket.io/blob/7952312911e439f1e794760b50054565ece72845/lib/broadcast-operator.ts#L471
-type AdapterSocket interface {
-	ID() SocketID
-
-	// Join room(s)
-	Join(room ...Room)
-	// Leave a room
-	Leave(room Room)
-
-	// Emit a message.
-	// If you want to emit a binary data, use sio.Binary instead of []byte.
-	Emit(eventName string, v ...any)
-
-	// Sets a modifier for a subsequent event emission that the event
-	// will only be broadcast to clients that have joined the given room.
-	//
-	// To emit to multiple rooms, you can call To several times.
-	To(room ...Room) *BroadcastOperator
-
-	// Alias of To(...)
-	In(room ...Room) *BroadcastOperator
-
-	// Sets a modifier for a subsequent event emission that the event
-	// will only be broadcast to clients that have not joined the given rooms.
-	Except(room ...Room) *BroadcastOperator
-
-	// Sets a modifier for a subsequent event emission that
-	// the event data will only be broadcast to every sockets but the sender.
-	Broadcast() *BroadcastOperator
-
-	// Disconnect from namespace.
-	//
-	// If `close` is true, all namespaces are going to be disconnected (a DISCONNECT packet will be sent),
-	// and the underlying Engine.IO connection will be terminated.
-	//
-	// If `close` is false, only the current namespace will be disconnected (a DISCONNECT packet will be sent),
-	// and the underlying Engine.IO connection will be kept open.
-	Disconnect(close bool)
 }
 
 // A private ID, sent by the server at the beginning of

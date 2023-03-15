@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/tomruk/socket.io-go/adapter"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/parser"
 )
@@ -103,12 +104,12 @@ func (s *clientSocket) setID(id SocketID) {
 	s.id.Store(id)
 }
 
-func (s *clientSocket) pid() (pid PrivateSessionID, ok bool) {
-	pid, ok = s._pid.Load().(PrivateSessionID)
+func (s *clientSocket) pid() (pid adapter.PrivateSessionID, ok bool) {
+	pid, ok = s._pid.Load().(adapter.PrivateSessionID)
 	return
 }
 
-func (s *clientSocket) setPID(pid PrivateSessionID) {
+func (s *clientSocket) setPID(pid adapter.PrivateSessionID) {
 	s._pid.Store(pid)
 }
 
@@ -384,10 +385,10 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 
 	if v.PID != nil {
 		pid, ok := s.pid()
-		if ok && pid == PrivateSessionID(*v.PID) {
+		if ok && pid == adapter.PrivateSessionID(*v.PID) {
 			s.setRecovered(true)
 		}
-		s.setPID(PrivateSessionID(*v.PID))
+		s.setPID(adapter.PrivateSessionID(*v.PID))
 	}
 
 	s.setID(SocketID(v.SID))

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/tomruk/socket.io-go/adapter"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
@@ -14,7 +15,7 @@ const DefaultConnectTimeout = time.Second * 45
 
 type ServerConfig struct {
 	ParserCreator  parser.Creator
-	AdapterCreator AdapterCreator
+	AdapterCreator adapter.Creator
 
 	EIO eio.ServerConfig
 
@@ -59,7 +60,7 @@ type ServerConnectionStateRecovery struct {
 
 type Server struct {
 	parserCreator  parser.Creator
-	adapterCreator AdapterCreator
+	adapterCreator adapter.Creator
 
 	eio        *eio.Server
 	namespaces *namespaceStore
@@ -103,7 +104,7 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	if server.adapterCreator == nil {
-		server.adapterCreator = newInMemoryAdapter
+		server.adapterCreator = adapter.NewInMemoryAdapterCreator()
 	}
 
 	if config.ConnectTimeout != 0 {
@@ -212,7 +213,7 @@ func (s *Server) Sockets() []ServerSocket {
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
 //
 // Alias of: s.Of("/").FetchSockets(...)
-func (s *Server) FetchSockets(room ...string) []AdapterSocket {
+func (s *Server) FetchSockets(room ...string) []adapter.Socket {
 	return s.Of("/").FetchSockets()
 }
 

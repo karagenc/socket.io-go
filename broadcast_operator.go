@@ -4,39 +4,20 @@ import (
 	"reflect"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/tomruk/socket.io-go/adapter"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type BroadcastOptions struct {
-	Rooms  mapset.Set[Room]
-	Except mapset.Set[Room]
-	Flags  BroadcastFlags
-}
-
-func NewBroadcastOptions() *BroadcastOptions {
-	return &BroadcastOptions{
-		Rooms:  mapset.NewSet[Room](),
-		Except: mapset.NewSet[Room](),
-	}
-}
-
-type BroadcastFlags struct {
-	// This flag is unused at the moment, but for compatibility with the socket.io API, it stays here.
-	Compress bool
-
-	Local bool
-}
-
 type BroadcastOperator struct {
 	nsp         string
-	adapter     Adapter
+	adapter     adapter.Adapter
 	parser      parser.Parser
 	rooms       mapset.Set[Room]
 	exceptRooms mapset.Set[Room]
-	flags       BroadcastFlags
+	flags       adapter.BroadcastFlags
 }
 
-func newBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser) *BroadcastOperator {
+func newBroadcastOperator(nsp string, adapter adapter.Adapter, parser parser.Parser) *BroadcastOperator {
 	return &BroadcastOperator{
 		nsp:         nsp,
 		adapter:     adapter,
@@ -69,7 +50,7 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...any) {
 		panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
 	}
 
-	opts := NewBroadcastOptions()
+	opts := adapter.NewBroadcastOptions()
 	opts.Rooms = b.rooms
 	opts.Except = b.exceptRooms
 	opts.Flags = b.flags
@@ -122,8 +103,8 @@ func (b *BroadcastOperator) Local() *BroadcastOperator {
 }
 
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
-func (b *BroadcastOperator) FetchSockets() []AdapterSocket {
-	opts := NewBroadcastOptions()
+func (b *BroadcastOperator) FetchSockets() []adapter.Socket {
+	opts := adapter.NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
 	opts.Flags = b.flags
@@ -132,7 +113,7 @@ func (b *BroadcastOperator) FetchSockets() []AdapterSocket {
 
 // Makes the matching socket instances join the specified rooms.
 func (b *BroadcastOperator) SocketsJoin(room ...Room) {
-	opts := NewBroadcastOptions()
+	opts := adapter.NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
 	opts.Flags = b.flags
@@ -142,7 +123,7 @@ func (b *BroadcastOperator) SocketsJoin(room ...Room) {
 
 // Makes the matching socket instances leave the specified rooms.
 func (b *BroadcastOperator) SocketsLeave(room ...Room) {
-	opts := NewBroadcastOptions()
+	opts := adapter.NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
 	opts.Flags = b.flags
@@ -154,7 +135,7 @@ func (b *BroadcastOperator) SocketsLeave(room ...Room) {
 //
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
 func (b *BroadcastOperator) DisconnectSockets(close bool) {
-	opts := NewBroadcastOptions()
+	opts := adapter.NewBroadcastOptions()
 	opts.Rooms = b.rooms.Clone()
 	opts.Except = b.exceptRooms.Clone()
 	opts.Flags = b.flags

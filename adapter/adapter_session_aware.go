@@ -1,4 +1,4 @@
-package sio
+package adapter
 
 import (
 	"sync"
@@ -28,14 +28,16 @@ type sessionAwareAdapter struct {
 	mu       sync.Mutex
 }
 
-func newSessionAwareAdapter(namespace *Namespace, socketStore *NamespaceSocketStore, parserCreator parser.Creator) Adapter {
-	s := &sessionAwareAdapter{
-		inMemoryAdapter:       newInMemoryAdapter(namespace, socketStore, parserCreator).(*inMemoryAdapter),
-		maxDisconnectDuration: namespace.server.connectionStateRecovery.MaxDisconnectionDuration,
-		yeaster:               yeast.New(),
+func NewSessionAwareAdapterCreator(adapterCreator Creator, maxDisconnectionDuration time.Duration) Creator {
+	return func(socketStore SocketStore, parserCreator parser.Creator) Adapter {
+		s := &sessionAwareAdapter{
+			inMemoryAdapter:       adapterCreator(socketStore, parserCreator).(*inMemoryAdapter),
+			maxDisconnectDuration: maxDisconnectionDuration,
+			yeaster:               yeast.New(),
+		}
+		go s.cleaner()
+		return s
 	}
-	go s.cleaner()
-	return s
 }
 
 func (a *sessionAwareAdapter) cleaner() {

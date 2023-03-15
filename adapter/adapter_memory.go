@@ -1,4 +1,4 @@
-package sio
+package adapter
 
 import (
 	"fmt"
@@ -15,18 +15,18 @@ type inMemoryAdapter struct {
 	rooms map[Room]mapset.Set[SocketID]
 	sids  map[SocketID]mapset.Set[Room]
 
-	namespace *Namespace
-	sockets   *NamespaceSocketStore
-	parser    parser.Parser
+	sockets SocketStore
+	parser  parser.Parser
 }
 
-func newInMemoryAdapter(namespace *Namespace, socketStore *NamespaceSocketStore, parserCreator parser.Creator) Adapter {
-	return &inMemoryAdapter{
-		rooms:     make(map[Room]mapset.Set[SocketID]),
-		sids:      make(map[SocketID]mapset.Set[Room]),
-		namespace: namespace,
-		sockets:   socketStore,
-		parser:    parserCreator(),
+func NewInMemoryAdapterCreator() Creator {
+	return func(socketStore SocketStore, parserCreator parser.Creator) Adapter {
+		return &inMemoryAdapter{
+			rooms:   make(map[Room]mapset.Set[SocketID]),
+			sids:    make(map[SocketID]mapset.Set[Room]),
+			sockets: socketStore,
+			parser:  parserCreator(),
+		}
 	}
 }
 
@@ -103,7 +103,7 @@ func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []any, opts *
 		panic(fmt.Errorf("sio: %w", err))
 	}
 
-	a.apply(opts, func(socket ServerSocket) {
+	a.apply(opts, func(socket Socket) {
 		a.sockets.SendBuffers(socket.ID(), buffers)
 	})
 }
@@ -117,7 +117,7 @@ func (a *inMemoryAdapter) Sockets(rooms mapset.Set[Room]) (sids mapset.Set[Socke
 	opts := NewBroadcastOptions()
 	opts.Rooms = rooms
 
-	a.apply(opts, func(socket ServerSocket) {
+	a.apply(opts, func(socket Socket) {
 		sids.Add(socket.ID())
 	})
 	return
@@ -141,21 +141,21 @@ func (a *inMemoryAdapter) SocketRooms(sid SocketID) (rooms mapset.Set[Room], ok 
 	return
 }
 
-func (a *inMemoryAdapter) FetchSockets(opts *BroadcastOptions) (sockets []AdapterSocket) {
-	a.apply(opts, func(socket ServerSocket) {
+func (a *inMemoryAdapter) FetchSockets(opts *BroadcastOptions) (sockets []Socket) {
+	a.apply(opts, func(socket Socket) {
 		sockets = append(sockets, socket)
 	})
 	return
 }
 
 func (a *inMemoryAdapter) AddSockets(opts *BroadcastOptions, rooms ...Room) {
-	a.apply(opts, func(socket ServerSocket) {
+	a.apply(opts, func(socket Socket) {
 		socket.Join(rooms...)
 	})
 }
 
 func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...Room) {
-	a.apply(opts, func(socket ServerSocket) {
+	a.apply(opts, func(socket Socket) {
 		for _, room := range rooms {
 			socket.Leave(room)
 		}
@@ -163,12 +163,12 @@ func (a *inMemoryAdapter) DelSockets(opts *BroadcastOptions, rooms ...Room) {
 }
 
 func (a *inMemoryAdapter) DisconnectSockets(opts *BroadcastOptions, close bool) {
-	a.apply(opts, func(socket ServerSocket) {
+	a.apply(opts, func(socket Socket) {
 		socket.Disconnect(close)
 	})
 }
 
-func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket ServerSocket)) {
+func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Socket)) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

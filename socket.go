@@ -1,6 +1,15 @@
 package sio
 
-import "time"
+import (
+	"time"
+
+	"github.com/tomruk/socket.io-go/adapter"
+)
+
+type (
+	SocketID = adapter.SocketID
+	Room     = adapter.Room
+)
 
 type Socket interface {
 	// Socket ID. For client socket, this may return an empty string if the client hasn't connected yet.

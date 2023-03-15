@@ -7,13 +7,14 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/tomruk/socket.io-go/adapter"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
 type serverSocket struct {
 	id        SocketID
-	pid       PrivateSessionID
+	pid       adapter.PrivateSessionID
 	recovered bool
 
 	connected   bool
@@ -22,7 +23,7 @@ type serverSocket struct {
 	server  *Server
 	conn    *serverConn
 	nsp     *Namespace
-	adapter Adapter
+	adapter adapter.Adapter
 
 	parser parser.Parser
 
@@ -45,13 +46,13 @@ type serverSocket struct {
 }
 
 // previousSession can be nil
-func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *SessionToPersist) (*serverSocket, error) {
-	adapter := nsp.Adapter()
+func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *adapter.SessionToPersist) (*serverSocket, error) {
+	_adapter := nsp.Adapter()
 	s := &serverSocket{
 		server:  server,
 		conn:    c,
 		nsp:     nsp,
-		adapter: adapter,
+		adapter: _adapter,
 		parser:  parser,
 
 		eventHandlers:         newEventHandlerStore(),
@@ -62,7 +63,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 
 	s.join = func(room ...Room) {
 		s.debug.Log("Joining room(s)", room)
-		adapter.AddAll(s.ID(), room)
+		_adapter.AddAll(s.ID(), room)
 	}
 
 	if previousSession != nil {
@@ -90,7 +91,7 @@ func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parse
 			if err != nil {
 				return nil, err
 			}
-			s.pid = PrivateSessionID(id)
+			s.pid = adapter.PrivateSessionID(id)
 		}
 	}
 	s.debug = server.debug.WithContext("Server socket with ID: " + string(s.id))
@@ -446,7 +447,7 @@ func (s *serverSocket) onClose(reason Reason) {
 			if !ok {
 				rooms = mapset.NewThreadUnsafeSet[Room]()
 			}
-			s.adapter.PersistSession(&SessionToPersist{
+			s.adapter.PersistSession(&adapter.SessionToPersist{
 				SID:   s.ID(),
 				PID:   s.pid,
 				Rooms: rooms.ToSlice(),
@@ -508,7 +509,7 @@ func (s *serverSocket) emit(eventName string, timeout time.Duration, volatile, f
 	}
 
 	if s.server.connectionStateRecovery.Enabled {
-		opts := NewBroadcastOptions()
+		opts := adapter.NewBroadcastOptions()
 		opts.Rooms.Add(Room(s.id))
 		s.adapter.Broadcast(header, v, opts)
 	} else {

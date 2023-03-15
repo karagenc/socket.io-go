@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tomruk/socket.io-go/adapter"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
@@ -20,7 +21,7 @@ type Namespace struct {
 	middlewareFuncs   []NspMiddlewareFunc
 	middlewareFuncsMu sync.RWMutex
 
-	adapter Adapter
+	adapter adapter.Adapter
 	parser  parser.Parser
 
 	ackID uint64
@@ -30,7 +31,7 @@ type Namespace struct {
 	connectionHandlers *handlerStore[*NamespaceConnectionFunc]
 }
 
-func newNamespace(name string, server *Server, adapterCreator AdapterCreator, parserCreator parser.Creator) *Namespace {
+func newNamespace(name string, server *Server, adapterCreator adapter.Creator, parserCreator parser.Creator) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
 		name:               name,
@@ -41,13 +42,13 @@ func newNamespace(name string, server *Server, adapterCreator AdapterCreator, pa
 		eventHandlers:      newEventHandlerStore(),
 		connectionHandlers: newHandlerStore[*NamespaceConnectionFunc](),
 	}
-	nsp.adapter = adapterCreator(nsp, socketStore, parserCreator)
+	nsp.adapter = adapterCreator(socketStore, parserCreator)
 	return nsp
 }
 
 func (n *Namespace) Name() string { return n.name }
 
-func (n *Namespace) Adapter() Adapter { return n.adapter }
+func (n *Namespace) Adapter() adapter.Adapter { return n.adapter }
 
 // Emits an event to all connected clients in the given namespace.
 func (n *Namespace) Emit(eventName string, v ...any) {
@@ -136,7 +137,7 @@ func (n *Namespace) Sockets() []ServerSocket {
 }
 
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
-func (n *Namespace) FetchSockets() []AdapterSocket {
+func (n *Namespace) FetchSockets() []adapter.Socket {
 	return newBroadcastOperator(n.Name(), n.adapter, n.parser).FetchSockets()
 }
 
@@ -180,7 +181,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	}
 
 	if n.server.connectionStateRecovery.Enabled {
-		session := n.adapter.RestoreSession(PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
+		session := n.adapter.RestoreSession(adapter.PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
 		if session != nil {
 			socket, err = newServerSocket(n.server, c, n, c.parser, session)
 			if err != nil {
