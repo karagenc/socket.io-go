@@ -54,3 +54,23 @@ type ServerSocket interface {
 	// and the underlying Engine.IO connection will be kept open.
 	Disconnect(close bool)
 }
+
+type ServerEvents interface {
+	OnError(f ServerSocketErrorFunc)
+
+	OnceError(f ServerSocketErrorFunc)
+
+	OffError(f ...ServerSocketErrorFunc)
+
+	OnDisconnecting(f ServerSocketDisconnectingFunc)
+
+	OnceDisconnecting(f ServerSocketDisconnectingFunc)
+
+	OffDisconnecting(f ...ServerSocketDisconnectingFunc)
+
+	OnDisconnect(f ServerSocketDisconnectFunc)
+
+	OnceDisconnect(f ServerSocketDisconnectFunc)
+
+	OffDisconnect(f ...ServerSocketDisconnectFunc)
+}

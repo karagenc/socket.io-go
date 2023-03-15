@@ -38,6 +38,6 @@ type Socket interface {
 	OffEvent(eventName string, handler ...any)
 
 	// Remove all event handlers.
-	// Including special event handlers such as: connect, connect_error, disconnect, disconnecting.
+	// Including special event handlers (connect, disconnect, disconnecting, etc.).
 	OffAll()
 }
