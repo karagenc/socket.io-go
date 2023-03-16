@@ -64,7 +64,7 @@ func TestSockets(t *testing.T) {
 	assert.Equal(t, 0, sockets.Cardinality())
 }
 
-func TestRooms(t *testing.T) {
+func TestSocketRooms(t *testing.T) {
 	adapter := newTestInMemoryAdapter()
 	adapter.AddAll("s1", []Room{"r1", "r2"})
 	adapter.AddAll("s2", []Room{"r2", "r3"})
