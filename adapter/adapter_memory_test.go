@@ -3,6 +3,7 @@ package adapter
 import (
 	"testing"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/assert"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
@@ -42,8 +43,27 @@ func TestInMemoryAdapterAddDelete(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestSockets(t *testing.T) {
+	adapter := newTestInMemoryAdapter()
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(newTestSocketWithID("s1"))
+	store.Set(newTestSocketWithID("s2"))
+	store.Set(newTestSocketWithID("s3"))
+
+	adapter.AddAll("s1", []Room{"r1", "r2"})
+	adapter.AddAll("s2", []Room{"r2", "r3"})
+	adapter.AddAll("s3", []Room{"r3"})
+
+	sockets := adapter.Sockets(mapset.NewThreadUnsafeSet[Room]())
+	assert.Equal(t, 3, sockets.Cardinality())
+
+	sockets = adapter.Sockets(mapset.NewThreadUnsafeSet[Room]("r2"))
+	assert.Equal(t, 2, sockets.Cardinality())
+	sockets = adapter.Sockets(mapset.NewThreadUnsafeSet[Room]("r4"))
+	assert.Equal(t, 0, sockets.Cardinality())
+}
+
 func newTestInMemoryAdapter() *inMemoryAdapter {
-	// TODO: Add test socket store
 	creator := NewInMemoryAdapterCreator()
-	return creator(nil, jsonparser.NewCreator(0, stdjson.New())).(*inMemoryAdapter)
+	return creator(newTestSocketStore(), jsonparser.NewCreator(0, stdjson.New())).(*inMemoryAdapter)
 }

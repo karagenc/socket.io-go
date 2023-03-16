@@ -16,7 +16,9 @@ type inMemoryAdapter struct {
 	sids  map[SocketID]mapset.Set[Room]
 
 	sockets SocketStore
-	parser  parser.Parser
+
+	parser   parser.Parser
+	parserMu sync.Mutex
 }
 
 func NewInMemoryAdapterCreator() Creator {
@@ -98,9 +100,6 @@ func (a *inMemoryAdapter) DeleteAll(sid SocketID) {
 }
 
 func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []any, opts *BroadcastOptions) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	buffers, err := a.parser.Encode(header, &v)
 	if err != nil {
 		panic(fmt.Errorf("sio: %w", err))
@@ -114,11 +113,10 @@ func (a *inMemoryAdapter) Broadcast(header *parser.PacketHeader, v []any, opts *
 // The return value 'sids' must be a thread safe mapset.Set.
 func (a *inMemoryAdapter) Sockets(rooms mapset.Set[Room]) (sids mapset.Set[SocketID]) {
 	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	sids = mapset.NewSet[SocketID]()
 	opts := NewBroadcastOptions()
 	opts.Rooms = rooms
+	a.mu.Unlock()
 
 	a.apply(opts, func(socket Socket) {
 		sids.Add(socket.ID())
