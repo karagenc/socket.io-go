@@ -202,13 +202,15 @@ func (c *clientConn) Disconnect() {
 	c.state = clientConnStateDisconnected
 
 	c.manager.skipReconnectMu.Lock()
-	defer c.manager.skipReconnectMu.Unlock()
 	c.manager.skipReconnect = true
+	c.manager.skipReconnectMu.Unlock()
 
 	c.manager.onClose(ReasonForcedClose, nil)
 
 	c.eioMu.Lock()
 	defer c.eioMu.Unlock()
-	c.eio.Close()
+	if c.eio != nil {
+		c.eio.Close()
+	}
 	c.eioPacketQueue.Reset()
 }

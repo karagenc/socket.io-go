@@ -44,11 +44,3 @@ func (s *clientSocketStore) Remove(namespace string) {
 	defer s.mu.Unlock()
 	delete(s.sockets, namespace)
 }
-
-func (s *clientSocketStore) DisconnectAll() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, socket := range s.sockets {
-		socket.Disconnect()
-	}
-}
