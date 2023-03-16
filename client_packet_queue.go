@@ -21,8 +21,9 @@ type clientPacketQueue struct {
 	socket *clientSocket
 	debug  Debugger
 
-	queuedPackets []*queuedPacket
 	mu            sync.Mutex
+	seq           uint64
+	queuedPackets []*queuedPacket
 }
 
 func newClientPacketQueue(socket *clientSocket) *clientPacketQueue {
@@ -46,7 +47,7 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 	}
 
 	packet := &queuedPacket{
-		id:     pq.socket.nextAckID(),
+		id:     pq.nextSeq(),
 		header: header,
 		mu:     new(sync.Mutex),
 	}
@@ -133,4 +134,12 @@ func (pq *clientPacketQueue) drainQueue(force bool) {
 
 	pq.debug.Log("Sending packet with ID", packet.id, "try", tryCount)
 	pq.socket.emit("", 0, false, true, packet.v...)
+}
+
+func (pq *clientPacketQueue) nextSeq() uint64 {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+	seq := pq.seq
+	pq.seq++
+	return seq
 }
