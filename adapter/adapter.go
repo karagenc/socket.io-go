@@ -43,8 +43,8 @@ type Adapter interface {
 
 	// Restore the session and find the packets that were missed by the client.
 	//
-	// Returns nil if there is no session or session has expired.
-	RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist
+	// ok returns false when there is no session or the session has expired.
+	RestoreSession(pid PrivateSessionID, offset string) (session *SessionToPersist, ok bool)
 }
 
 // A private ID, sent by the server at the beginning of

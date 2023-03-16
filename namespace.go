@@ -181,8 +181,8 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	}
 
 	if n.server.connectionStateRecovery.Enabled {
-		session := n.adapter.RestoreSession(adapter.PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
-		if session != nil {
+		session, ok := n.adapter.RestoreSession(adapter.PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
+		if ok {
 			socket, err = newServerSocket(n.server, c, n, c.parser, session)
 			if err != nil {
 				return nil, err

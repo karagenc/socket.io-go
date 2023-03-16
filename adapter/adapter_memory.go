@@ -235,6 +235,6 @@ func (a *inMemoryAdapter) ServerSideEmit(header *parser.PacketHeader, v []any) {
 
 func (a *inMemoryAdapter) PersistSession(session *SessionToPersist) {}
 
-func (a *inMemoryAdapter) RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist {
-	return nil
+func (a *inMemoryAdapter) RestoreSession(pid PrivateSessionID, offset string) (*SessionToPersist, bool) {
+	return nil, false
 }

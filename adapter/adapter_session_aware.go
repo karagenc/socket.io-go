@@ -72,17 +72,17 @@ func (a *sessionAwareAdapter) PersistSession(session *SessionToPersist) {
 	a.sessions[session.PID] = sessionWithTS
 }
 
-func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string) *SessionToPersist {
+func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string) (session *SessionToPersist, ok bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	session, ok := a.sessions[pid]
+	sessionWithTS, ok := a.sessions[pid]
 	if !ok {
-		return nil
+		return nil, false
 	}
 
-	if session.hasExpired(a.maxDisconnectDuration) {
+	if sessionWithTS.hasExpired(a.maxDisconnectDuration) {
 		delete(a.sessions, pid)
-		return nil
+		return nil, false
 	}
 
 	index := -1
@@ -93,21 +93,21 @@ func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string
 		}
 	}
 	if index == -1 {
-		return nil
+		return nil, false
 	}
 
 	var missedPackets []*PersistedPacket
 	for i := index + 1; i < len(a.packets); i++ {
 		packet := a.packets[i]
-		if shouldIncludePacket(session.SessionToPersist.Rooms, packet.Opts) {
+		if shouldIncludePacket(sessionWithTS.SessionToPersist.Rooms, packet.Opts) {
 			missedPackets = append(missedPackets, packet)
 		}
 	}
 
 	// Return a copy to prevent race conditions.
-	sp := session.SessionToPersist
-	sp.MissedPackets = missedPackets
-	return &sp
+	session = &sessionWithTS.SessionToPersist
+	session.MissedPackets = missedPackets
+	return session, true
 }
 
 func shouldIncludePacket(sessionRooms []Room, opts *BroadcastOptions) bool {
