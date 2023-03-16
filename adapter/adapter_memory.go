@@ -38,11 +38,14 @@ func (a *inMemoryAdapter) AddAll(sid SocketID, rooms []Room) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	_, ok := a.sids[sid]
+	if !ok {
+		a.sids[sid] = mapset.NewThreadUnsafeSet[Room]()
+	}
+
 	for _, room := range rooms {
-		s, ok := a.sids[sid]
-		if ok {
-			s.Add(room)
-		}
+		s := a.sids[sid]
+		s.Add(room)
 
 		r, ok := a.rooms[room]
 		if !ok {
