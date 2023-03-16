@@ -156,6 +156,32 @@ func TestRestoreMissedPackets(t *testing.T) {
 	assert.Equal(t, "no except", session.MissedPackets[2].Data[0])
 }
 
+func TestUnknownSession(t *testing.T) {
+	adapter := newTestSessionAwareAdapter()
+	adapter.AddAll("s1", []Room{"r1"})
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(newTestSocketWithID("s1"))
+
+	_, ok := adapter.RestoreSession("p1", "snfskjfnekwjnfw")
+	assert.False(t, ok)
+}
+
+func TestUnknownOffset(t *testing.T) {
+	adapter := newTestSessionAwareAdapter()
+	adapter.AddAll("s1", []Room{"r1"})
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(newTestSocketWithID("s1"))
+
+	adapter.PersistSession(&SessionToPersist{
+		SID:   "s1",
+		PID:   "p1",
+		Rooms: []Room{"r1", "r2"},
+	})
+
+	_, ok := adapter.RestoreSession("p1", "snfskjfnekwjnfw")
+	assert.False(t, ok)
+}
+
 func newTestSessionAwareAdapter() *sessionAwareAdapter {
 	const maxDisconnectionDuration = 5 * time.Second
 	creator := NewSessionAwareAdapterCreator(maxDisconnectionDuration)
