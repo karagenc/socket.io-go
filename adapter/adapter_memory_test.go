@@ -154,6 +154,61 @@ func TestFetchSockets(t *testing.T) {
 	assert.Equal(t, 3, len(sockets))
 }
 
+func TestAddAndDelSockets(t *testing.T) {
+	adapter := newTestInMemoryAdapter()
+	adapter.AddAll("s1", []Room{"s1"})
+	adapter.AddAll("s2", []Room{"s2"})
+
+	socket1 := newTestSocketWithID("s1")
+	socket2 := newTestSocketWithID("s2")
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(socket1)
+	store.Set(socket2)
+
+	opts := NewBroadcastOptions()
+	opts.Rooms.Add("s1")
+	adapter.AddSockets(opts, "r1", "r2", "r3")
+
+	assert.Equal(t, 4, len(socket1.rooms))
+	assert.Equal(t, Room("s1"), socket1.rooms[0])
+	assert.Equal(t, Room("r1"), socket1.rooms[1])
+	assert.Equal(t, Room("r2"), socket1.rooms[2])
+	assert.Equal(t, Room("r3"), socket1.rooms[3])
+
+	assert.Equal(t, 1, len(socket2.rooms))
+	assert.Equal(t, Room("s2"), socket2.rooms[0])
+
+	opts = NewBroadcastOptions()
+	opts.Rooms.Add("s1")
+	opts.Rooms.Add("s2")
+	adapter.DelSockets(opts, "r3", "r2", "s2")
+
+	assert.Equal(t, 2, len(socket1.rooms))
+	assert.Equal(t, Room("s1"), socket1.rooms[0])
+	assert.Equal(t, Room("r1"), socket1.rooms[1])
+
+	assert.Equal(t, 0, len(socket2.rooms))
+}
+
+func TestDisconnectSockets(t *testing.T) {
+	adapter := newTestInMemoryAdapter()
+	adapter.AddAll("s1", []Room{"s1"})
+	adapter.AddAll("s2", []Room{"s2"})
+
+	socket1 := newTestSocketWithID("s1")
+	socket2 := newTestSocketWithID("s2")
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(socket1)
+	store.Set(socket2)
+
+	opts := NewBroadcastOptions()
+	opts.Rooms.Add("s1")
+	adapter.DisconnectSockets(opts, true)
+
+	assert.False(t, socket1.connected)
+	assert.True(t, socket2.connected)
+}
+
 func TestReturnMatchingSocketsWithinRoom(t *testing.T) {
 	adapter := newTestInMemoryAdapter()
 	adapter.AddAll("s1", []Room{"r1", "r2"})
