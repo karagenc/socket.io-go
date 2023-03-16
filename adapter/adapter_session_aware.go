@@ -14,7 +14,7 @@ type sessionWithTimestamp struct {
 }
 
 func (s *sessionWithTimestamp) hasExpired(maxDisconnectDuration time.Duration) bool {
-	return time.Now().Before(s.DisconnectedAt.Add(maxDisconnectDuration))
+	return time.Now().After(s.DisconnectedAt.Add(maxDisconnectDuration))
 }
 
 type sessionAwareAdapter struct {
@@ -28,11 +28,13 @@ type sessionAwareAdapter struct {
 	mu       sync.Mutex
 }
 
-func NewSessionAwareAdapterCreator(adapterCreator Creator, maxDisconnectionDuration time.Duration) Creator {
+func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creator {
+	creator := NewInMemoryAdapterCreator()
 	return func(socketStore SocketStore, parserCreator parser.Creator) Adapter {
 		s := &sessionAwareAdapter{
-			inMemoryAdapter:       adapterCreator(socketStore, parserCreator).(*inMemoryAdapter),
+			inMemoryAdapter:       creator(socketStore, parserCreator).(*inMemoryAdapter),
 			maxDisconnectDuration: maxDisconnectionDuration,
+			sessions:              make(map[PrivateSessionID]*sessionWithTimestamp),
 			yeaster:               yeast.New(),
 		}
 		go s.cleaner()
