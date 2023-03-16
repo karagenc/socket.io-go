@@ -5,17 +5,21 @@ import (
 )
 
 type testSocketStore struct {
-	sockets map[SocketID]Socket
-	mu      sync.Mutex
+	sockets     map[SocketID]Socket
+	mu          sync.Mutex
+	sendBuffers func(sid SocketID, buffers [][]byte) (ok bool)
 }
 
 func newTestSocketStore() *testSocketStore {
 	return &testSocketStore{
-		sockets: make(map[SocketID]Socket),
+		sockets:     make(map[SocketID]Socket),
+		sendBuffers: func(sid SocketID, buffers [][]byte) (ok bool) { return },
 	}
 }
 
-func (s *testSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) { return }
+func (s *testSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
+	return s.sendBuffers(sid, buffers)
+}
 
 func (s *testSocketStore) Get(sid SocketID) (so Socket, ok bool) {
 	s.mu.Lock()
