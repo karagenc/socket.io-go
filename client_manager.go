@@ -162,13 +162,15 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 }
 
 func (m *Manager) Open() {
+	go m.open()
+}
+
+func (m *Manager) open() {
 	m.debug.Log("Opening")
-	go func() {
-		err := m.conn.Connect(false)
-		if err != nil {
-			m.conn.MaybeReconnectOnOpen()
-		}
-	}()
+	err := m.conn.Connect(false)
+	if err != nil {
+		m.conn.MaybeReconnectOnOpen()
+	}
 }
 
 func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSocket {

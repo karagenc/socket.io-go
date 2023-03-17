@@ -194,7 +194,7 @@ func (s *clientSocket) Connect() {
 		isReconnecting := s.manager.conn.state == clientConnStateReconnecting
 		s.manager.conn.stateMu.RUnlock()
 		if !isReconnecting {
-			s.manager.Open()
+			s.manager.open()
 		}
 
 		s.manager.conn.stateMu.RLock()
@@ -286,7 +286,9 @@ func (s *clientSocket) sendConnectPacket(authData any) {
 		s.onError(wrapInternalError(err))
 		return
 	}
-	s.manager.conn.Packet(packet)
+	// This function is called from onOpen, and onOpen can be called via `Manager.openHandlers`.
+	// We need to use a goroutine because eioMu is locked inside `Manager.Connect`, which indirectly calls this method.
+	go s.manager.conn.Packet(packet)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
