@@ -129,7 +129,7 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		io.debug = newNoopDebugger()
 	}
 
-	io.debug = io.debug.WithContext("Manager with URL: " + concatURL(url))
+	io.debug = io.debug.WithContext("Manager with URL: " + truncateURL(url))
 
 	if config.ReconnectionDelay != nil {
 		io.reconnectionDelay = *config.ReconnectionDelay
@@ -285,9 +285,9 @@ func (m *Manager) Close() {
 	m.conn.Disconnect()
 }
 
-func concatURL(url string) string {
-	if len(url) > 20 {
-		return url[:20] + "..."
+func truncateURL(url string) string {
+	if len(url) > 30 {
+		return url[:30] + "..."
 	}
 	return url
 }
