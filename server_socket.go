@@ -243,7 +243,7 @@ func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 		// We already know that the last value of the handler is an ack function
 		// and it doesn't have a return value. So dismantle it, and create it with reflect.MakeFunc.
 		f := values[len(values)-1]
-		in, variadic := dismantleAckFunc(reflect.TypeOf(f))
+		in, variadic := dismantleAckFunc(f.Type())
 		rt := reflect.FuncOf(in, nil, variadic)
 
 		f = reflect.MakeFunc(rt, func(args []reflect.Value) (results []reflect.Value) {
