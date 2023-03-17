@@ -3,6 +3,7 @@ package eio
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 type Debugger interface {
@@ -26,6 +27,7 @@ func (d noopDebugger) WithDynamicContext(context string, _ func() string) Debugg
 type printDebugger struct {
 	context        string
 	dynamicContext func() string
+	mu             sync.Mutex
 }
 
 func NewPrintDebugger() Debugger {
@@ -33,7 +35,9 @@ func NewPrintDebugger() Debugger {
 }
 
 func (d *printDebugger) Log(main string, _v ...any) {
-	fmt.Print(main)
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if len(d.context) != 0 {
 		fmt.Print(d.context)
 		fmt.Print(": ")
@@ -43,6 +47,7 @@ func (d *printDebugger) Log(main string, _v ...any) {
 		fmt.Print(context)
 		fmt.Print(": ")
 	}
+	fmt.Print(main)
 
 	for _, v := range _v {
 		fmt.Print(": ")
