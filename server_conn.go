@@ -55,7 +55,7 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 		OnClose: c.onClose,
 	}
 
-	go pollAndSend(c.eio, c.eioPacketQueue)
+	go c.eioPacketQueue.pollAndSend(c.eio)
 
 	go func() {
 		time.Sleep(server.connectTimeout)

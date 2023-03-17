@@ -26,12 +26,16 @@ func newPacketQueue() *packetQueue {
 func (pq *packetQueue) Poll() (packets []*eioparser.Packet, ok bool) {
 	packets = pq.Get()
 	if len(packets) != 0 {
-		return packets, true
+		ok = true
+		return
 	}
 
 	select {
 	case <-pq.ready:
 		packets = pq.Get()
+		if len(packets) != 0 {
+			ok = true
+		}
 	case <-pq.reset:
 		return nil, false
 	}
@@ -89,11 +93,11 @@ func (pq *packetQueue) WaitForDrain(timeout time.Duration) (timedout bool) {
 	return
 }
 
-func pollAndSend(socket eio.Socket, pq *packetQueue) {
+func (pq *packetQueue) pollAndSend(socket eio.Socket) {
 	for {
 		packets, ok := pq.Poll()
 		if !ok {
-			break
+			continue
 		}
 		socket.Send(packets...)
 	}

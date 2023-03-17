@@ -89,7 +89,7 @@ func (c *clientConn) Connect(again bool) (err error) {
 	defer c.manager.parserMu.Unlock()
 	c.manager.parser.Reset()
 
-	go pollAndSend(c.eio, c.eioPacketQueue)
+	go c.eioPacketQueue.pollAndSend(c.eio)
 
 	for _, handler := range c.manager.openHandlers.GetAll() {
 		(*handler)()
