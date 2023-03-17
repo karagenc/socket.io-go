@@ -11,7 +11,10 @@ import (
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
-const DefaultConnectTimeout = time.Second * 45
+const (
+	DefaultConnectTimeout           = time.Second * 45
+	DefaultMaxDisconnectionDuration = time.Minute * 2
+)
 
 type BroadcastOperator = adapter.BroadcastOperator
 
@@ -92,6 +95,12 @@ func NewServer(config *ServerConfig) *Server {
 		acceptAnyNamespace:      config.AcceptAnyNamespace,
 		connectionStateRecovery: config.ServerConnectionStateRecovery,
 		newNamespaceHandlers:    newHandlerStore[*NamespaceNewNamespaceFunc](),
+	}
+
+	if server.connectionStateRecovery.Enabled {
+		if server.connectionStateRecovery.MaxDisconnectionDuration == 0 {
+			server.connectionStateRecovery.MaxDisconnectionDuration = DefaultMaxDisconnectionDuration
+		}
 	}
 
 	if config.Debugger != nil {
