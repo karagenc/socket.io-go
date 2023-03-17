@@ -12,7 +12,7 @@ import (
 )
 
 func TestPersistAndRestoreSession(t *testing.T) {
-	adapter := newTestSessionAwareAdapter()
+	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
 	store := adapter.sockets.(*testSocketStore)
 	store.Set(newTestSocketWithID("s1"))
@@ -54,7 +54,7 @@ func TestPersistAndRestoreSession(t *testing.T) {
 }
 
 func TestRestoreMissedPackets(t *testing.T) {
-	adapter := newTestSessionAwareAdapter()
+	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
 	store := adapter.sockets.(*testSocketStore)
 	store.Set(newTestSocketWithID("s1"))
@@ -157,7 +157,7 @@ func TestRestoreMissedPackets(t *testing.T) {
 }
 
 func TestUnknownSession(t *testing.T) {
-	adapter := newTestSessionAwareAdapter()
+	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
 	store := adapter.sockets.(*testSocketStore)
 	store.Set(newTestSocketWithID("s1"))
@@ -167,7 +167,7 @@ func TestUnknownSession(t *testing.T) {
 }
 
 func TestUnknownOffset(t *testing.T) {
-	adapter := newTestSessionAwareAdapter()
+	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
 	store := adapter.sockets.(*testSocketStore)
 	store.Set(newTestSocketWithID("s1"))
@@ -182,8 +182,97 @@ func TestUnknownOffset(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func newTestSessionAwareAdapter() *sessionAwareAdapter {
-	const maxDisconnectionDuration = 5 * time.Second
-	creator := NewSessionAwareAdapterCreator(maxDisconnectionDuration)
-	return creator(newTestSocketStore(), jsonparser.NewCreator(0, stdjson.New())).(*sessionAwareAdapter)
+func TestCleaner(t *testing.T) {
+	adapter := newTestSessionAwareAdapter(500*time.Millisecond, 50*time.Millisecond)
+	adapter.AddAll("s1", []Room{"r1"})
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(newTestSocketWithID("s1"))
+
+	adapter.PersistSession(&SessionToPersist{
+		SID:   "s1",
+		PID:   "p1",
+		Rooms: []Room{"r1", "r2"},
+	})
+
+	header := parser.PacketHeader{
+		Namespace: "/",
+		Type:      parser.PacketTypeEvent,
+	}
+	opts := NewBroadcastOptions()
+	offset := ""
+	v := []any{"123"}
+
+	store.sendBuffers = func(sid SocketID, buffers [][]byte) (ok bool) {
+		assert.Equal(t, SocketID("s1"), sid)
+
+		// Yank the offset with a regex.
+		re := regexp.MustCompile(`.*".*".*"(.*)"`)
+		_offset := re.FindStringSubmatch(string(buffers[0]))
+		//fmt.Printf("'%s'\n", _offset[1])
+		offset = _offset[1]
+		return true
+	}
+
+	adapter.Broadcast(&header, v, opts)
+
+	session, ok := adapter.RestoreSession("p1", offset)
+	if !assert.True(t, ok) {
+		return
+	}
+	assert.Equal(t, SocketID("s1"), session.SID)
+	assert.Equal(t, PrivateSessionID("p1"), session.PID)
+	assert.Equal(t, 0, len(session.MissedPackets))
+
+	// Ensure at least 500 millisecond passes
+	time.Sleep(600 * time.Millisecond)
+	_, ok = adapter.RestoreSession("p1", offset)
+	if !assert.False(t, ok) {
+		return
+	}
+}
+
+func TestSessionExpiration(t *testing.T) {
+	adapter := newTestSessionAwareAdapter(1*time.Millisecond, 0)
+	adapter.AddAll("s1", []Room{"r1"})
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(newTestSocketWithID("s1"))
+
+	adapter.PersistSession(&SessionToPersist{
+		SID:   "s1",
+		PID:   "p1",
+		Rooms: []Room{"r1", "r2"},
+	})
+
+	header := parser.PacketHeader{
+		Namespace: "/",
+		Type:      parser.PacketTypeEvent,
+	}
+	opts := NewBroadcastOptions()
+	offset := ""
+	v := []any{"123"}
+
+	store.sendBuffers = func(sid SocketID, buffers [][]byte) (ok bool) {
+		assert.Equal(t, SocketID("s1"), sid)
+
+		// Yank the offset with a regex.
+		re := regexp.MustCompile(`.*".*".*"(.*)"`)
+		_offset := re.FindStringSubmatch(string(buffers[0]))
+		//fmt.Printf("'%s'\n", _offset[1])
+		offset = _offset[1]
+		return true
+	}
+
+	adapter.Broadcast(&header, v, opts)
+
+	// Ensure at least 1 millisecond passes
+	time.Sleep(time.Millisecond * 2)
+	_, ok := adapter.RestoreSession("p1", offset)
+	assert.False(t, ok)
+}
+
+func newTestSessionAwareAdapter(maxDisconnectionDuration, cleanerDuration time.Duration) *sessionAwareAdapter {
+	socketStore := newTestSocketStore()
+	parserCreator := jsonparser.NewCreator(0, stdjson.New())
+	inMemoryAdapter := NewInMemoryAdapterCreator()(socketStore, parserCreator).(*inMemoryAdapter)
+	return newSessionAwareAdapter(inMemoryAdapter, maxDisconnectionDuration, cleanerDuration, socketStore, parserCreator)
 }

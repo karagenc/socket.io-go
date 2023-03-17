@@ -22,6 +22,7 @@ type sessionAwareAdapter struct {
 
 	maxDisconnectDuration time.Duration
 	yeaster               *yeast.Yeaster
+	cleanerDuration       time.Duration
 
 	sessions map[PrivateSessionID]*sessionWithTimestamp
 	packets  []*PersistedPacket
@@ -29,22 +30,31 @@ type sessionAwareAdapter struct {
 }
 
 func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creator {
+	const cleanerDuration = time.Minute * 1
 	creator := NewInMemoryAdapterCreator()
 	return func(socketStore SocketStore, parserCreator parser.Creator) Adapter {
-		s := &sessionAwareAdapter{
-			inMemoryAdapter:       creator(socketStore, parserCreator).(*inMemoryAdapter),
-			maxDisconnectDuration: maxDisconnectionDuration,
-			sessions:              make(map[PrivateSessionID]*sessionWithTimestamp),
-			yeaster:               yeast.New(),
-		}
-		go s.cleaner()
-		return s
+		inMemoryAdapter := creator(socketStore, parserCreator).(*inMemoryAdapter)
+		return newSessionAwareAdapter(inMemoryAdapter, maxDisconnectionDuration, cleanerDuration, socketStore, parserCreator)
 	}
+}
+
+func newSessionAwareAdapter(inMemoryAdapter *inMemoryAdapter, maxDisconnectionDuration, cleanerDuration time.Duration, socketStore SocketStore, parserCreator parser.Creator) *sessionAwareAdapter {
+	a := &sessionAwareAdapter{
+		inMemoryAdapter:       inMemoryAdapter,
+		maxDisconnectDuration: maxDisconnectionDuration,
+		sessions:              make(map[PrivateSessionID]*sessionWithTimestamp),
+		yeaster:               yeast.New(),
+		cleanerDuration:       cleanerDuration,
+	}
+	if cleanerDuration != 0 {
+		go a.cleaner()
+	}
+	return a
 }
 
 func (a *sessionAwareAdapter) cleaner() {
 	for {
-		time.Sleep(60 * time.Second)
+		time.Sleep(a.cleanerDuration)
 
 		a.mu.Lock()
 		for sessionID, session := range a.sessions {
