@@ -270,6 +270,48 @@ func TestSessionExpiration(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestSessionCopy(t *testing.T) {
+	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
+	adapter.AddAll("s1", []Room{"r1"})
+	store := adapter.sockets.(*testSocketStore)
+	store.Set(newTestSocketWithID("s1"))
+
+	originalSession := &SessionToPersist{
+		SID:   "s1",
+		PID:   "p1",
+		Rooms: []Room{"r1", "r2"},
+	}
+	adapter.PersistSession(originalSession)
+
+	header := parser.PacketHeader{
+		Namespace: "/",
+		Type:      parser.PacketTypeEvent,
+	}
+	opts := NewBroadcastOptions()
+	offset := ""
+	v := []any{"123"}
+
+	store.sendBuffers = func(sid SocketID, buffers [][]byte) (ok bool) {
+		assert.Equal(t, SocketID("s1"), sid)
+
+		// Yank the offset with a regex.
+		re := regexp.MustCompile(`.*".*".*"(.*)"`)
+		_offset := re.FindStringSubmatch(string(buffers[0]))
+		//fmt.Printf("'%s'\n", _offset[1])
+		offset = _offset[1]
+		return true
+	}
+
+	adapter.Broadcast(&header, v, opts)
+
+	persistedSession, ok := adapter.RestoreSession("p1", offset)
+	if !assert.True(t, ok) {
+		return
+	}
+	// Session should be copied.
+	assert.True(t, originalSession != persistedSession)
+}
+
 func newTestSessionAwareAdapter(maxDisconnectionDuration, cleanerDuration time.Duration) *sessionAwareAdapter {
 	socketStore := newTestSocketStore()
 	parserCreator := jsonparser.NewCreator(0, stdjson.New())
