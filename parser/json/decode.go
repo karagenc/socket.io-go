@@ -18,7 +18,6 @@ var (
 	errInvalidPlaceholderNumValue = fmt.Errorf("parser/json: invalid placeholder num value")
 	errInvalidNumberOfBuffers     = fmt.Errorf("parser/json: invalid number of buffers")
 	errInvalidNumberOfValues      = fmt.Errorf("parser/json: invalid number of values")
-	errNilReconstructor           = fmt.Errorf("parser/json: reconstructor was nil")
 )
 
 var stringType = reflect.TypeOf("")
@@ -44,22 +43,18 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 
 		ok := header.IsBinary() == false || header.Attachments == 0
 		if ok {
-			// In case finish panics, p.r is guaranteed to be nil.
-			defer func() {
-				p.r = nil
-			}()
-			finish(header, eventName, p.decode)
+			r := p.r
+			p.r = nil
+			finish(header, eventName, r.decode)
 		}
 		return nil
 	}
 
 	ok := p.r.AddBuffer(data)
 	if ok {
-		// In case finish panics, p.r is guaranteed to be nil.
-		defer func() {
-			p.r = nil
-		}()
-		finish(p.r.header, p.r.eventName, p.decode)
+		r := p.r
+		p.r = nil
+		finish(p.r.header, p.r.eventName, r.decode)
 	}
 	return nil
 }
@@ -197,17 +192,13 @@ func (p *Parser) parseHeader(data []byte) (header *parser.PacketHeader, buf []by
 	return
 }
 
-func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err error) {
-	if p.r == nil {
-		return nil, errNilReconstructor
-	}
-
+func (r *reconstructor) decode(types ...reflect.Type) (values []reflect.Value, err error) {
 	// We have no binary data.
-	if len(p.r.buffers) == 1 {
-		payload := p.r.buffers[0]
+	if len(r.buffers) == 1 {
+		payload := r.buffers[0]
 		values = convertTypesToValues(types...)
 
-		if p.r.header.IsEvent() {
+		if r.header.IsEvent() {
 			eventName := reflect.New(stringType)
 			values = append([]reflect.Value{eventName}, values...)
 
@@ -229,7 +220,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				payload = []byte("[]")
 			}
 
-			err = p.json.Unmarshal(payload, &ifaces)
+			err = r.json.Unmarshal(payload, &ifaces)
 			if err != nil {
 				return nil, err
 			}
@@ -238,7 +229,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 			return
 		}
 
-		if len(values) == 1 && !p.r.header.IsAck() {
+		if len(values) == 1 && !r.header.IsAck() {
 			rv := values[0]
 			if !rv.CanInterface() {
 				return nil, &ValueError{err: errNonInterfaceableValue, Value: rv}
@@ -248,7 +239,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				payload = []byte("{}")
 			}
 
-			err = p.json.Unmarshal(payload, rv.Interface())
+			err = r.json.Unmarshal(payload, rv.Interface())
 			if err != nil {
 				return nil, err
 			}
@@ -267,7 +258,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 				payload = []byte("[]")
 			}
 
-			err = p.json.Unmarshal(payload, &ifaces)
+			err = r.json.Unmarshal(payload, &ifaces)
 			if err != nil {
 				return nil, err
 			}
@@ -276,7 +267,7 @@ func (p *Parser) decode(types ...reflect.Type) (values []reflect.Value, err erro
 		return
 	}
 
-	return p.r.Reconstruct(types...)
+	return r.Reconstruct(types...)
 }
 
 func convertTypesToValues(types ...reflect.Type) (values []reflect.Value) {
