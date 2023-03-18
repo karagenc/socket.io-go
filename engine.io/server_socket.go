@@ -46,7 +46,7 @@ func newServerSocket(id string, upgrades []string, transport ServerTransport, pi
 
 		closeChan: make(chan struct{}),
 		onClose:   onClose,
-		debug:     debug.WithContext("eio: server socket with ID: " + id),
+		debug:     debug.WithContext("[eio] server socket with ID: " + id),
 	}
 
 	s.setCallbacks(nil)
