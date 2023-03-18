@@ -286,8 +286,8 @@ func (m *Manager) Close() {
 }
 
 func truncateURL(url string) string {
-	if len(url) > 30 {
-		return url[:30] + "..."
+	if len(url) > 50 {
+		return url[:50] + "..."
 	}
 	return url
 }
