@@ -27,30 +27,47 @@ func (d noopDebugger) WithDynamicContext(context string, _ func() string) Debugg
 type printDebugger struct {
 	context        string
 	dynamicContext func() string
-	mu             sync.Mutex
 }
 
 func NewPrintDebugger() Debugger {
 	return new(printDebugger)
 }
 
+var printMu sync.Mutex
+
+// Log each field, adding colon if there's a subsequent field.
 func (d *printDebugger) Log(main string, _v ...any) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	printMu.Lock()
+	defer printMu.Unlock()
+
+	dynamicContext := ""
+	if d.dynamicContext != nil {
+		dynamicContext = d.dynamicContext()
+	}
 
 	if len(d.context) != 0 {
 		fmt.Print(d.context)
-		fmt.Print(": ")
+		if len(dynamicContext) != 0 || len(main) != 0 || len(_v) != 0 {
+			fmt.Print(": ")
+		}
 	}
-	if d.dynamicContext != nil {
-		context := d.dynamicContext()
-		fmt.Print(context)
-		fmt.Print(": ")
+	if len(dynamicContext) != 0 {
+		fmt.Print(dynamicContext)
+		if len(main) != 0 || len(_v) != 0 {
+			fmt.Print(": ")
+		}
 	}
-	fmt.Print(main)
+	if len(main) != 0 {
+		fmt.Print(main)
+		if len(_v) != 0 {
+			fmt.Print(": ")
+		}
+	}
 
-	for _, v := range _v {
-		fmt.Print(": ")
+	for i, v := range _v {
+		if i != 0 {
+			fmt.Print(": ")
+		}
 		fmt.Print(v)
 	}
 
