@@ -262,7 +262,7 @@ func (m *Manager) destroy(socket *clientSocket) {
 }
 
 func (m *Manager) onClose(reason Reason, err error) {
-	m.debug.Log("Closed. Reason:", reason)
+	m.debug.Log("Closed. Reason", reason)
 
 	m.parserMu.Lock()
 	defer m.parserMu.Unlock()
