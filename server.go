@@ -108,7 +108,7 @@ func NewServer(config *ServerConfig) *Server {
 	} else {
 		server.debug = newNoopDebugger()
 	}
-	server.debug = server.debug.WithContext("Server")
+	server.debug = server.debug.WithContext("[sio] Server")
 
 	server.eio = eio.NewServer(server.onEIOSocket, &config.EIO)
 

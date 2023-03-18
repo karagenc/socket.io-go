@@ -36,7 +36,7 @@ func newNamespace(name string, server *Server, adapterCreator adapter.Creator, p
 	nsp := &Namespace{
 		name:               name,
 		server:             server,
-		debug:              server.debug.WithContext("Namespace with name: " + name),
+		debug:              server.debug.WithContext("[sio] Namespace with name: " + name),
 		sockets:            socketStore,
 		parser:             parserCreator(),
 		eventHandlers:      newEventHandlerStore(),

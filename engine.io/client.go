@@ -96,8 +96,12 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 	} else {
 		socket.debug = NewNoopDebugger()
 	}
-	socket.debug = socket.debug.WithDynamicContext("[eio] client socket with ID", func() string {
-		return socket.ID()
+	socket.debug = socket.debug.WithDynamicContext("[eio] clientSocket with ID", func() string {
+		id := socket.ID()
+		if id == "" {
+			return "<none>"
+		}
+		return id
 	})
 
 	var err error

@@ -129,7 +129,7 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		io.debug = newNoopDebugger()
 	}
 
-	io.debug = io.debug.WithContext("Manager with URL: " + truncateURL(url))
+	io.debug = io.debug.WithContext("[sio] Manager with URL: " + truncateURL(url))
 
 	if config.ReconnectionDelay != nil {
 		io.reconnectionDelay = *config.ReconnectionDelay

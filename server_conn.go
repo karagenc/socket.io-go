@@ -44,7 +44,7 @@ func newServerConn(server *Server, _eio eio.ServerSocket, creator parser.Creator
 		nsps:    newNamespaceStore(),
 
 		parser: creator(),
-		debug:  server.debug.WithContext("serverConn with engine.io ID: " + _eio.ID()),
+		debug:  server.debug.WithContext("[sio] serverConn with engine.io ID: " + _eio.ID()),
 	}
 
 	callbacks := &eio.Callbacks{

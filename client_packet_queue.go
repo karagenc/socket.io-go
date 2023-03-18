@@ -27,7 +27,7 @@ type clientPacketQueue struct {
 }
 
 func newClientPacketQueue(socket *clientSocket) *clientPacketQueue {
-	debug := socket.debug.WithDynamicContext("clientPacketQueue with socket ID", func() string {
+	debug := socket.debug.WithDynamicContext("[sio] clientPacketQueue with socket ID", func() string {
 		return string(socket.ID())
 	})
 	return &clientPacketQueue{
