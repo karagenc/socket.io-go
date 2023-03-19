@@ -165,7 +165,6 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		default:
 			t.Close()
 			s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
-			return
 		}
 	}
 
@@ -186,7 +185,6 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		select {
 		case <-done:
 			s.debug.Log("maybeUpgrade", "channel `done` is triggered")
-			return
 		case <-time.After(s.upgradeTimeout):
 			t.Close()
 			s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
