@@ -2,7 +2,6 @@ package polling
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,9 +21,7 @@ type ClientTransport struct {
 	url             *url.URL
 	requestHeader   *transport.RequestHeader
 
-	httpContext context.Context
-	httpCancel  context.CancelFunc
-	httpClient  *http.Client
+	httpClient *http.Client
 
 	initialPacket *parser.Packet
 
@@ -34,16 +31,12 @@ type ClientTransport struct {
 }
 
 func NewClientTransport(callbacks *transport.Callbacks, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, httpClient *http.Client) *ClientTransport {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	return &ClientTransport{
 		protocolVersion: protocolVersion,
 		url:             &url,
 		requestHeader:   requestHeader,
 
-		httpContext: ctx,
-		httpCancel:  cancel,
-		httpClient:  httpClient,
+		httpClient: httpClient,
 
 		callbacks: callbacks,
 	}
@@ -114,7 +107,7 @@ func (t *ClientTransport) Run() {
 }
 
 func (t *ClientTransport) newRequest(method string, body io.Reader, contentLength int) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(t.httpContext, method, t.url.String(), body)
+	req, err := http.NewRequest(method, t.url.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -218,15 +211,13 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 }
 
 func (t *ClientTransport) Discard() {
-	t.once.Do(func() {
-		t.httpCancel()
-	})
+	// Do nothing.
+	t.once.Do(func() {})
 }
 
 func (t *ClientTransport) close(err error) {
 	t.once.Do(func() {
 		defer t.callbacks.OnClose(t.Name(), err)
-		defer t.httpCancel()
 
 		p, err := parser.NewPacket(parser.PacketTypeClose, false, nil)
 		if err == nil {
