@@ -62,6 +62,10 @@ func NewPacket(packetType PacketType, isBinary bool, data []byte) (*Packet, erro
 	}, nil
 }
 
+func (p *Packet) String() string {
+	return fmt.Sprintf("type: %d | is binary: %t | data as string: `%s`", p.Type, p.IsBinary, string(p.Data))
+}
+
 func (p *Packet) EncodedLen(supportsBinary bool) int {
 	if p.IsBinary {
 		if supportsBinary {
