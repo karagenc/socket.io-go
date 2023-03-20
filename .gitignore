@@ -10,3 +10,5 @@ __debug_bin
 /_examples/server/full/full
 /_examples/client/basic/basic
 /_examples/client/full/full
+
+*.env
