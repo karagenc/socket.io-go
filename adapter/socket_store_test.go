@@ -4,31 +4,31 @@ import (
 	"sync"
 )
 
-type testSocketStore struct {
+type TestSocketStore struct {
 	sockets     map[SocketID]Socket
 	mu          sync.Mutex
 	sendBuffers func(sid SocketID, buffers [][]byte) (ok bool)
 }
 
-func newTestSocketStore() *testSocketStore {
-	return &testSocketStore{
+func NewTestSocketStore() *TestSocketStore {
+	return &TestSocketStore{
 		sockets:     make(map[SocketID]Socket),
 		sendBuffers: func(sid SocketID, buffers [][]byte) (ok bool) { return },
 	}
 }
 
-func (s *testSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
+func (s *TestSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
 	return s.sendBuffers(sid, buffers)
 }
 
-func (s *testSocketStore) Get(sid SocketID) (so Socket, ok bool) {
+func (s *TestSocketStore) Get(sid SocketID) (so Socket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	so, ok = s.sockets[sid]
 	return so, ok
 }
 
-func (s *testSocketStore) GetAll() []Socket {
+func (s *TestSocketStore) GetAll() []Socket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -41,13 +41,13 @@ func (s *testSocketStore) GetAll() []Socket {
 	return sockets
 }
 
-func (s *testSocketStore) Set(so Socket) {
+func (s *TestSocketStore) Set(so Socket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sockets[so.ID()] = so
 }
 
-func (s *testSocketStore) Remove(sid SocketID) {
+func (s *TestSocketStore) Remove(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)
