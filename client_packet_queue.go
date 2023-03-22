@@ -133,7 +133,7 @@ func (pq *clientPacketQueue) drainQueue(force bool) {
 	packet.mu.Unlock()
 
 	pq.debug.Log("Sending packet with ID", packet.id, "try", tryCount)
-	pq.socket.emit("", 0, false, true, packet.v...)
+	go pq.socket.emit("", 0, false, true, packet.v...)
 }
 
 func (pq *clientPacketQueue) nextSeq() uint64 {
