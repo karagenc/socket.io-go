@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/cristalhq/jsn"
 	"github.com/tomruk/socket.io-go/parser"
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
@@ -169,7 +169,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 		{
 			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
-				gin.H{ // This is map[string]any
+				jsn.O{ // This is map[string]any
 					"lorem": "ipsum",
 					"dolor": 12345,
 					"amet":  Binary("This is binary"),
@@ -180,7 +180,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 		{
 			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
 			V: createArgs(
-				gin.H{ // This is map[string]any
+				jsn.O{ // This is map[string]any
 					"lorem": "ipsum",
 					"dolor": 12345,
 					"amet":  Binary("One"),
@@ -200,7 +200,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 					Name: "Abdurrezak",
 					Age:  25,
 					Bin:  Binary("One"),
-					V: gin.H{ // This is map[string]any
+					V: jsn.O{ // This is map[string]any
 						"lorem": "ipsum",
 						"dolor": 12345,
 						"amet":  Binary("Two"),
