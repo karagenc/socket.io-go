@@ -40,7 +40,12 @@ type BroadcastOperator struct {
 	isEventReserved func(string) bool
 }
 
-func NewBroadcastOperator(nsp string, adapter Adapter, parser parser.Parser, isEventReserved func(string) bool) *BroadcastOperator {
+func NewBroadcastOperator(
+	nsp string,
+	adapter Adapter,
+	parser parser.Parser,
+	isEventReserved func(string) bool,
+) *BroadcastOperator {
 	return &BroadcastOperator{
 		nsp:         nsp,
 		adapter:     adapter,

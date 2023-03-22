@@ -46,7 +46,13 @@ type serverSocket struct {
 }
 
 // previousSession can be nil
-func newServerSocket(server *Server, c *serverConn, nsp *Namespace, parser parser.Parser, previousSession *adapter.SessionToPersist) (*serverSocket, error) {
+func newServerSocket(
+	server *Server,
+	c *serverConn,
+	nsp *Namespace,
+	parser parser.Parser,
+	previousSession *adapter.SessionToPersist,
+) (*serverSocket, error) {
 	_adapter := nsp.Adapter()
 	s := &serverSocket{
 		server:  server,
@@ -207,7 +213,12 @@ func (s *serverSocket) onDisconnect() {
 	s.onClose("client namespace disconnect")
 }
 
-func (s *serverSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck ackSendFunc) (hasAckFunc bool) {
+func (s *serverSocket) onEvent(
+	handler *eventHandler,
+	header *parser.PacketHeader,
+	decode parser.Decode,
+	sendAck ackSendFunc,
+) (hasAckFunc bool) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -483,7 +494,11 @@ func (s *serverSocket) Emit(eventName string, v ...any) {
 	s.emit(eventName, 0, false, false, v...)
 }
 
-func (s *serverSocket) emit(eventName string, timeout time.Duration, volatile, fromQueue bool, _v ...any) {
+func (s *serverSocket) emit(
+	eventName string,
+	timeout time.Duration,
+	volatile, fromQueue bool,
+	_v ...any) {
 	header := &parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.nsp.Name(),

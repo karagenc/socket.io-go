@@ -7,13 +7,19 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type Creator func(socketStore SocketStore, parserCreator parser.Creator) Adapter
+type (
+	Creator func(socketStore SocketStore, parserCreator parser.Creator) Adapter
 
-// A public ID, sent by the server at the beginning of
-// the Socket.IO session and which can be used for private messaging.
-type SocketID string
+	// A public ID, sent by the server at the beginning of
+	// the Socket.IO session and which can be used for private messaging.
+	SocketID string
 
-type Room string
+	Room string
+
+	// A private ID, sent by the server at the beginning of
+	// the Socket.IO session and used for connection state recovery upon reconnection.
+	PrivateSessionID string
+)
 
 type Adapter interface {
 	ServerCount() int
@@ -46,10 +52,6 @@ type Adapter interface {
 	// ok returns false when there is no session or the session has expired.
 	RestoreSession(pid PrivateSessionID, offset string) (session *SessionToPersist, ok bool)
 }
-
-// A private ID, sent by the server at the beginning of
-// the Socket.IO session and used for connection state recovery upon reconnection.
-type PrivateSessionID string
 
 type SessionToPersist struct {
 	SID SocketID

@@ -8,7 +8,15 @@ import (
 	"nhooyr.io/websocket"
 )
 
-func newTestServerAndClient(t *testing.T, serverConfig *ServerConfig, managerConfig *ManagerConfig) (server *Server, httpServer *httptest.Server, manager *Manager) {
+func newTestServerAndClient(
+	t *testing.T,
+	serverConfig *ServerConfig,
+	managerConfig *ManagerConfig,
+) (
+	server *Server,
+	httpServer *httptest.Server,
+	manager *Manager,
+) {
 	enablePrintDebugger := os.Getenv("SIO_DEBUGGER_PRINT") == "yes"
 
 	if serverConfig == nil {

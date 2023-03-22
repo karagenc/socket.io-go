@@ -31,7 +31,12 @@ type Namespace struct {
 	connectionHandlers *handlerStore[*NamespaceConnectionFunc]
 }
 
-func newNamespace(name string, server *Server, adapterCreator adapter.Creator, parserCreator parser.Creator) *Namespace {
+func newNamespace(
+	name string,
+	server *Server,
+	adapterCreator adapter.Creator,
+	parserCreator parser.Creator,
+) *Namespace {
 	socketStore := newNamespaceSocketStore()
 	nsp := &Namespace{
 		name:               name,
@@ -181,7 +186,10 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 	}
 
 	if n.server.connectionStateRecovery.Enabled {
-		session, ok := n.adapter.RestoreSession(adapter.PrivateSessionID(authRecoveryFields.SessionID), authRecoveryFields.Offset)
+		session, ok := n.adapter.RestoreSession(
+			adapter.PrivateSessionID(authRecoveryFields.SessionID),
+			authRecoveryFields.Offset,
+		)
 		if ok {
 			socket, err = newServerSocket(n.server, c, n, c.parser, session)
 			if err != nil {

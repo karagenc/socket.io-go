@@ -72,7 +72,12 @@ type clientSocket struct {
 	debug Debugger
 }
 
-func newClientSocket(config *ClientSocketConfig, manager *Manager, namespace string, parser parser.Parser) *clientSocket {
+func newClientSocket(
+	config *ClientSocketConfig,
+	manager *Manager,
+	namespace string,
+	parser parser.Parser,
+) *clientSocket {
 	s := &clientSocket{
 		config:    config,
 		namespace: namespace,
@@ -527,7 +532,12 @@ type clientEvent struct {
 
 type ackSendFunc = func(id uint64, values []reflect.Value)
 
-func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeader, decode parser.Decode, sendAck ackSendFunc) (hasAckFunc bool) {
+func (s *clientSocket) onEvent(
+	handler *eventHandler,
+	header *parser.PacketHeader,
+	decode parser.Decode,
+	sendAck ackSendFunc,
+) (hasAckFunc bool) {
 	values, err := decode(handler.inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
@@ -561,7 +571,12 @@ func (s *clientSocket) onEvent(handler *eventHandler, header *parser.PacketHeade
 	return
 }
 
-func (s *clientSocket) callEvent(handler *eventHandler, header *parser.PacketHeader, values []reflect.Value, sendAck ackSendFunc) (hasAckFunc bool) {
+func (s *clientSocket) callEvent(
+	handler *eventHandler,
+	header *parser.PacketHeader,
+	values []reflect.Value,
+	sendAck ackSendFunc,
+) (hasAckFunc bool) {
 	// Set the lastOffset before calling the handler.
 	// An error can occur when the handler gets called,
 	// and we can miss setting the lastOffset.
@@ -667,7 +682,12 @@ func (s *clientSocket) Emit(eventName string, v ...any) {
 	s.emit(eventName, 0, false, false, v...)
 }
 
-func (s *clientSocket) emit(eventName string, timeout time.Duration, volatile, fromQueue bool, v ...any) {
+func (s *clientSocket) emit(
+	eventName string,
+	timeout time.Duration,
+	volatile, fromQueue bool,
+	v ...any,
+) {
 	header := parser.PacketHeader{
 		Type:      parser.PacketTypeEvent,
 		Namespace: s.namespace,

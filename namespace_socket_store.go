@@ -60,6 +60,9 @@ func (s *NamespaceSocketStore) Remove(sid SocketID) {
 	delete(s.sockets, sid)
 }
 
+// This is to ensure we have a socket store with a
+// right function signature that matches with adapter's
+// `SocketStore`.
 type adapterSocketStore struct {
 	store *NamespaceSocketStore
 }

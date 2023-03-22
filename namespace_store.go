@@ -39,7 +39,12 @@ func (s *namespaceStore) Get(name string) (nsp *Namespace, ok bool) {
 	return
 }
 
-func (s *namespaceStore) GetOrCreate(name string, server *Server, adapterCreator adapter.Creator, parserCreator parser.Creator) (namespace *Namespace, created bool) {
+func (s *namespaceStore) GetOrCreate(
+	name string,
+	server *Server,
+	adapterCreator adapter.Creator,
+	parserCreator parser.Creator,
+) (namespace *Namespace, created bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var ok bool

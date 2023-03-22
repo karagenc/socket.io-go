@@ -316,5 +316,12 @@ func NewTestSessionAwareAdapter(maxDisconnectionDuration, cleanerDuration time.D
 	socketStore := NewTestSocketStore()
 	parserCreator := jsonparser.NewCreator(0, stdjson.New())
 	inMemoryAdapter := NewInMemoryAdapterCreator()(socketStore, parserCreator).(*inMemoryAdapter)
-	return NewSessionAwareAdapter(inMemoryAdapter, maxDisconnectionDuration, cleanerDuration, socketStore, parserCreator)
+
+	return NewSessionAwareAdapter(
+		inMemoryAdapter,
+		maxDisconnectionDuration,
+		cleanerDuration,
+		socketStore,
+		parserCreator,
+	)
 }

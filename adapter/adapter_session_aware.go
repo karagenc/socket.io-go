@@ -34,11 +34,22 @@ func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creat
 	creator := NewInMemoryAdapterCreator()
 	return func(socketStore SocketStore, parserCreator parser.Creator) Adapter {
 		inMemoryAdapter := creator(socketStore, parserCreator).(*inMemoryAdapter)
-		return NewSessionAwareAdapter(inMemoryAdapter, maxDisconnectionDuration, cleanerDuration, socketStore, parserCreator)
+		return NewSessionAwareAdapter(
+			inMemoryAdapter,
+			maxDisconnectionDuration,
+			cleanerDuration,
+			socketStore,
+			parserCreator,
+		)
 	}
 }
 
-func NewSessionAwareAdapter(inMemoryAdapter *inMemoryAdapter, maxDisconnectionDuration, cleanerDuration time.Duration, socketStore SocketStore, parserCreator parser.Creator) *sessionAwareAdapter {
+func NewSessionAwareAdapter(inMemoryAdapter *inMemoryAdapter,
+	maxDisconnectionDuration,
+	cleanerDuration time.Duration,
+	socketStore SocketStore,
+	parserCreator parser.Creator,
+) *sessionAwareAdapter {
 	a := &sessionAwareAdapter{
 		inMemoryAdapter:       inMemoryAdapter,
 		maxDisconnectDuration: maxDisconnectionDuration,
@@ -84,7 +95,10 @@ func (a *sessionAwareAdapter) PersistSession(session *SessionToPersist) {
 	a.sessions[session.PID] = sessionWithTS
 }
 
-func (a *sessionAwareAdapter) RestoreSession(pid PrivateSessionID, offset string) (session *SessionToPersist, ok bool) {
+func (a *sessionAwareAdapter) RestoreSession(
+	pid PrivateSessionID,
+	offset string,
+) (session *SessionToPersist, ok bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	sessionWithTS, ok := a.sessions[pid]
