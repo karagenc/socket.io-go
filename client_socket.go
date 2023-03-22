@@ -195,16 +195,14 @@ func (s *clientSocket) Connect() {
 
 	go func() {
 		s.manager.conn.stateMu.RLock()
-		isReconnecting := s.manager.conn.state == clientConnStateReconnecting
+		connState := s.manager.conn.state
 		s.manager.conn.stateMu.RUnlock()
-		if !isReconnecting {
+		if connState != clientConnStateReconnecting {
 			s.manager.open()
 		}
 
-		s.manager.conn.stateMu.RLock()
-		connected := s.manager.conn.state == clientConnStateConnected
-		s.manager.conn.stateMu.RUnlock()
-		if connected {
+		// If already connected, send a CONNECT packet.
+		if connState == clientConnStateConnected {
 			s.onOpen()
 		}
 	}()
