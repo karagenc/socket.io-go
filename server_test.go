@@ -1,12 +1,51 @@
 package sio
 
 import (
+	"fmt"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	eio "github.com/tomruk/socket.io-go/engine.io"
 	"nhooyr.io/websocket"
 )
+
+func TestServerAck(t *testing.T) {
+	server, _, manager := newTestServerAndClient(t, nil, &ManagerConfig{
+		EIO: eio.ClientConfig{
+			// TODO: Fix transport problem
+			Transports: []string{"polling"},
+		},
+	})
+	socket := manager.Socket("/", nil)
+	socket.Connect()
+	replied := sync.WaitGroup{}
+	replied.Add(5)
+
+	manager.OnError(func(err error) {
+		t.Fatal(err)
+	})
+
+	socket.OnEvent("ack", func(message string, ack func(reply string)) {
+		fmt.Printf("event %s\n", message)
+		assert.Equal(t, "hello", message)
+		ack("hi")
+	})
+
+	server.OnConnection(func(socket ServerSocket) {
+		for i := 0; i < 5; i++ {
+			fmt.Println("Emitting to client")
+			socket.Emit("ack", "hello", func(reply string) {
+				defer replied.Done()
+				fmt.Println("ack")
+				assert.Equal(t, "hi", reply)
+			})
+		}
+	})
+	replied.Wait()
+}
 
 func newTestServerAndClient(
 	t *testing.T,

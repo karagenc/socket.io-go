@@ -60,6 +60,7 @@ func newServerSocket(
 		nsp:     nsp,
 		adapter: _adapter,
 		parser:  parser,
+		acks:    make(map[uint64]*ackHandler),
 
 		eventHandlers:         newEventHandlerStore(),
 		errorHandlers:         newHandlerStore[*ServerSocketErrorFunc](),

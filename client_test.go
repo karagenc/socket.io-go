@@ -12,6 +12,7 @@ import (
 func TestClientAck(t *testing.T) {
 	server, _, manager := newTestServerAndClient(t, nil, &ManagerConfig{
 		EIO: eio.ClientConfig{
+			// TODO: Fix transport problem
 			Transports: []string{"polling"},
 		},
 	})
@@ -28,9 +29,9 @@ func TestClientAck(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			fmt.Println("Emitting to server")
 			socket.Emit("ack", "hello", func(reply string) {
+				defer replied.Done()
 				fmt.Println("ack")
 				assert.Equal(t, "hi", reply)
-				replied.Done()
 			})
 		}
 	})
