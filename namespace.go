@@ -57,7 +57,7 @@ func (n *Namespace) Adapter() adapter.Adapter { return n.adapter }
 
 // Emits an event to all connected clients in the given namespace.
 func (n *Namespace) Emit(eventName string, v ...any) {
-	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Emit(eventName, v...)
+	n.newBroadcastOperator().Emit(eventName, v...)
 }
 
 // Sends a message to the other Socket.IO servers of the cluster.
@@ -109,30 +109,30 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 //
 // To emit to multiple rooms, you can call `To` several times.
 func (n *Namespace) To(room ...Room) *BroadcastOperator {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).To(room...)
+	return n.newBroadcastOperator().To(room...)
 }
 
 // Alias of To(...)
 func (n *Namespace) In(room ...Room) *BroadcastOperator {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).In(room...)
+	return n.newBroadcastOperator().In(room...)
 }
 
 // Sets a modifier for a subsequent event emission that the event
 // will only be broadcast to clients that have not joined the given rooms.
 func (n *Namespace) Except(room ...Room) *BroadcastOperator {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Except(room...)
+	return n.newBroadcastOperator().Except(room...)
 }
 
 // Compression flag is unused at the moment, thus setting this will have no effect on compression.
 func (n *Namespace) Compress(compress bool) *BroadcastOperator {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Compress(compress)
+	return n.newBroadcastOperator().Compress(compress)
 }
 
 // Sets a modifier for a subsequent event emission that the event data will only be broadcast to the current node (when scaling to multiple nodes).
 //
 // See: https://socket.io/docs/v4/using-multiple-nodes
 func (n *Namespace) Local() *BroadcastOperator {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).Local()
+	return n.newBroadcastOperator().Local()
 }
 
 // Gets the sockets of the namespace.
@@ -143,24 +143,28 @@ func (n *Namespace) Sockets() []ServerSocket {
 
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
 func (n *Namespace) FetchSockets() []adapter.Socket {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).FetchSockets()
+	return n.newBroadcastOperator().FetchSockets()
 }
 
 // Makes the matching socket instances join the specified rooms.
 func (n *Namespace) SocketsJoin(room ...Room) {
-	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).SocketsJoin(room...)
+	n.newBroadcastOperator().SocketsJoin(room...)
 }
 
 // Makes the matching socket instances leave the specified rooms.
 func (n *Namespace) SocketsLeave(room ...Room) {
-	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).SocketsLeave(room...)
+	n.newBroadcastOperator().SocketsLeave(room...)
 }
 
 // Makes the matching socket instances disconnect from the namespace.
 //
 // If value of close is true, closes the underlying connection. Otherwise, it just disconnects the namespace.
 func (n *Namespace) DisconnectSockets(close bool) {
-	adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer).DisconnectSockets(close)
+	n.newBroadcastOperator().DisconnectSockets(close)
+}
+
+func (n *Namespace) newBroadcastOperator() *BroadcastOperator {
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer)
 }
 
 type authRecoveryFields struct {
