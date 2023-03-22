@@ -60,9 +60,22 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 
 		switch name {
 		case "websocket":
-			s.transport = _websocket.NewClientTransport(c, "", ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
+			s.transport = _websocket.NewClientTransport(
+				c,
+				"",
+				ProtocolVersion,
+				*s.url,
+				s.requestHeader,
+				s.wsDialOptions,
+			)
 		case "polling":
-			s.transport = polling.NewClientTransport(c, ProtocolVersion, *s.url, s.requestHeader, s.httpClient)
+			s.transport = polling.NewClientTransport(
+				c,
+				ProtocolVersion,
+				*s.url,
+				s.requestHeader,
+				s.httpClient,
+			)
 		default:
 			err = fmt.Errorf("eio: invalid transport name: %s", name)
 			return

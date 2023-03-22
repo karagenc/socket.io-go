@@ -30,7 +30,13 @@ type ClientTransport struct {
 	once sync.Once
 }
 
-func NewClientTransport(callbacks *transport.Callbacks, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, httpClient *http.Client) *ClientTransport {
+func NewClientTransport(
+	callbacks *transport.Callbacks,
+	protocolVersion int,
+	url url.URL,
+	requestHeader *transport.RequestHeader,
+	httpClient *http.Client,
+) *ClientTransport {
 	return &ClientTransport{
 		protocolVersion: protocolVersion,
 		url:             &url,

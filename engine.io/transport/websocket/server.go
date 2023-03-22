@@ -25,7 +25,12 @@ type ServerTransport struct {
 	once sync.Once
 }
 
-func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, supportsBinary bool, acceptOptions *websocket.AcceptOptions) *ServerTransport {
+func NewServerTransport(
+	callbacks *transport.Callbacks,
+	maxBufferSize int,
+	supportsBinary bool,
+	acceptOptions *websocket.AcceptOptions,
+) *ServerTransport {
 	return &ServerTransport{
 		readLimit:      int64(maxBufferSize),
 		supportsBinary: supportsBinary,

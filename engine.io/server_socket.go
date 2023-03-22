@@ -28,7 +28,15 @@ type serverSocket struct {
 	debug Debugger
 }
 
-func newServerSocket(id string, upgrades []string, transport ServerTransport, pingInterval time.Duration, pingTimeout time.Duration, debug Debugger, onClose func(sid string)) *serverSocket {
+func newServerSocket(
+	id string,
+	upgrades []string,
+	transport ServerTransport,
+	pingInterval time.Duration,
+	pingTimeout time.Duration,
+	debug Debugger,
+	onClose func(sid string),
+) *serverSocket {
 	// The function below might be nil for testing purposes. See: sstore_test.go
 	if onClose == nil {
 		onClose = func(sid string) {}

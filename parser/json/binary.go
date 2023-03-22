@@ -123,7 +123,12 @@ func (p *Parser) deconstructValue(rv reflect.Value, numBuffers *int) (buffers []
 	return
 }
 
-func (p *Parser) deconstructBinaryValue(rv reflect.Value, original reflect.Value, numBuffers *int, customSetter func([]byte) error) (buf []byte, err error) {
+func (p *Parser) deconstructBinaryValue(
+	rv reflect.Value,
+	original reflect.Value,
+	numBuffers *int,
+	customSetter func([]byte) error,
+) (buf []byte, err error) {
 	if rv.CanInterface() {
 		sb, ok := rv.Interface().(socketIOBinary)
 		if ok && sb.SocketIOBinary() == true {
@@ -355,7 +360,11 @@ func (r *reconstructor) reconstructValue(rv reflect.Value) error {
 	return nil
 }
 
-func (r *reconstructor) reconstructBinaryValue(rv reflect.Value, original reflect.Value, customSetter func([]byte) error) error {
+func (r *reconstructor) reconstructBinaryValue(
+	rv reflect.Value,
+	original reflect.Value,
+	customSetter func([]byte) error,
+) error {
 	if rv.CanInterface() {
 		sb, ok := rv.Interface().(socketIOBinary)
 		if ok && sb.SocketIOBinary() == true {

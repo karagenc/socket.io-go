@@ -27,7 +27,14 @@ type ClientTransport struct {
 	once sync.Once
 }
 
-func NewClientTransport(callbacks *transport.Callbacks, sid string, protocolVersion int, url url.URL, requestHeader *transport.RequestHeader, dialOptions *websocket.DialOptions) *ClientTransport {
+func NewClientTransport(
+	callbacks *transport.Callbacks,
+	sid string,
+	protocolVersion int,
+	url url.URL,
+	requestHeader *transport.RequestHeader,
+	dialOptions *websocket.DialOptions,
+) *ClientTransport {
 	return &ClientTransport{
 		sid: sid,
 
