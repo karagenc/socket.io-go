@@ -104,18 +104,16 @@ func (t *ClientTransport) Run() {
 	}
 
 	for {
-		packets, err := t.poll()
-		if err != nil {
-			t.close(err)
-			break
-		}
-		t.callbacks.OnPacket(packets...)
-
 		select {
 		case <-t.pollExit:
-			break
+			return
 		default:
-			continue
+			packets, err := t.poll()
+			if err != nil {
+				t.close(err)
+				return
+			}
+			t.callbacks.OnPacket(packets...)
 		}
 	}
 }
@@ -225,13 +223,14 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 
 func (t *ClientTransport) Discard() {
 	t.once.Do(func() {
-		t.pollExit <- nil
+		close(t.pollExit)
 	})
 }
 
 func (t *ClientTransport) close(err error) {
 	t.once.Do(func() {
 		defer t.callbacks.OnClose(t.Name(), err)
+		close(t.pollExit)
 
 		p, err := parser.NewPacket(parser.PacketTypeClose, false, nil)
 		if err == nil {
