@@ -65,8 +65,8 @@ func (c *clientConn) connect(again bool) (err error) {
 
 	callbacks := eio.Callbacks{
 		OnPacket: c.manager.onEIOPacket,
-		OnError:  c.manager.onEIOError,
-		OnClose:  c.manager.onEIOClose,
+		OnError:  c.manager.onError,
+		OnClose:  c.manager.onClose,
 	}
 
 	_eio, err := eio.Dial(c.manager.url, &callbacks, &c.manager.eioConfig)

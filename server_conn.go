@@ -53,10 +53,8 @@ func newServerConn(
 
 	callbacks := &eio.Callbacks{
 		OnPacket: c.onEIOPacket,
-		OnError: func(err error) {
-			c.debug.Log("eio error", err)
-		},
-		OnClose: c.onClose,
+		OnError:  c.onError,
+		OnClose:  c.onClose,
 	}
 
 	go c.eioPacketQueue.pollAndSend(c.eio)
@@ -80,7 +78,7 @@ func (c *serverConn) onEIOPacket(packets ...*eioparser.Packet) {
 
 	for _, packet := range packets {
 		if packet.Type == eioparser.PacketTypeMessage {
-			err := c.parser.Add(packet.Data, c.onFinishEIOPacket)
+			err := c.parser.Add(packet.Data, c.onParserFinish)
 			if err != nil {
 				c.onFatalError(wrapInternalError(err))
 				return
@@ -89,7 +87,7 @@ func (c *serverConn) onEIOPacket(packets ...*eioparser.Packet) {
 	}
 }
 
-func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
+func (c *serverConn) onParserFinish(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	if header.Namespace == "" {
 		header.Namespace = "/"
 	}
@@ -202,6 +200,13 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 
 func (c *serverConn) packet(packets ...*eioparser.Packet) {
 	c.eioPacketQueue.add(packets...)
+}
+
+func (c *serverConn) onError(err error) {
+	sockets := c.sockets.getAll()
+	for _, socket := range sockets {
+		socket.onError(err)
+	}
 }
 
 func (c *serverConn) onFatalError(err error) {

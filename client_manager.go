@@ -201,7 +201,7 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 	for _, packet := range packets {
 		switch packet.Type {
 		case eioparser.PacketTypeMessage:
-			err := m.parser.Add(packet.Data, m.onFinishEIOPacket)
+			err := m.parser.Add(packet.Data, m.onParserFinish)
 			if err != nil {
 				m.onClose(ReasonParseError, err)
 				return
@@ -221,7 +221,7 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 	}
 }
 
-func (m *Manager) onFinishEIOPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
+func (m *Manager) onParserFinish(header *parser.PacketHeader, eventName string, decode parser.Decode) {
 	if header.Namespace == "" {
 		header.Namespace = "/"
 	}
@@ -231,14 +231,6 @@ func (m *Manager) onFinishEIOPacket(header *parser.PacketHeader, eventName strin
 		return
 	}
 	socket.onPacket(header, eventName, decode)
-}
-
-func (m *Manager) onEIOError(err error) {
-	m.onError(err)
-}
-
-func (m *Manager) onEIOClose(reason eio.Reason, err error) {
-	m.onClose(reason, err)
 }
 
 func (m *Manager) onError(err error) {
