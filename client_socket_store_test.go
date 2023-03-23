@@ -25,8 +25,11 @@ func TestClientSocketStore(t *testing.T) {
 	if !assert.Equal(t, 2, len(sockets)) {
 		return
 	}
-	assert.True(t, main == sockets[0])
-	assert.True(t, foo == sockets[1])
+	assert.Contains(t, sockets, main)
+	assert.Contains(t, sockets, foo)
+	// We used to this, but maps are not ordered, so we do the above test.
+	// assert.True(t, main == sockets[0])
+	// assert.True(t, foo == sockets[1])
 
 	store.Remove("/foo")
 	sockets = store.GetAll()
