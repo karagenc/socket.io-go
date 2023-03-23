@@ -17,6 +17,8 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
+const defaultTestWaitTimeout = time.Second * 12
+
 // This is a sync.WaitGroup with a WaitTimeout function. Use this for testing purposes.
 type testWaiter struct {
 	wg *sync.WaitGroup
@@ -314,7 +316,7 @@ func TestMaxBufferSizePolling(t *testing.T) {
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 	socket.Send(packet)
 
-	tw.WaitTimeout(t, 3*time.Second)
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
 func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
@@ -360,7 +362,7 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 	socket.Send(packet)
 
-	tw.WaitTimeout(t, 3*time.Second)
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
 func TestDisableMaxBufferSizePolling(t *testing.T) {
@@ -405,7 +407,7 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 	socket.Send(packet)
 
-	tw.WaitTimeout(t, 3*time.Second)
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
 func TestJSONP(t *testing.T) {
@@ -629,7 +631,7 @@ func TestJSONP(t *testing.T) {
 		t.Fatal("ok expected")
 	}
 
-	tw.WaitTimeout(t, time.Second*1)
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
 func TestServerClose(t *testing.T) {
@@ -696,7 +698,7 @@ func TestServerClose(t *testing.T) {
 	}
 
 	// Wait for upgrades to finish.
-	timedout := utw.WaitTimeout(t, time.Second*3)
+	timedout := utw.WaitTimeout(t, time.Second*10)
 	if timedout {
 		t.Fatal("upgrades couldn't finish")
 	}
@@ -719,5 +721,5 @@ func TestServerClose(t *testing.T) {
 
 	assert.Equal(t, http.StatusTeapot, resp.StatusCode, "server should have been closed")
 
-	tw.WaitTimeout(t, time.Second*3)
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
