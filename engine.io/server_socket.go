@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type serverSocket struct {
@@ -32,6 +33,7 @@ func newServerSocket(
 	id string,
 	upgrades []string,
 	transport ServerTransport,
+	callbacks *transport.Callbacks,
 	pingInterval time.Duration,
 	pingTimeout time.Duration,
 	debug Debugger,
@@ -58,7 +60,7 @@ func newServerSocket(
 	}
 
 	s.setCallbacks(nil)
-	transport.Callbacks().Set(s.onPacket, s.onTransportClose)
+	callbacks.Set(s.onPacket, s.onTransportClose)
 	go s.pingPong(pingInterval, pingTimeout)
 
 	return s
@@ -108,10 +110,10 @@ func (s *serverSocket) PingTimeout() time.Duration {
 	return s.pingTimeout
 }
 
-func (s *serverSocket) upgradeTo(t ServerTransport) {
+func (s *serverSocket) upgradeTo(t ServerTransport, c *transport.Callbacks) {
 	s.debug.Log("UpgradeTo", t.Name())
 
-	t.Callbacks().Set(s.onPacket, s.onTransportClose)
+	c.Set(s.onPacket, s.onTransportClose)
 
 	s.transportMu.Lock()
 	defer s.transportMu.Unlock()

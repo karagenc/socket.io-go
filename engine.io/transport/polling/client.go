@@ -50,13 +50,7 @@ func NewClientTransport(
 	}
 }
 
-func (t *ClientTransport) Name() string {
-	return "polling"
-}
-
-func (t *ClientTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
+func (t *ClientTransport) Name() string { return "polling" }
 
 func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) {
 	packets, err := t.poll()

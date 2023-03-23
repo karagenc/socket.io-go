@@ -48,13 +48,7 @@ func NewClientTransport(
 	}
 }
 
-func (t *ClientTransport) Name() string {
-	return "websocket"
-}
-
-func (t *ClientTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
+func (t *ClientTransport) Name() string { return "websocket" }
 
 func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) {
 	q := t.url.Query()

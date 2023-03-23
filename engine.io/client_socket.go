@@ -174,7 +174,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 			}
 
 			once.Do(func() { close(done) })
-			s.upgradeTo(t)
+			s.upgradeTo(t, c)
 		default:
 			t.Close()
 			s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: packet type: %d", packet.Type)))
@@ -215,14 +215,14 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	t.Send(ping)
 }
 
-func (s *clientSocket) upgradeTo(t ClientTransport) {
+func (s *clientSocket) upgradeTo(t ClientTransport, c *transport.Callbacks) {
 	p, err := parser.NewPacket(parser.PacketTypeUpgrade, false, nil)
 	if err != nil {
 		s.onError(fmt.Errorf("upgrade failed: %w", err))
 		return
 	}
 
-	t.Callbacks().Set(s.onPacket, s.onTransportClose)
+	c.Set(s.onPacket, s.onTransportClose)
 
 	s.transportMu.Lock()
 	defer s.transportMu.Unlock()

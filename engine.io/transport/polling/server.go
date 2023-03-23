@@ -37,13 +37,7 @@ func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, pollT
 	}
 }
 
-func (t *ServerTransport) Name() string {
-	return "polling"
-}
-
-func (t *ServerTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
+func (t *ServerTransport) Name() string { return "polling" }
 
 func (t *ServerTransport) Send(packets ...*parser.Packet) {
 	t.pq.add(packets...)

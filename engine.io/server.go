@@ -277,7 +277,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	socket := newServerSocket(sid, upgrades, t, s.pingInterval, s.pingTimeout, s.debug, s.store.delete)
+	socket := newServerSocket(sid, upgrades, t, c, s.pingInterval, s.pingTimeout, s.debug, s.store.delete)
 
 	callbacks := s.onSocket(socket)
 	socket.setCallbacks(callbacks)
@@ -342,7 +342,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 			go socket.Send(noop)
 		case parser.PacketTypeUpgrade:
 			once.Do(func() { close(done) })
-			socket.upgradeTo(t)
+			socket.upgradeTo(t, c)
 		default:
 			t.Close()
 			socket.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: packet type: %d", packet.Type)))

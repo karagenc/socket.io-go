@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 type ServerTransport interface {
@@ -29,8 +28,6 @@ type ServerTransport interface {
 	// If you run this method in a transport (see the close method of polling for example), call it on a new goroutine.
 	// Otherwise it can call the close function recursively.
 	Send(packets ...*parser.Packet)
-
-	Callbacks() *transport.Callbacks
 
 	// This method closes the transport but doesn't call the onClose callback.
 	// This method will be called after an upgrade to discard and remove this transport.
@@ -63,8 +60,6 @@ type ClientTransport interface {
 	// If you run this method in a transport (see the close method of polling for example), call it on a new goroutine.
 	// Otherwise it can call the close function recursively.
 	Send(packets ...*parser.Packet)
-
-	Callbacks() *transport.Callbacks
 
 	// This method closes the transport but doesn't call the onClose callback.
 	// This method will be called after an upgrade to discard and remove this transport.

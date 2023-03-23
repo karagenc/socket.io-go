@@ -41,13 +41,7 @@ func NewServerTransport(
 	}
 }
 
-func (t *ServerTransport) Name() string {
-	return "websocket"
-}
-
-func (t *ServerTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
+func (t *ServerTransport) Name() string { return "websocket" }
 
 func (t *ServerTransport) QueuedPackets() []*parser.Packet {
 	// There's no queue on WebSocket. Packets are directly sent.
