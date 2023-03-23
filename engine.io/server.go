@@ -16,68 +16,12 @@ import (
 	"nhooyr.io/websocket"
 )
 
-type AuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
-
-type ServerError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-func GetServerError(code int) (se ServerError, ok bool) {
-	se, ok = serverErrors[code]
-	return
-}
-
-const (
-	ErrorUnknownTransport = iota
-	ErrorUnknownSID
-	ErrorBadHandshakeMethod
-	ErrorBadRequest
-	ErrorForbidden
-	ErrorUnsupportedProtocolVersion
-)
-
-var serverErrors = map[int]ServerError{
-	ErrorUnknownTransport: {
-		Code:    0,
-		Message: "Transport unknown",
-	},
-	ErrorUnknownSID: {
-		Code:    1,
-		Message: "Session ID unknown",
-	},
-	ErrorBadHandshakeMethod: {
-		Code:    2,
-		Message: "Bad handshake method",
-	},
-	ErrorBadRequest: {
-		Code:    3,
-		Message: "Bad request",
-	},
-	ErrorForbidden: {
-		Code:    4,
-		Message: "Forbidden",
-	},
-	ErrorUnsupportedProtocolVersion: {
-		Code:    5,
-		Message: "Unsupported protocol version",
-	},
-}
-
-func writeError(w http.ResponseWriter, code int) {
-	w.WriteHeader(http.StatusBadRequest)
-
-	em, ok := serverErrors[code]
-	if ok {
-		data, _ := json.Marshal(&em)
-		w.Write(data)
-	}
-}
+type ServerAuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
 
 type ServerConfig struct {
 	// This is a middleware function to authenticate clients before doing the handshake.
 	// If this function returns false authentication will fail. Or else, the handshake will begin as usual.
-	Authenticator AuthFunc
+	Authenticator ServerAuthFunc
 
 	// When to send PING packets to clients.
 	PingInterval time.Duration
@@ -105,7 +49,7 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	authenticator AuthFunc
+	authenticator ServerAuthFunc
 
 	pingInterval   time.Duration
 	pingTimeout    time.Duration
@@ -232,12 +176,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	version, err := strconv.Atoi(q.Get("EIO"))
 	if err != nil {
-		writeError(w, ErrorUnsupportedProtocolVersion)
+		writeServerError(w, ErrorUnsupportedProtocolVersion)
 		return
 	}
 
 	if version != ProtocolVersion {
-		writeError(w, ErrorUnsupportedProtocolVersion)
+		writeServerError(w, ErrorUnsupportedProtocolVersion)
 		return
 	}
 
@@ -247,7 +191,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		socket, ok := s.store.get(sid)
 		if !ok {
-			writeError(w, ErrorUnknownSID)
+			writeServerError(w, ErrorUnknownSID)
 			return
 		}
 
@@ -265,7 +209,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		writeError(w, ErrorBadHandshakeMethod)
+		writeServerError(w, ErrorBadHandshakeMethod)
 		return
 	}
 
@@ -314,7 +258,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 	case "websocket":
 		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
 	default:
-		writeError(w, ErrorUnknownTransport)
+		writeServerError(w, ErrorUnknownTransport)
 		return
 	}
 
@@ -352,7 +296,7 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *serverSocket, upgradeTo string) {
 	if upgradeTo != "websocket" {
 		s.debug.Log("Invalid upgradeTo", upgradeTo)
-		writeError(w, ErrorBadRequest)
+		writeServerError(w, ErrorBadRequest)
 		return
 	}
 
