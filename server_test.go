@@ -8,17 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	eio "github.com/tomruk/socket.io-go/engine.io"
 	"nhooyr.io/websocket"
 )
 
 func TestServerAck(t *testing.T) {
-	server, _, manager := newTestServerAndClient(t, nil, &ManagerConfig{
-		EIO: eio.ClientConfig{
-			// TODO: Fix transport problem
-			Transports: []string{"polling"},
-		},
-	})
+	server, _, manager := newTestServerAndClient(t, nil, nil)
 	socket := manager.Socket("/", nil)
 	socket.Connect()
 	replied := sync.WaitGroup{}

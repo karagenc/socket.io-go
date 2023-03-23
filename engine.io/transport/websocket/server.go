@@ -59,27 +59,29 @@ func (t *ServerTransport) Send(packets ...*parser.Packet) {
 	t.writeMu.Lock()
 	defer t.writeMu.Unlock()
 
-	for _, p := range packets {
-		var mt websocket.MessageType
-		if p.IsBinary {
-			mt = websocket.MessageBinary
-		} else {
-			mt = websocket.MessageText
-		}
-
-		w, err := t.conn.Writer(t.ctx, mt)
-		if err != nil {
-			t.close(err)
-			break
-		}
-		defer w.Close()
-
-		err = p.Encode(w, true)
+	for _, packet := range packets {
+		err := t.send(packet)
 		if err != nil {
 			t.close(err)
 			break
 		}
 	}
+}
+
+func (t *ServerTransport) send(packet *parser.Packet) error {
+	var mt websocket.MessageType
+	if packet.IsBinary {
+		mt = websocket.MessageBinary
+	} else {
+		mt = websocket.MessageText
+	}
+
+	w, err := t.conn.Writer(t.ctx, mt)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	return packet.Encode(w, true)
 }
 
 func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) (err error) {
