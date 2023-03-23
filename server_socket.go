@@ -117,11 +117,6 @@ func (s *serverSocket) Connected() bool {
 	return s.connected
 }
 
-var (
-	_emptyError  error
-	reflectError = reflect.TypeOf(&_emptyError).Elem()
-)
-
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:

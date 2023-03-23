@@ -194,6 +194,11 @@ func dismantleAckFunc(rt reflect.Type) (in []reflect.Type, variadic bool) {
 	return
 }
 
+var (
+	_emptyError  error
+	reflectError = reflect.TypeOf(&_emptyError).Elem()
+)
+
 func doesAckHandlerHasAnError(f any) error {
 	rt := reflect.TypeOf(f)
 
