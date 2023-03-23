@@ -231,14 +231,12 @@ func (s *clientSocket) upgradeTo(t ClientTransport) {
 	old := s.transport
 	s.transport = t
 
-	// Don't block
-	go func() {
-		t.Send(p)
-		s.debug.Log("upgradeTo", "upgraded to", t.Name())
-		s.upgradeDone(t.Name())
-	}()
-
 	old.Discard()
+
+	t.Send(p)
+	s.debug.Log("upgradeTo", "upgraded to", t.Name())
+	// Don't block
+	go s.upgradeDone(t.Name())
 }
 
 func findTransport(transports []string, name string) bool {
