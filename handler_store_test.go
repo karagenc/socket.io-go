@@ -59,3 +59,22 @@ func TestOffAll(t *testing.T) {
 	all := h.getAll()
 	assert.Equal(t, 0, len(all))
 }
+
+func TestSubEvents(t *testing.T) {
+	h := newHandlerStore[*testFn]()
+	var f testFn = func() {}
+
+	h.onSubEvent(&f)
+	if !assert.True(t, h.subs[0] == &f) {
+		return
+	}
+	all := h.getAll()
+	if !assert.True(t, all[0] == &f) {
+		return
+	}
+
+	h.offSubEvents()
+	assert.Equal(t, 0, len(h.subs))
+	all = h.getAll()
+	assert.Equal(t, 0, len(all))
+}
