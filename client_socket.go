@@ -860,8 +860,8 @@ func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]by
 			}
 		}
 
-		s.connectedMu.Lock()
-		defer s.connectedMu.Unlock()
+		s.connectedMu.RLock()
+		defer s.connectedMu.RUnlock()
 		if s.connected {
 			s.manager.conn.Packet(packets...)
 		} else if !volatile {
