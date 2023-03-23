@@ -401,7 +401,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 			socket.UpgradeTo(t)
 		default:
 			t.Close()
-			socket.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
+			socket.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: packet type: %d", packet.Type)))
 			return
 		}
 	}

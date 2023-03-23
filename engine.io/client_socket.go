@@ -167,8 +167,9 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 
 		switch packet.Type {
 		case parser.PacketTypePong:
-			if string(packet.Data) != "probe" {
-				s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
+			pong := string(packet.Data)
+			if pong != "probe" {
+				s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: pong with invalid data: '%s'", pong)))
 				t.Close()
 				return
 			}
@@ -177,7 +178,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 			s.upgradeTo(t)
 		default:
 			t.Close()
-			s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received")))
+			s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: packet type: %d", packet.Type)))
 		}
 	}
 
