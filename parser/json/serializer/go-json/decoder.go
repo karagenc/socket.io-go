@@ -7,6 +7,6 @@ type decoder struct {
 	options []json.DecodeOptionFunc
 }
 
-func (d *decoder) Decode(v any) error {
+func (d decoder) Decode(v any) error {
 	return d.d.DecodeWithOption(v, d.options...)
 }

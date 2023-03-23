@@ -27,5 +27,5 @@ func (s stdjsonSerializer) NewDecoder(r io.Reader) serializer.JSONDecoder {
 }
 
 func New() serializer.JSONSerializer {
-	return &stdjsonSerializer{}
+	return stdjsonSerializer{}
 }

@@ -7,6 +7,6 @@ type encoder struct {
 	options []json.EncodeOptionFunc
 }
 
-func (e *encoder) Encode(v any) error {
+func (e encoder) Encode(v any) error {
 	return e.e.EncodeWithOption(v, e.options...)
 }

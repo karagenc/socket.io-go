@@ -22,12 +22,12 @@ func (s *gojsonSerializer) Unmarshal(data []byte, v any) error {
 
 func (s *gojsonSerializer) NewEncoder(w io.Writer) serializer.JSONEncoder {
 	e := json.NewEncoder(w)
-	return &encoder{e: e, options: s.encodeOptions}
+	return encoder{e: e, options: s.encodeOptions}
 }
 
 func (s *gojsonSerializer) NewDecoder(r io.Reader) serializer.JSONDecoder {
 	d := json.NewDecoder(r)
-	return &decoder{d: d, options: s.decodeOptions}
+	return decoder{d: d, options: s.decodeOptions}
 }
 
 func New(encodeOptions []json.EncodeOptionFunc, decodeOptions []json.DecodeOptionFunc) serializer.JSONSerializer {

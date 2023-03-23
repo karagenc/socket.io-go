@@ -15,22 +15,22 @@ type sonicSerializer struct {
 	api sonic.API
 }
 
-func (s *sonicSerializer) Marshal(v any) ([]byte, error) {
+func (s sonicSerializer) Marshal(v any) ([]byte, error) {
 	return s.api.Marshal(v)
 }
 
-func (s *sonicSerializer) Unmarshal(data []byte, v any) error {
+func (s sonicSerializer) Unmarshal(data []byte, v any) error {
 	return s.api.Unmarshal(data, v)
 }
 
-func (s *sonicSerializer) NewEncoder(w io.Writer) serializer.JSONEncoder {
+func (s sonicSerializer) NewEncoder(w io.Writer) serializer.JSONEncoder {
 	return s.api.NewEncoder(w)
 }
 
-func (s *sonicSerializer) NewDecoder(r io.Reader) serializer.JSONDecoder {
+func (s sonicSerializer) NewDecoder(r io.Reader) serializer.JSONDecoder {
 	return s.api.NewDecoder(r)
 }
 
 func New(config sonic.Config) serializer.JSONSerializer {
-	return &sonicSerializer{api: config.Froze()}
+	return sonicSerializer{api: config.Froze()}
 }
