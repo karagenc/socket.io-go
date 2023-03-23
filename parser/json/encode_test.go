@@ -2,7 +2,6 @@ package jsonparser
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/cristalhq/jsn"
@@ -17,14 +16,16 @@ func TestEncode(t *testing.T) {
 	tests := createEncodeTests(t)
 
 	for _, test := range tests {
+		// fmt.Printf("\nTEST %d\n", i)
+
 		buffers, err := p.Encode(test.Header, test.V)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		for _, buf := range buffers {
-			fmt.Printf("buf: %s\n", buf)
-		}
+		// for i, buf := range buffers {
+		// 	fmt.Printf("buf #%d: %s\n", i, buf)
+		// }
 
 		if len(buffers) > 1 && !test.Header.IsBinary() {
 			t.Fatal("type of the packet should have been binary")
@@ -39,9 +40,16 @@ func TestEncode(t *testing.T) {
 		}
 
 		for i, buf := range buffers {
-			exp := test.Expected[i]
-			if !bytes.Equal(buf, exp) {
-				t.Fatal("test buffer and encoded buffer didn't match")
+			expected1 := test.Expected[i]
+			if !bytes.Equal(buf, expected1) {
+				if len(test.Or) > 0 {
+					expected2 := test.Or[i]
+					if !bytes.Equal(buf, expected2) {
+						t.Fatalf("test buffers and encoded buffer didn't match (buffer #%d)\nbuf: `%s`\n", i, buf)
+					}
+				} else {
+					t.Fatalf("test buffer and encoded buffer didn't match (buffer #%d)\nbuf: `%s`\n", i, buf)
+				}
 			}
 		}
 	}
@@ -192,6 +200,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 				},
 			),
 			Expected: createBuffers([]byte(`62-[{"amet":{"_placeholder":true,"num":0},"consectetur":{"name":"Abdurrezak","age":25,"bin":{"_placeholder":true,"num":1}},"dolor":12345,"lorem":"ipsum"}]`), []byte("One"), []byte("Two")),
+			Or:       createBuffers([]byte(`62-[{"amet":{"_placeholder":true,"num":1},"consectetur":{"name":"Abdurrezak","age":25,"bin":{"_placeholder":true,"num":0}},"dolor":12345,"lorem":"ipsum"}]`), []byte("Two"), []byte("One")),
 		},
 		{
 			Header: mustCreatePacketHeader(t, parser.PacketTypeAck, "/", 0),
@@ -208,6 +217,7 @@ func createEncodeTests(t *testing.T) []*encodeTest {
 				},
 			),
 			Expected: createBuffers([]byte(`62-[{"name":"Abdurrezak","age":25,"bin":{"_placeholder":true,"num":0},"v":{"amet":{"_placeholder":true,"num":1},"dolor":12345,"lorem":"ipsum"}}]`), []byte("One"), []byte("Two")),
+			Or:       createBuffers([]byte(`62-[{"name":"Abdurrezak","age":25,"bin":{"_placeholder":true,"num":1},"v":{"amet":{"_placeholder":true,"num":0},"dolor":12345,"lorem":"ipsum"}}]`), []byte("Two"), []byte("One")),
 		},
 	}
 }
@@ -220,6 +230,7 @@ type encodeTest struct {
 	Header   *parser.PacketHeader
 	V        any
 	Expected [][]byte
+	Or       [][]byte
 }
 
 func mustCreatePacketHeader(t *testing.T, packetType parser.PacketType, namespace string, ackID uint64) *parser.PacketHeader {
