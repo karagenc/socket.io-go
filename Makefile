@@ -2,7 +2,7 @@ all: test
 
 .PHONY: test
 test:
-	go test -buildmode=default -race -cover -covermode=atomic ./...
+	go test -count 1 -buildmode=default -race -cover -covermode=atomic ./...
 
 .PHONY: build-examples
 build-examples:
