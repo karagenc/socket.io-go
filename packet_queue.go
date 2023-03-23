@@ -12,19 +12,19 @@ type packetQueue struct {
 	packets []*eioparser.Packet
 	mu      sync.Mutex
 
-	ready chan struct{}
-	reset chan struct{}
+	ready  chan struct{}
+	_reset chan struct{}
 }
 
 func newPacketQueue() *packetQueue {
 	return &packetQueue{
-		ready: make(chan struct{}, 1),
-		reset: make(chan struct{}, 1),
+		ready:  make(chan struct{}, 1),
+		_reset: make(chan struct{}, 1),
 	}
 }
 
-func (pq *packetQueue) Poll() (packets []*eioparser.Packet, ok bool) {
-	packets = pq.Get()
+func (pq *packetQueue) poll() (packets []*eioparser.Packet, ok bool) {
+	packets = pq.get()
 	if len(packets) != 0 {
 		ok = true
 		return
@@ -32,17 +32,17 @@ func (pq *packetQueue) Poll() (packets []*eioparser.Packet, ok bool) {
 
 	select {
 	case <-pq.ready:
-		packets = pq.Get()
+		packets = pq.get()
 		if len(packets) != 0 {
 			ok = true
 		}
-	case <-pq.reset:
+	case <-pq._reset:
 		return nil, false
 	}
 	return
 }
 
-func (pq *packetQueue) Get() (packets []*eioparser.Packet) {
+func (pq *packetQueue) get() (packets []*eioparser.Packet) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 	packets = pq.packets
@@ -50,7 +50,7 @@ func (pq *packetQueue) Get() (packets []*eioparser.Packet) {
 	return
 }
 
-func (pq *packetQueue) Add(packets ...*eioparser.Packet) {
+func (pq *packetQueue) add(packets ...*eioparser.Packet) {
 	pq.mu.Lock()
 
 	if len(packets) == 0 {
@@ -66,17 +66,17 @@ func (pq *packetQueue) Add(packets ...*eioparser.Packet) {
 	}
 }
 
-func (pq *packetQueue) Reset() {
+func (pq *packetQueue) reset() {
 	pq.mu.Lock()
 	pq.packets = nil
 	pq.mu.Unlock()
 	select {
-	case pq.reset <- struct{}{}:
+	case pq._reset <- struct{}{}:
 	default:
 	}
 }
 
-func (pq *packetQueue) WaitForDrain(timeout time.Duration) (timedout bool) {
+func (pq *packetQueue) waitForDrain(timeout time.Duration) (timedout bool) {
 	pq.mu.Lock()
 	drained := len(pq.packets) == 0
 	pq.mu.Unlock()
@@ -86,7 +86,7 @@ func (pq *packetQueue) WaitForDrain(timeout time.Duration) (timedout bool) {
 
 	select {
 	case <-pq.ready:
-	case <-pq.reset:
+	case <-pq._reset:
 	case <-time.After(timeout):
 		timedout = true
 	}
@@ -95,7 +95,7 @@ func (pq *packetQueue) WaitForDrain(timeout time.Duration) (timedout bool) {
 
 func (pq *packetQueue) pollAndSend(socket eio.Socket) {
 	for {
-		packets, ok := pq.Poll()
+		packets, ok := pq.poll()
 		if !ok {
 			continue
 		}

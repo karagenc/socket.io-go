@@ -46,11 +46,11 @@ func (t *ServerTransport) Callbacks() *transport.Callbacks {
 }
 
 func (t *ServerTransport) Send(packets ...*parser.Packet) {
-	t.pq.Add(packets...)
+	t.pq.add(packets...)
 }
 
 func (t *ServerTransport) QueuedPackets() []*parser.Packet {
-	return t.pq.Get()
+	return t.pq.get()
 }
 
 func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
@@ -105,7 +105,7 @@ func (t *ServerTransport) writeJSONPBody(w io.Writer, jsonp string, packets []*p
 }
 
 func (t *ServerTransport) handlePollRequest(w http.ResponseWriter, r *http.Request) {
-	packets := t.pq.Poll(t.pollTimeout)
+	packets := t.pq.poll(t.pollTimeout)
 
 	jsonp := r.URL.Query().Get("j")
 	wh := w.Header()

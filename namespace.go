@@ -16,7 +16,7 @@ type Namespace struct {
 
 	debug Debugger
 
-	sockets *NamespaceSocketStore
+	sockets *namespaceSocketStore
 
 	middlewareFuncs   []NspMiddlewareFunc
 	middlewareFuncsMu sync.RWMutex
@@ -85,7 +85,7 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 	for i, v := range _v {
 		values[i] = reflect.ValueOf(v)
 	}
-	handlers := n.eventHandlers.GetAll(eventName)
+	handlers := n.eventHandlers.getAll(eventName)
 
 	go func() {
 		for _, handler := range handlers {
@@ -99,7 +99,7 @@ func (n *Namespace) OnServerSideEmit(eventName string, _v ...any) {
 				n.debug.Log("Namespace.OnServerSideEmit: handler signature mismatch")
 				return
 			}
-			handler.Call(values...)
+			handler.call(values...)
 		}
 	}()
 }
@@ -138,7 +138,7 @@ func (n *Namespace) Local() *BroadcastOperator {
 // Gets the sockets of the namespace.
 // Beware that this is local to the current node. For sockets across all nodes, use FetchSockets
 func (n *Namespace) Sockets() []ServerSocket {
-	return n.sockets.GetAll()
+	return n.sockets.getAll()
 }
 
 // Returns the matching socket instances. This method works across a cluster of several Socket.IO servers.
@@ -226,7 +226,7 @@ func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, err
 }
 
 func (n *Namespace) doConnect(socket *serverSocket) error {
-	n.sockets.Set(socket)
+	n.sockets.set(socket)
 
 	// It is paramount that the internal `onconnect` logic
 	// fires before user-set events to prevent state order
@@ -238,7 +238,7 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 	}
 
 	go func() {
-		for _, handler := range n.connectionHandlers.GetAll() {
+		for _, handler := range n.connectionHandlers.getAll() {
 			(*handler)(socket)
 		}
 	}()
@@ -246,8 +246,8 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 }
 
 func (n *Namespace) remove(socket *serverSocket) {
-	if _, ok := n.sockets.Get(socket.ID()); ok {
-		n.sockets.Remove(socket.ID())
+	if _, ok := n.sockets.get(socket.ID()); ok {
+		n.sockets.remove(socket.ID())
 	} else {
 		n.debug.Log("Ignoring remove for", socket.ID())
 	}

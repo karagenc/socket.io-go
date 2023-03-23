@@ -108,7 +108,7 @@ func (s *serverSocket) PingTimeout() time.Duration {
 	return s.pingTimeout
 }
 
-func (s *serverSocket) UpgradeTo(t ServerTransport) {
+func (s *serverSocket) upgradeTo(t ServerTransport) {
 	s.debug.Log("UpgradeTo", t.Name())
 
 	t.Callbacks().Set(s.onPacket, s.onTransportClose)

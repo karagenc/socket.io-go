@@ -15,21 +15,21 @@ func newServerSocketStore() *serverSocketStore {
 	}
 }
 
-func (s *serverSocketStore) GetByID(sid SocketID) (socket *serverSocket, ok bool) {
+func (s *serverSocketStore) getByID(sid SocketID) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	socket, ok = s.socketsByID[sid]
 	return
 }
 
-func (s *serverSocketStore) GetByNsp(nsp string) (socket *serverSocket, ok bool) {
+func (s *serverSocketStore) getByNsp(nsp string) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	socket, ok = s.socketsByNamespace[nsp]
 	return
 }
 
-func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
+func (s *serverSocketStore) getAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -42,7 +42,7 @@ func (s *serverSocketStore) GetAll() (sockets []*serverSocket) {
 	return
 }
 
-func (s *serverSocketStore) GetAndRemoveAll() (sockets []*serverSocket) {
+func (s *serverSocketStore) getAndRemoveAll() (sockets []*serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -57,14 +57,14 @@ func (s *serverSocketStore) GetAndRemoveAll() (sockets []*serverSocket) {
 	return
 }
 
-func (s *serverSocketStore) Set(socket *serverSocket) {
+func (s *serverSocketStore) set(socket *serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.socketsByID[socket.ID()] = socket
 	s.socketsByNamespace[socket.nsp.Name()] = socket
 }
 
-func (s *serverSocketStore) RemoveByID(sid SocketID) {
+func (s *serverSocketStore) removeByID(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	socket, ok := s.socketsByID[sid]

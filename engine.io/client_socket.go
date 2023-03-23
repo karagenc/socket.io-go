@@ -49,7 +49,7 @@ type clientSocket struct {
 	debug Debugger
 }
 
-func (s *clientSocket) Connect(transports []string) (err error) {
+func (s *clientSocket) connect(transports []string) (err error) {
 	s.transportMu.Lock()
 	defer s.transportMu.Unlock()
 
@@ -105,7 +105,6 @@ func (s *clientSocket) Connect(transports []string) (err error) {
 		go s.maybeUpgrade(transports, s.upgrades)
 		go s.handleTimeout()
 	}
-
 	return
 }
 

@@ -26,11 +26,11 @@ func TestSocketStore(t *testing.T) {
 		ft := newFakeServerTransport()
 		socket := newServerSocket(sid, nil, ft, 0, 0, NewNoopDebugger(), onClose)
 
-		ok := store.Set(socket.ID(), socket)
+		ok := store.set(socket.ID(), socket)
 		assert.True(t, ok)
 	}
 
-	all := store.GetAll()
+	all := store.getAll()
 	assert.Equal(t, max, len(all))
 
 	for _, socket1 := range all {
@@ -39,7 +39,7 @@ func TestSocketStore(t *testing.T) {
 		}
 
 		sid := socket1.ID()
-		socket2, ok := store.Get(sid)
+		socket2, ok := store.get(sid)
 
 		if socket1 != socket2 {
 			t.Fatal("socket1 and socket2 should be the same one")
@@ -50,11 +50,11 @@ func TestSocketStore(t *testing.T) {
 
 		assert.Equal(t, sid, socket2.ID())
 
-		exists := store.Exists(sid)
+		exists := store.exists(sid)
 		assert.True(t, exists)
 	}
 
-	store.CloseAll()
+	store.closeAll()
 
 	countMu.Lock()
 	assert.Equal(t, max, count, "all sockets should be closed")
@@ -63,8 +63,8 @@ func TestSocketStore(t *testing.T) {
 	for i := 0; i < max; i++ {
 		sid := strconv.Itoa(i)
 
-		store.Delete(sid)
-		exists := store.Exists(sid)
+		store.delete(sid)
+		exists := store.exists(sid)
 		assert.False(t, exists)
 	}
 }

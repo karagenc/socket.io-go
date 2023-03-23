@@ -19,10 +19,10 @@ func newPollQueue() *pollQueue {
 	}
 }
 
-// Poll for packets. If we already have a packet, this function will immediately return.
+// poll for packets. If we already have a packet, this function will immediately return.
 // Otherwise it will wait for a packet until pollTimeout is reached.
-func (pq *pollQueue) Poll(pollTimeout time.Duration) []*parser.Packet {
-	packets := pq.Get()
+func (pq *pollQueue) poll(pollTimeout time.Duration) []*parser.Packet {
+	packets := pq.get()
 
 	if len(packets) > 0 {
 		return packets
@@ -30,14 +30,14 @@ func (pq *pollQueue) Poll(pollTimeout time.Duration) []*parser.Packet {
 
 	select {
 	case <-pq.ready:
-		packets = pq.Get()
+		packets = pq.get()
 	case <-time.After(pollTimeout):
 	}
 	return packets
 }
 
-// Add a packet to the queue and signal the other goroutine (if any).
-func (pq *pollQueue) Add(packets ...*parser.Packet) {
+// add a packet to the queue and signal the other goroutine (if any).
+func (pq *pollQueue) add(packets ...*parser.Packet) {
 	pq.mu.Lock()
 	defer pq.mu.Unlock()
 
@@ -55,7 +55,7 @@ func (pq *pollQueue) Add(packets ...*parser.Packet) {
 }
 
 // Retrieve the packets without waiting.
-func (pq *pollQueue) Get() []*parser.Packet {
+func (pq *pollQueue) get() []*parser.Packet {
 	pq.mu.Lock()
 	packets := pq.packets
 	pq.packets = nil
@@ -63,7 +63,7 @@ func (pq *pollQueue) Get() []*parser.Packet {
 	return packets
 }
 
-func (pq *pollQueue) Len() int {
+func (pq *pollQueue) len() int {
 	pq.mu.Lock()
 	l := len(pq.packets)
 	pq.mu.Unlock()

@@ -2,14 +2,13 @@ package eio
 
 import "github.com/tomruk/socket.io-go/engine.io/parser"
 
-type NewSocketCallback func(socket ServerSocket) *Callbacks
-
-type PacketCallback func(packets ...*parser.Packet)
-
-type ErrorCallback func(err error)
-
-// err can be nil. Always do a nil check.
-type CloseCallback func(reason Reason, err error)
+type (
+	NewSocketCallback func(socket ServerSocket) *Callbacks
+	PacketCallback    func(packets ...*parser.Packet)
+	ErrorCallback     func(err error)
+	// err can be nil. Always do a nil check.
+	CloseCallback func(reason Reason, err error)
+)
 
 type Callbacks struct {
 	OnPacket PacketCallback

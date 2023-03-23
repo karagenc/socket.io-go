@@ -8,7 +8,7 @@ func (n *Namespace) OnEvent(eventName string, handler any) {
 	if err != nil {
 		panic(err)
 	}
-	n.eventHandlers.On(eventName, h)
+	n.eventHandlers.on(eventName, h)
 }
 
 func (n *Namespace) OnceEvent(eventName string, handler any) {
@@ -19,16 +19,16 @@ func (n *Namespace) OnceEvent(eventName string, handler any) {
 	if err != nil {
 		panic(err)
 	}
-	n.eventHandlers.Once(eventName, h)
+	n.eventHandlers.once(eventName, h)
 }
 
 func (n *Namespace) OffEvent(eventName string, handler ...any) {
-	n.eventHandlers.Off(eventName, handler...)
+	n.eventHandlers.off(eventName, handler...)
 }
 
 func (n *Namespace) OffAll() {
-	n.eventHandlers.OffAll()
-	n.connectionHandlers.OffAll()
+	n.eventHandlers.offAll()
+	n.connectionHandlers.offAll()
 }
 
 type (
@@ -36,11 +36,11 @@ type (
 )
 
 func (n *Namespace) OnConnection(f NamespaceConnectionFunc) {
-	n.connectionHandlers.On(&f)
+	n.connectionHandlers.on(&f)
 }
 
 func (n *Namespace) OnceConnection(f NamespaceConnectionFunc) {
-	n.connectionHandlers.Once(&f)
+	n.connectionHandlers.once(&f)
 }
 
 func (n *Namespace) OffConnection(_f ...NamespaceConnectionFunc) {
@@ -48,5 +48,5 @@ func (n *Namespace) OffConnection(_f ...NamespaceConnectionFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	n.connectionHandlers.Off(f...)
+	n.connectionHandlers.off(f...)
 }

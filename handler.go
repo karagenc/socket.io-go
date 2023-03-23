@@ -48,7 +48,7 @@ func (s *eventHandler) ack() (ok bool, err error) {
 	return
 }
 
-func (f *eventHandler) Call(args ...reflect.Value) (ret []reflect.Value, err error) {
+func (f *eventHandler) call(args ...reflect.Value) (ret []reflect.Value, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var ok bool
@@ -130,7 +130,7 @@ func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) 
 	return h, nil
 }
 
-func (f *ackHandler) Call(args ...reflect.Value) (err error) {
+func (f *ackHandler) call(args ...reflect.Value) (err error) {
 	f.mu.Lock()
 	if f.timedOut {
 		f.mu.Unlock()
@@ -157,7 +157,7 @@ func (f *ackHandler) Call(args ...reflect.Value) (err error) {
 	return
 }
 
-func (f *ackHandler) CallWithError(e error, args ...reflect.Value) (err error) {
+func (f *ackHandler) callWithError(e error, args ...reflect.Value) (err error) {
 	if !f.hasError {
 		panic("sio: hasError is false. this shouldn't have happened")
 	}

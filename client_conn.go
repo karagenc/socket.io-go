@@ -38,13 +38,13 @@ func newClientConn(manager *Manager) *clientConn {
 	}
 }
 
-func (c *clientConn) Connected() bool {
+func (c *clientConn) connected() bool {
 	c.stateMu.RLock()
 	defer c.stateMu.RUnlock()
 	return c.state == clientConnStateConnected
 }
 
-func (c *clientConn) Connect(again bool) (err error) {
+func (c *clientConn) connect(again bool) (err error) {
 	// again = Is this the first time we're doing reconnect?
 	// In other words: are we recursing?
 	if !again {
@@ -77,7 +77,7 @@ func (c *clientConn) Connect(again bool) (err error) {
 
 		c.state = clientConnStateDisconnected
 
-		for _, handler := range c.manager.errorHandlers.GetAll() {
+		for _, handler := range c.manager.errorHandlers.getAll() {
 			(*handler)(err)
 		}
 		return err
@@ -91,20 +91,20 @@ func (c *clientConn) Connect(again bool) (err error) {
 
 	go c.eioPacketQueue.pollAndSend(c.eio)
 
-	for _, handler := range c.manager.openHandlers.GetAll() {
+	for _, handler := range c.manager.openHandlers.getAll() {
 		(*handler)()
 	}
 	return
 }
 
-func (c *clientConn) MaybeReconnectOnOpen() {
-	reconnect := c.manager.backoff.Attempts() == 0 && !c.manager.noReconnection
+func (c *clientConn) maybeReconnectOnOpen() {
+	reconnect := c.manager.backoff.attempts() == 0 && !c.manager.noReconnection
 	if reconnect {
-		c.Reconnect(false)
+		c.reconnect(false)
 	}
 }
 
-func (c *clientConn) Reconnect(again bool) {
+func (c *clientConn) reconnect(again bool) {
 	c.debug.Log("`Reconnect` called. It's happening")
 
 	// again = Is this the first time we're doing reconnect?
@@ -130,22 +130,22 @@ func (c *clientConn) Reconnect(again bool) {
 	}
 	c.state = clientConnStateReconnecting
 
-	attempts := c.manager.backoff.Attempts()
+	attempts := c.manager.backoff.attempts()
 	didAttemptsReachedMaxAttempts := c.manager.reconnectionAttempts > 0 && attempts >= c.manager.reconnectionAttempts
 	// Just in case
 	didAttemptsReachedMaxInt := c.manager.reconnectionAttempts == 0 && attempts == math.MaxUint32
 
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
 		c.debug.Log("Maximum attempts reached. Attempts made so far", attempts)
-		c.manager.backoff.Reset()
+		c.manager.backoff.reset()
 		c.state = clientConnStateDisconnected
-		for _, handler := range c.manager.reconnectFailedHandlers.GetAll() {
+		for _, handler := range c.manager.reconnectFailedHandlers.getAll() {
 			(*handler)()
 		}
 		return
 	}
 
-	delay := c.manager.backoff.Duration()
+	delay := c.manager.backoff.duration()
 	c.debug.Log("Delay before reconnect attempt", delay)
 	time.Sleep(delay)
 
@@ -154,8 +154,8 @@ func (c *clientConn) Reconnect(again bool) {
 		return
 	}
 
-	attempts = c.manager.backoff.Attempts()
-	for _, handler := range c.manager.reconnectAttemptHandlers.GetAll() {
+	attempts = c.manager.backoff.attempts()
+	for _, handler := range c.manager.reconnectAttemptHandlers.getAll() {
 		(*handler)(attempts)
 	}
 
@@ -165,14 +165,14 @@ func (c *clientConn) Reconnect(again bool) {
 	}
 
 	c.debug.Log("Attempting to reconnect")
-	err := c.Connect(again)
+	err := c.connect(again)
 	if err != nil {
 		c.debug.Log("Reconnect failed", err)
 		c.state = clientConnStateDisconnected
-		for _, handler := range c.manager.reconnectErrorHandlers.GetAll() {
+		for _, handler := range c.manager.reconnectErrorHandlers.getAll() {
 			(*handler)(err)
 		}
-		c.Reconnect(true)
+		c.reconnect(true)
 		return
 	}
 
@@ -181,20 +181,20 @@ func (c *clientConn) Reconnect(again bool) {
 }
 
 func (c *clientConn) onReconnect() {
-	attempts := c.manager.backoff.Attempts()
-	c.manager.backoff.Reset()
-	for _, handler := range c.manager.reconnectHandlers.GetAll() {
+	attempts := c.manager.backoff.attempts()
+	c.manager.backoff.reset()
+	for _, handler := range c.manager.reconnectHandlers.getAll() {
 		(*handler)(attempts)
 	}
 }
 
-func (c *clientConn) Packet(packets ...*eioparser.Packet) {
+func (c *clientConn) packet(packets ...*eioparser.Packet) {
 	c.eioMu.RLock()
 	defer c.eioMu.RUnlock()
-	c.eioPacketQueue.Add(packets...)
+	c.eioPacketQueue.add(packets...)
 }
 
-func (c *clientConn) Disconnect() {
+func (c *clientConn) disconnect() {
 	c.debug.Log("Disconnecting")
 
 	c.stateMu.Lock()
@@ -212,5 +212,5 @@ func (c *clientConn) Disconnect() {
 	if c.eio != nil {
 		c.eio.Close()
 	}
-	c.eioPacketQueue.Reset()
+	c.eioPacketQueue.reset()
 }

@@ -63,9 +63,9 @@ func newServerConn(
 
 	go func() {
 		time.Sleep(server.connectTimeout)
-		if c.nsps.Len() == 0 {
+		if c.nsps.len() == 0 {
 			c.debug.Log("No namespace joined yet, close the client")
-			c.Close()
+			c.close()
 		} else {
 			c.debug.Log("The client has already joined a namespace, nothing to do")
 		}
@@ -93,7 +93,7 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 	if header.Namespace == "" {
 		header.Namespace = "/"
 	}
-	socket, ok := c.sockets.GetByNsp(header.Namespace)
+	socket, ok := c.sockets.getByNsp(header.Namespace)
 
 	if header.Type == parser.PacketTypeConnect && !ok {
 		c.connect(header, decode)
@@ -104,7 +104,7 @@ func (c *serverConn) onFinishEIOPacket(header *parser.PacketHeader, eventName st
 		}
 	} else {
 		c.debug.Log("Invalid state", "packet type", header.Type)
-		c.Close()
+		c.close()
 	}
 }
 
@@ -115,14 +115,14 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	)
 
 	if c.server.acceptAnyNamespace {
-		nsp, _ = c.server.namespaces.GetOrCreate(
+		nsp, _ = c.server.namespaces.getOrCreate(
 			header.Namespace,
 			c.server,
 			c.server.adapterCreator,
 			c.server.parserCreator,
 		)
 	} else {
-		nsp, ok = c.server.namespaces.Get(header.Namespace)
+		nsp, ok = c.server.namespaces.get(header.Namespace)
 		if !ok {
 			c.connectError(fmt.Errorf("namespace '%s' was not created and AcceptAnyNamespace was not set", header.Namespace), header.Namespace)
 			return
@@ -152,8 +152,8 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	c.sockets.Set(socket)
-	c.nsps.Set(nsp)
+	c.sockets.set(socket)
+	c.nsps.set(nsp)
 }
 
 func (c *serverConn) connectError(err error, nsp string) {
@@ -201,11 +201,11 @@ func (c *serverConn) sendBuffers(buffers ...[]byte) {
 }
 
 func (c *serverConn) packet(packets ...*eioparser.Packet) {
-	c.eioPacketQueue.Add(packets...)
+	c.eioPacketQueue.add(packets...)
 }
 
 func (c *serverConn) onFatalError(err error) {
-	sockets := c.sockets.GetAll()
+	sockets := c.sockets.getAll()
 	for _, socket := range sockets {
 		socket.onError(err)
 	}
@@ -217,7 +217,7 @@ func (c *serverConn) onClose(reason Reason, err error) {
 	// We don't want it to close more than once,
 	// so we use sync.Once to avoid running onClose more than once.
 	c.closeOnce.Do(func() {
-		sockets := c.sockets.GetAndRemoveAll()
+		sockets := c.sockets.getAndRemoveAll()
 		for _, socket := range sockets {
 			socket.onClose(reason)
 		}
@@ -228,24 +228,24 @@ func (c *serverConn) onClose(reason Reason, err error) {
 	})
 }
 
-func (c *serverConn) Remove(socket *serverSocket) {
-	if _, ok := c.sockets.GetByID(socket.ID()); ok {
-		c.sockets.RemoveByID(socket.ID())
-		c.nsps.Remove(socket.Namespace().Name())
+func (c *serverConn) remove(socket *serverSocket) {
+	if _, ok := c.sockets.getByID(socket.ID()); ok {
+		c.sockets.removeByID(socket.ID())
+		c.nsps.remove(socket.Namespace().Name())
 	} else {
 		c.debug.Log("Ignored remove")
 	}
 }
 
-func (c *serverConn) DisconnectAll() {
-	for _, socket := range c.sockets.GetAndRemoveAll() {
+func (c *serverConn) disconnectAll() {
+	for _, socket := range c.sockets.getAndRemoveAll() {
 		socket.Disconnect(false)
 	}
 }
 
-func (c *serverConn) Close() {
+func (c *serverConn) close() {
 	c.debug.Log("Closing engine.io")
 	c.eio.Close()
-	c.eioPacketQueue.Reset()
+	c.eioPacketQueue.reset()
 	c.onClose("forced server close", nil)
 }

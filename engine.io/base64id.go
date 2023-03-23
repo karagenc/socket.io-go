@@ -52,7 +52,7 @@ func (s *Server) generateSID() (sid string, err error) {
 			return "", err
 		}
 
-		if !s.store.Exists(sid) {
+		if !s.store.exists(sid) {
 			return
 		}
 

@@ -3,11 +3,11 @@ package sio
 type NamespaceNewNamespaceFunc func(namespace *Namespace)
 
 func (s *Server) OnNewNamespace(f NamespaceNewNamespaceFunc) {
-	s.newNamespaceHandlers.On(&f)
+	s.newNamespaceHandlers.on(&f)
 }
 
 func (s *Server) OnceNewNamespace(f NamespaceNewNamespaceFunc) {
-	s.newNamespaceHandlers.Once(&f)
+	s.newNamespaceHandlers.once(&f)
 }
 
 func (s *Server) OffNewNamespace(_f ...NamespaceNewNamespaceFunc) {
@@ -15,5 +15,5 @@ func (s *Server) OffNewNamespace(_f ...NamespaceNewNamespaceFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	s.newNamespaceHandlers.Off(f...)
+	s.newNamespaceHandlers.off(f...)
 }

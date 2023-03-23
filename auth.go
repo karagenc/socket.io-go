@@ -15,7 +15,7 @@ func newAuth() *Auth {
 	return new(Auth)
 }
 
-func (a *Auth) Set(data any) error {
+func (a *Auth) set(data any) error {
 	if data != nil {
 		rt := reflect.TypeOf(data)
 		k := rt.Kind()
@@ -36,7 +36,7 @@ func (a *Auth) Set(data any) error {
 	return nil
 }
 
-func (a *Auth) Get() (data any) {
+func (a *Auth) get() (data any) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.data

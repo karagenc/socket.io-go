@@ -110,7 +110,7 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 		return nil, err
 	}
 
-	err = socket.Connect(transports)
+	err = socket.connect(transports)
 	if err != nil {
 		return nil, err
 	}

@@ -167,9 +167,9 @@ func (m *Manager) Open() {
 
 func (m *Manager) open() {
 	m.debug.Log("Opening")
-	err := m.conn.Connect(false)
+	err := m.conn.connect(false)
 	if err != nil {
-		m.conn.MaybeReconnectOnOpen()
+		m.conn.maybeReconnectOnOpen()
 	}
 }
 
@@ -184,10 +184,10 @@ func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSoc
 		config = &*config
 	}
 
-	socket, ok := m.sockets.Get(namespace)
+	socket, ok := m.sockets.get(namespace)
 	if !ok {
 		socket = newClientSocket(config, m, namespace, m.parser)
-		m.sockets.Set(socket)
+		m.sockets.set(socket)
 	}
 	return socket
 }
@@ -206,7 +206,7 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 			}
 
 		case eioparser.PacketTypePing:
-			handlers := m.pingHandlers.GetAll()
+			handlers := m.pingHandlers.getAll()
 			// Avoid unnecessary overhead of creating a goroutine.
 			if len(handlers) > 0 {
 				go func() {
@@ -224,7 +224,7 @@ func (m *Manager) onFinishEIOPacket(header *parser.PacketHeader, eventName strin
 		header.Namespace = "/"
 	}
 
-	socket, ok := m.sockets.Get(header.Namespace)
+	socket, ok := m.sockets.get(header.Namespace)
 	if !ok {
 		return
 	}
@@ -240,7 +240,7 @@ func (m *Manager) onEIOClose(reason eio.Reason, err error) {
 }
 
 func (m *Manager) onError(err error) {
-	handlers := m.errorHandlers.GetAll()
+	handlers := m.errorHandlers.getAll()
 	// Avoid unnecessary overhead of creating a goroutine.
 	if len(handlers) > 0 {
 		go func() {
@@ -252,7 +252,7 @@ func (m *Manager) onError(err error) {
 }
 
 func (m *Manager) destroy(socket *clientSocket) {
-	for _, socket := range m.sockets.GetAll() {
+	for _, socket := range m.sockets.getAll() {
 		if socket.Active() {
 			m.debug.Log("Socket with ID", socket.ID(), "still active, skipping close")
 			return
@@ -267,9 +267,9 @@ func (m *Manager) onClose(reason Reason, err error) {
 	m.parserMu.Lock()
 	defer m.parserMu.Unlock()
 	m.parser.Reset()
-	m.backoff.Reset()
+	m.backoff.reset()
 
-	for _, handler := range m.closeHandlers.GetAll() {
+	for _, handler := range m.closeHandlers.getAll() {
 		(*handler)(reason, err)
 	}
 
@@ -277,12 +277,12 @@ func (m *Manager) onClose(reason Reason, err error) {
 	skipReconnect := m.skipReconnect
 	m.skipReconnectMu.RUnlock()
 	if !m.noReconnection && !skipReconnect {
-		go m.conn.Reconnect(false)
+		go m.conn.reconnect(false)
 	}
 }
 
 func (m *Manager) Close() {
-	m.conn.Disconnect()
+	m.conn.disconnect()
 }
 
 func truncateURL(url string) string {

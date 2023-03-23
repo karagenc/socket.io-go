@@ -245,7 +245,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if sid == "" {
 		s.handleHandshake(w, r)
 	} else {
-		socket, ok := s.store.Get(sid)
+		socket, ok := s.store.get(sid)
 		if !ok {
 			writeError(w, ErrorUnknownSID)
 			return
@@ -333,12 +333,12 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	socket := newServerSocket(sid, upgrades, t, s.pingInterval, s.pingTimeout, s.debug, s.store.Delete)
+	socket := newServerSocket(sid, upgrades, t, s.pingInterval, s.pingTimeout, s.debug, s.store.delete)
 
 	callbacks := s.onSocket(socket)
 	socket.setCallbacks(callbacks)
 
-	ok = s.store.Set(sid, socket)
+	ok = s.store.set(sid, socket)
 	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
 		s.onError(wrapInternalError(fmt.Errorf("sid's overlap")))
@@ -398,7 +398,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 			go socket.Send(noop)
 		case parser.PacketTypeUpgrade:
 			once.Do(func() { close(done) })
-			socket.UpgradeTo(t)
+			socket.upgradeTo(t)
 		default:
 			t.Close()
 			socket.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: packet type: %d", packet.Type)))
@@ -433,6 +433,6 @@ func (s *Server) Close() error {
 	})
 
 	// Close all sockets that are currently connected.
-	s.store.CloseAll()
+	s.store.closeAll()
 	return nil
 }

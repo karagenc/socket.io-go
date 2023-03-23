@@ -1,13 +1,13 @@
 package sio
 
 func (m *Manager) OffAll() {
-	m.openHandlers.OffAll()
-	m.errorHandlers.OffAll()
-	m.closeHandlers.OffAll()
-	m.reconnectHandlers.OffAll()
-	m.reconnectAttemptHandlers.OffAll()
-	m.reconnectErrorHandlers.OffAll()
-	m.reconnectFailedHandlers.OffAll()
+	m.openHandlers.offAll()
+	m.errorHandlers.offAll()
+	m.closeHandlers.offAll()
+	m.reconnectHandlers.offAll()
+	m.reconnectAttemptHandlers.offAll()
+	m.reconnectErrorHandlers.offAll()
+	m.reconnectFailedHandlers.offAll()
 }
 
 type (
@@ -22,11 +22,11 @@ type (
 )
 
 func (m *Manager) OnOpen(f ManagerOpenFunc) {
-	m.openHandlers.On(&f)
+	m.openHandlers.on(&f)
 }
 
 func (m *Manager) OnceOpen(f ManagerOpenFunc) {
-	m.openHandlers.Once(&f)
+	m.openHandlers.once(&f)
 }
 
 func (m *Manager) OffOpen(_f ...ManagerOpenFunc) {
@@ -34,15 +34,15 @@ func (m *Manager) OffOpen(_f ...ManagerOpenFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.openHandlers.Off(f...)
+	m.openHandlers.off(f...)
 }
 
 func (m *Manager) OnPing(f ManagerPingFunc) {
-	m.pingHandlers.On(&f)
+	m.pingHandlers.on(&f)
 }
 
 func (m *Manager) OncePing(f ManagerPingFunc) {
-	m.pingHandlers.Once(&f)
+	m.pingHandlers.once(&f)
 }
 
 func (m *Manager) OffPing(_f ...ManagerPingFunc) {
@@ -50,15 +50,15 @@ func (m *Manager) OffPing(_f ...ManagerPingFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.pingHandlers.Off(f...)
+	m.pingHandlers.off(f...)
 }
 
 func (m *Manager) OnError(f ManagerErrorFunc) {
-	m.errorHandlers.On(&f)
+	m.errorHandlers.on(&f)
 }
 
 func (m *Manager) OnceError(f ManagerErrorFunc) {
-	m.errorHandlers.Once(&f)
+	m.errorHandlers.once(&f)
 }
 
 func (m *Manager) OffError(_f ...ManagerErrorFunc) {
@@ -66,15 +66,15 @@ func (m *Manager) OffError(_f ...ManagerErrorFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.errorHandlers.Off(f...)
+	m.errorHandlers.off(f...)
 }
 
 func (m *Manager) OnClose(f ManagerCloseFunc) {
-	m.closeHandlers.On(&f)
+	m.closeHandlers.on(&f)
 }
 
 func (m *Manager) OnceClose(f ManagerCloseFunc) {
-	m.closeHandlers.Once(&f)
+	m.closeHandlers.once(&f)
 }
 
 func (m *Manager) OffClose(_f ...ManagerCloseFunc) {
@@ -82,15 +82,15 @@ func (m *Manager) OffClose(_f ...ManagerCloseFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.closeHandlers.Off(f...)
+	m.closeHandlers.off(f...)
 }
 
 func (m *Manager) OnReconnect(f ManagerReconnectFunc) {
-	m.reconnectHandlers.On(&f)
+	m.reconnectHandlers.on(&f)
 }
 
 func (m *Manager) OnceReconnect(f ManagerReconnectFunc) {
-	m.reconnectHandlers.Once(&f)
+	m.reconnectHandlers.once(&f)
 }
 
 func (m *Manager) OffReconnect(_f ...ManagerReconnectFunc) {
@@ -98,15 +98,15 @@ func (m *Manager) OffReconnect(_f ...ManagerReconnectFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.reconnectHandlers.Off(f...)
+	m.reconnectHandlers.off(f...)
 }
 
 func (m *Manager) OnReconnectAttempt(f ManagerReconnectAttemptFunc) {
-	m.reconnectAttemptHandlers.On(&f)
+	m.reconnectAttemptHandlers.on(&f)
 }
 
 func (m *Manager) OnceReconnectAttempt(f ManagerReconnectAttemptFunc) {
-	m.reconnectAttemptHandlers.Once(&f)
+	m.reconnectAttemptHandlers.once(&f)
 }
 
 func (m *Manager) OffReconnectAttempt(_f ...ManagerReconnectAttemptFunc) {
@@ -114,15 +114,15 @@ func (m *Manager) OffReconnectAttempt(_f ...ManagerReconnectAttemptFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.reconnectAttemptHandlers.Off(f...)
+	m.reconnectAttemptHandlers.off(f...)
 }
 
 func (m *Manager) OnReconnectError(f ManagerReconnectErrorFunc) {
-	m.reconnectErrorHandlers.On(&f)
+	m.reconnectErrorHandlers.on(&f)
 }
 
 func (m *Manager) OnceReconnectError(f ManagerReconnectErrorFunc) {
-	m.reconnectErrorHandlers.Once(&f)
+	m.reconnectErrorHandlers.once(&f)
 }
 
 func (m *Manager) OffReconnectError(_f ...ManagerReconnectErrorFunc) {
@@ -130,15 +130,15 @@ func (m *Manager) OffReconnectError(_f ...ManagerReconnectErrorFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.reconnectErrorHandlers.Off(f...)
+	m.reconnectErrorHandlers.off(f...)
 }
 
 func (m *Manager) OnReconnectFailed(f ManagerReconnectFailedFunc) {
-	m.reconnectFailedHandlers.On(&f)
+	m.reconnectFailedHandlers.on(&f)
 }
 
 func (m *Manager) OnceReconnectFailed(f ManagerReconnectFailedFunc) {
-	m.reconnectFailedHandlers.Once(&f)
+	m.reconnectFailedHandlers.once(&f)
 }
 
 func (m *Manager) OffReconnectFailed(_f ...ManagerReconnectFailedFunc) {
@@ -146,5 +146,5 @@ func (m *Manager) OffReconnectFailed(_f ...ManagerReconnectFailedFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	m.reconnectFailedHandlers.Off(f...)
+	m.reconnectFailedHandlers.off(f...)
 }

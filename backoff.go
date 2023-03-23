@@ -13,8 +13,8 @@ type backoff struct {
 	factor int64
 	jitter float64
 
-	attempts   uint32
-	attemptsMu sync.Mutex
+	numAttempts   uint32
+	numAttemptsMu sync.Mutex
 }
 
 func newBackoff(min time.Duration, max time.Duration, jitter float32) *backoff {
@@ -30,18 +30,18 @@ func newBackoff(min time.Duration, max time.Duration, jitter float32) *backoff {
 	}
 }
 
-func (b *backoff) Attempts() uint32 {
-	b.attemptsMu.Lock()
-	attempts := b.attempts
-	b.attemptsMu.Unlock()
+func (b *backoff) attempts() uint32 {
+	b.numAttemptsMu.Lock()
+	attempts := b.numAttempts
+	b.numAttemptsMu.Unlock()
 	return attempts
 }
 
-func (b *backoff) Duration() time.Duration {
-	b.attemptsMu.Lock()
-	ms := int64(b.min) * int64(math.Pow(float64(b.factor), float64(b.attempts)))
-	b.attempts++
-	b.attemptsMu.Unlock()
+func (b *backoff) duration() time.Duration {
+	b.numAttemptsMu.Lock()
+	ms := int64(b.min) * int64(math.Pow(float64(b.factor), float64(b.numAttempts)))
+	b.numAttempts++
+	b.numAttemptsMu.Unlock()
 
 	if b.jitter > 0 {
 		r := rand.Float64()
@@ -62,8 +62,8 @@ func (b *backoff) Duration() time.Duration {
 	return time.Duration(math.Min(float64(ms), float64(b.max)))
 }
 
-func (b *backoff) Reset() {
-	b.attemptsMu.Lock()
-	b.attempts = 0
-	b.attemptsMu.Unlock()
+func (b *backoff) reset() {
+	b.numAttemptsMu.Lock()
+	b.numAttempts = 0
+	b.numAttemptsMu.Unlock()
 }

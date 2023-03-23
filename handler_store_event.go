@@ -15,7 +15,7 @@ func newEventHandlerStore() *eventHandlerStore {
 	}
 }
 
-func (e *eventHandlerStore) On(eventName string, handler *eventHandler) {
+func (e *eventHandlerStore) on(eventName string, handler *eventHandler) {
 	e.mu.Lock()
 	handlers, _ := e.events[eventName]
 	handlers = append(handlers, handler)
@@ -23,7 +23,7 @@ func (e *eventHandlerStore) On(eventName string, handler *eventHandler) {
 	e.mu.Unlock()
 }
 
-func (e *eventHandlerStore) Once(eventName string, handler *eventHandler) {
+func (e *eventHandlerStore) once(eventName string, handler *eventHandler) {
 	e.mu.Lock()
 	handlers, _ := e.eventsOnce[eventName]
 	handlers = append(handlers, handler)
@@ -31,7 +31,7 @@ func (e *eventHandlerStore) Once(eventName string, handler *eventHandler) {
 	e.mu.Unlock()
 }
 
-func (e *eventHandlerStore) Off(eventName string, handler ...any) {
+func (e *eventHandlerStore) off(eventName string, handler ...any) {
 	if eventName == "" {
 		return
 	}
@@ -74,7 +74,7 @@ func (e *eventHandlerStore) Off(eventName string, handler ...any) {
 	}
 }
 
-func (e *eventHandlerStore) OffAll() {
+func (e *eventHandlerStore) offAll() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -87,7 +87,7 @@ func (e *eventHandlerStore) OffAll() {
 	}
 }
 
-func (e *eventHandlerStore) GetAll(eventName string) (handlers []*eventHandler) {
+func (e *eventHandlerStore) getAll(eventName string) (handlers []*eventHandler) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

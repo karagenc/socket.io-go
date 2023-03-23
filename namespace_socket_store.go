@@ -6,20 +6,20 @@ import (
 	"github.com/tomruk/socket.io-go/adapter"
 )
 
-type NamespaceSocketStore struct {
+type namespaceSocketStore struct {
 	sockets map[SocketID]ServerSocket
 	mu      sync.Mutex
 }
 
-func newNamespaceSocketStore() *NamespaceSocketStore {
-	return &NamespaceSocketStore{
+func newNamespaceSocketStore() *namespaceSocketStore {
+	return &namespaceSocketStore{
 		sockets: make(map[SocketID]ServerSocket),
 	}
 }
 
 // Send Engine.IO packets to a specific socket.
-func (s *NamespaceSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
-	_socket, ok := s.Get(sid)
+func (s *namespaceSocketStore) sendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
+	_socket, ok := s.get(sid)
 	if !ok {
 		return false
 	}
@@ -28,14 +28,14 @@ func (s *NamespaceSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok b
 	return true
 }
 
-func (s *NamespaceSocketStore) Get(sid SocketID) (so ServerSocket, ok bool) {
+func (s *namespaceSocketStore) get(sid SocketID) (so ServerSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	so, ok = s.sockets[sid]
 	return so, ok
 }
 
-func (s *NamespaceSocketStore) GetAll() []ServerSocket {
+func (s *namespaceSocketStore) getAll() []ServerSocket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -48,13 +48,13 @@ func (s *NamespaceSocketStore) GetAll() []ServerSocket {
 	return sockets
 }
 
-func (s *NamespaceSocketStore) Set(so ServerSocket) {
+func (s *namespaceSocketStore) set(so ServerSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sockets[so.ID()] = so
 }
 
-func (s *NamespaceSocketStore) Remove(sid SocketID) {
+func (s *namespaceSocketStore) remove(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)
@@ -64,10 +64,10 @@ func (s *NamespaceSocketStore) Remove(sid SocketID) {
 // right function signature that matches with adapter's
 // `SocketStore`.
 type adapterSocketStore struct {
-	store *NamespaceSocketStore
+	store *namespaceSocketStore
 }
 
-func newAdapterSocketStore(store *NamespaceSocketStore) *adapterSocketStore {
+func newAdapterSocketStore(store *namespaceSocketStore) *adapterSocketStore {
 	return &adapterSocketStore{
 		store: store,
 	}
@@ -75,15 +75,15 @@ func newAdapterSocketStore(store *NamespaceSocketStore) *adapterSocketStore {
 
 // Send Engine.IO packets to a specific socket.
 func (s *adapterSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
-	return s.store.SendBuffers(sid, buffers)
+	return s.store.sendBuffers(sid, buffers)
 }
 
 func (s *adapterSocketStore) Get(sid SocketID) (so adapter.Socket, ok bool) {
-	return s.store.Get(sid)
+	return s.store.get(sid)
 }
 
 func (s *adapterSocketStore) GetAll() []adapter.Socket {
-	_sockets := s.store.GetAll()
+	_sockets := s.store.getAll()
 	sockets := make([]adapter.Socket, len(_sockets))
 	for i := range sockets {
 		sockets[i] = _sockets[i]
@@ -92,5 +92,5 @@ func (s *adapterSocketStore) GetAll() []adapter.Socket {
 }
 
 func (s *adapterSocketStore) Remove(sid SocketID) {
-	s.store.Remove(sid)
+	s.store.remove(sid)
 }

@@ -15,14 +15,14 @@ func newSocketStore() *socketStore {
 	}
 }
 
-func (s *socketStore) Get(sid string) (socket *serverSocket, ok bool) {
+func (s *socketStore) get(sid string) (socket *serverSocket, ok bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	socket, ok = s.sockets[sid]
 	return
 }
 
-func (s *socketStore) Set(sid string, socket *serverSocket) (ok bool) {
+func (s *socketStore) set(sid string, socket *serverSocket) (ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -35,20 +35,20 @@ func (s *socketStore) Set(sid string, socket *serverSocket) (ok bool) {
 	return true
 }
 
-func (s *socketStore) Delete(sid string) {
+func (s *socketStore) delete(sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)
 }
 
-func (s *socketStore) Exists(sid string) (exists bool) {
+func (s *socketStore) exists(sid string) (exists bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	_, exists = s.sockets[sid]
 	return
 }
 
-func (s *socketStore) GetAll() (sockets []*serverSocket) {
+func (s *socketStore) getAll() (sockets []*serverSocket) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, socket := range s.sockets {
@@ -57,8 +57,8 @@ func (s *socketStore) GetAll() (sockets []*serverSocket) {
 	return
 }
 
-func (s *socketStore) CloseAll() {
-	sockets := s.GetAll()
+func (s *socketStore) closeAll() {
+	sockets := s.getAll()
 	for _, socket := range sockets {
 		socket.Close()
 	}

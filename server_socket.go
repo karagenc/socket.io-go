@@ -117,13 +117,15 @@ func (s *serverSocket) Connected() bool {
 	return s.connected
 }
 
-var _emptyError error
-var reflectError = reflect.TypeOf(&_emptyError).Elem()
+var (
+	_emptyError  error
+	reflectError = reflect.TypeOf(&_emptyError).Elem()
+)
 
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.eventHandlers.GetAll(eventName)
+		handlers := s.eventHandlers.getAll(eventName)
 
 		go func() {
 			var (
@@ -239,7 +241,7 @@ func (s *serverSocket) onEvent(
 		values[len(values)-1] = f
 	}
 
-	_, err = handler.Call(values...)
+	_, err = handler.call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
@@ -284,7 +286,7 @@ func (s *serverSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	err = ack.Call(values...)
+	err = ack.call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
@@ -370,7 +372,7 @@ func (s *serverSocket) onConnect() error {
 }
 
 func (s *serverSocket) onError(err error) {
-	handlers := s.errorHandlers.GetAll()
+	handlers := s.errorHandlers.getAll()
 	if len(handlers) > 0 {
 		go func() {
 			for _, handler := range handlers {
@@ -391,7 +393,7 @@ func (s *serverSocket) onClose(reason Reason) {
 		if !s.Connected() {
 			return
 		}
-		for _, handler := range s.disconnectingHandlers.GetAll() {
+		for _, handler := range s.disconnectingHandlers.getAll() {
 			(*handler)(reason)
 		}
 
@@ -414,12 +416,12 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.leaveAll()
 
 		s.nsp.remove(s)
-		s.conn.Remove(s)
+		s.conn.remove(s)
 
 		s.connectedMu.Lock()
 		s.connected = false
 		s.connectedMu.Unlock()
-		for _, handler := range s.disconnectHandlers.GetAll() {
+		for _, handler := range s.disconnectHandlers.getAll() {
 			(*handler)(reason)
 		}
 	})
@@ -570,8 +572,8 @@ func (s *serverSocket) Disconnect(close bool) {
 		return
 	}
 	if close {
-		s.conn.DisconnectAll()
-		s.conn.Close()
+		s.conn.disconnectAll()
+		s.conn.close()
 	} else {
 		s.sendControlPacket(parser.PacketTypeDisconnect)
 		s.onClose("server namespace disconnect")

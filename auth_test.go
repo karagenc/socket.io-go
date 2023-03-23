@@ -14,17 +14,17 @@ func TestAuth(t *testing.T) {
 		Num: 500,
 	}
 	auth := newAuth()
-	err := auth.Set(s)
+	err := auth.set(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, ok := auth.Get().(*S)
+	s, ok := auth.get().(*S)
 	if !assert.True(t, ok) {
 		t.Fail()
 	}
 	assert.Equal(t, s.Num, 500)
 
-	err = auth.Set("Donkey")
+	err = auth.set("Donkey")
 	assert.NotNil(t, err, "err must be non-nil for a string value")
 }

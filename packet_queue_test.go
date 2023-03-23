@@ -10,17 +10,17 @@ import (
 func TestPacketQueue(t *testing.T) {
 	pq := newPacketQueue()
 
-	pq.Add(mustCreateEIOPacket(parser.PacketTypeMessage, false, nil))
-	pq.Add(mustCreateEIOPacket(parser.PacketTypePing, false, nil))
+	pq.add(mustCreateEIOPacket(parser.PacketTypeMessage, false, nil))
+	pq.add(mustCreateEIOPacket(parser.PacketTypePing, false, nil))
 
-	packets := pq.Get()
+	packets := pq.get()
 	assert.Equal(t, 2, len(packets))
 	assert.Equal(t, 0, len(pq.packets))
 
-	pq.Add(mustCreateEIOPacket(parser.PacketTypeMessage, false, nil))
-	pq.Add(mustCreateEIOPacket(parser.PacketTypePing, false, nil))
+	pq.add(mustCreateEIOPacket(parser.PacketTypeMessage, false, nil))
+	pq.add(mustCreateEIOPacket(parser.PacketTypePing, false, nil))
 
-	pq.Reset()
+	pq.reset()
 	assert.Equal(t, 0, len(pq.packets))
 }
 

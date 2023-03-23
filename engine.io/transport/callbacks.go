@@ -6,9 +6,10 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
-type PacketCallback func(packet ...*parser.Packet)
-
-type CloseCallback func(transportName string, err error)
+type (
+	PacketCallback func(packet ...*parser.Packet)
+	CloseCallback  func(transportName string, err error)
+)
 
 type Callbacks struct {
 	onPacket atomic.Value

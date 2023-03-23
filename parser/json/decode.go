@@ -50,7 +50,7 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 		return nil
 	}
 
-	ok := p.r.AddBuffer(data)
+	ok := p.r.addBuffer(data)
 	if ok {
 		r := p.r
 		p.r = nil
@@ -267,7 +267,7 @@ func (r *reconstructor) decode(types ...reflect.Type) (values []reflect.Value, e
 		return
 	}
 
-	return r.Reconstruct(types...)
+	return r.reconstruct(types...)
 }
 
 func convertTypesToValues(types ...reflect.Type) (values []reflect.Value) {

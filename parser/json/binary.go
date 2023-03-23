@@ -14,11 +14,15 @@ var (
 	errBinaryCannotBeAPtr = fmt.Errorf("parser/json: sio.Binary cannot be a pointer")
 )
 
-type socketIOBinary interface {
-	SocketIOBinary() bool
-}
+type (
+	Binary []byte
 
-type Binary []byte
+	socketIOBinary interface {
+		SocketIOBinary() bool
+	}
+)
+
+var _ socketIOBinary = Binary{}
 
 func (b Binary) SocketIOBinary() bool {
 	return true
@@ -254,13 +258,13 @@ type reconstructor struct {
 	json      serializer.JSONSerializer
 }
 
-func (r *reconstructor) AddBuffer(buf []byte) (ok bool) {
+func (r *reconstructor) addBuffer(buf []byte) (ok bool) {
 	r.buffers = append(r.buffers, buf)
 	r.remaining--
 	return r.remaining == 0
 }
 
-func (r *reconstructor) Reconstruct(types ...reflect.Type) (values []reflect.Value, err error) {
+func (r *reconstructor) reconstruct(types ...reflect.Type) (values []reflect.Value, err error) {
 	if len(r.buffers) < 1 {
 		return nil, errInvalidNumberOfBuffers
 	}

@@ -14,15 +14,15 @@ func TestOnOff(t *testing.T) {
 	var f testFn = func() {
 		count++
 	}
-	h.On(&f)
+	h.on(&f)
 
-	all := h.GetAll()
+	all := h.getAll()
 	c := all[0]
 	(*c)()
 	assert.Equal(t, 1, count)
 
-	h.Off(&f)
-	all = h.GetAll()
+	h.off(&f)
+	all = h.getAll()
 	assert.Equal(t, 0, len(all))
 }
 
@@ -32,30 +32,30 @@ func TestOnce(t *testing.T) {
 	var f testFn = func() {
 		count++
 	}
-	h.Once(&f)
+	h.once(&f)
 
-	all := h.GetAll()
+	all := h.getAll()
 	c := all[0]
 	(*c)()
 	assert.Equal(t, 1, count)
 
-	all = h.GetAll()
+	all = h.getAll()
 	assert.Equal(t, 0, len(all))
 
-	h.Once(&f)
-	h.Off(&f)
+	h.once(&f)
+	h.off(&f)
 
-	all = h.GetAll()
+	all = h.getAll()
 	assert.Equal(t, 0, len(all))
 }
 
 func TestOffAll(t *testing.T) {
 	h := newHandlerStore[*testFn]()
 	var f testFn = func() {}
-	h.On(&f)
-	h.Once(&f)
-	h.OffAll()
+	h.on(&f)
+	h.once(&f)
+	h.offAll()
 
-	all := h.GetAll()
+	all := h.getAll()
 	assert.Equal(t, 0, len(all))
 }

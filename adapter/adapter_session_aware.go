@@ -34,7 +34,7 @@ func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creat
 	creator := NewInMemoryAdapterCreator()
 	return func(socketStore SocketStore, parserCreator parser.Creator) Adapter {
 		inMemoryAdapter := creator(socketStore, parserCreator).(*inMemoryAdapter)
-		return NewSessionAwareAdapter(
+		return newSessionAwareAdapter(
 			inMemoryAdapter,
 			maxDisconnectionDuration,
 			cleanerDuration,
@@ -44,7 +44,7 @@ func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creat
 	}
 }
 
-func NewSessionAwareAdapter(inMemoryAdapter *inMemoryAdapter,
+func newSessionAwareAdapter(inMemoryAdapter *inMemoryAdapter,
 	maxDisconnectionDuration,
 	cleanerDuration time.Duration,
 	socketStore SocketStore,

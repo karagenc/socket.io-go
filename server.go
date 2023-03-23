@@ -139,10 +139,10 @@ func (s *Server) Of(namespace string) *Namespace {
 	if len(namespace) != 0 && namespace[0] != '/' {
 		namespace = "/" + namespace
 	}
-	n, created := s.namespaces.GetOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
+	n, created := s.namespaces.getOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
 	if created && namespace != "/" {
 		go func() {
-			for _, handler := range s.newNamespaceHandlers.GetAll() {
+			for _, handler := range s.newNamespaceHandlers.getAll() {
 				(*handler)(n)
 			}
 		}()

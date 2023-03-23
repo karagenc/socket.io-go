@@ -12,18 +12,18 @@ type ServerSocket interface {
 	// Retrieves the Namespace this socket is connected to.
 	Namespace() *Namespace
 
-	// Register a middleware for events.
-	//
-	// Function signature must be same as with On and Once:
-	// func(eventName string, v ...any) error
-	Use(f any)
-
 	// Join room(s)
 	Join(room ...Room)
 	// Leave a room
 	Leave(room Room)
 	// Get a set of all rooms socket was joined to.
 	Rooms() mapset.Set[Room]
+
+	// Register a middleware for events.
+	//
+	// Function signature must be same as with On and Once:
+	// func(eventName string, v ...any) error
+	Use(f any)
 
 	// Sets a modifier for a subsequent event emission that the event
 	// will only be broadcast to clients that have joined the given room.

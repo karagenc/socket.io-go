@@ -13,31 +13,31 @@ func newHandlerStore[T comparable]() *handlerStore[T] {
 	return new(handlerStore[T])
 }
 
-func (e *handlerStore[T]) On(handler T) {
+func (e *handlerStore[T]) on(handler T) {
 	e.mu.Lock()
 	e.funcs = append(e.funcs, handler)
 	e.mu.Unlock()
 }
 
-func (e *handlerStore[T]) OnSubEvent(handler T) {
+func (e *handlerStore[T]) onSubEvent(handler T) {
 	e.mu.Lock()
 	e.subs = append(e.subs, handler)
 	e.mu.Unlock()
 }
 
-func (e *handlerStore[T]) OffSubEvents() {
+func (e *handlerStore[T]) offSubEvents() {
 	e.mu.Lock()
 	e.subs = nil
 	e.mu.Unlock()
 }
 
-func (e *handlerStore[T]) Once(handler T) {
+func (e *handlerStore[T]) once(handler T) {
 	e.mu.Lock()
 	e.funcsOnce = append(e.funcsOnce, handler)
 	e.mu.Unlock()
 }
 
-func (e *handlerStore[T]) Off(handler ...T) {
+func (e *handlerStore[T]) off(handler ...T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -62,14 +62,14 @@ func (e *handlerStore[T]) Off(handler ...T) {
 	}
 }
 
-func (e *handlerStore[T]) OffAll() {
+func (e *handlerStore[T]) offAll() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.funcs = nil
 	e.funcsOnce = nil
 }
 
-func (e *handlerStore[T]) GetAll() (handlers []T) {
+func (e *handlerStore[T]) getAll() (handlers []T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

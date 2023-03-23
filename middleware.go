@@ -1,11 +1,21 @@
 package sio
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"time"
 )
 
 type NspMiddlewareFunc func(socket ServerSocket, handshake *Handshake) error
+
+type Handshake struct {
+	// Date of creation
+	Time time.Time
+
+	// Authentication data
+	Auth json.RawMessage
+}
 
 func (n *Namespace) Use(f NspMiddlewareFunc) {
 	n.middlewareFuncsMu.Lock()

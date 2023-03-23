@@ -1,27 +1,29 @@
 package adapter
 
-type TestSocket struct {
+type testSocket struct {
 	id SocketID
 
 	Rooms     []Room
 	Connected bool
 }
 
-func NewTestSocket(id SocketID) *TestSocket {
-	return &TestSocket{
+var _ Socket = newTestSocket("")
+
+func newTestSocket(id SocketID) *testSocket {
+	return &testSocket{
 		id:        id,
 		Connected: true,
 		Rooms:     []Room{Room(id)},
 	}
 }
 
-func (s *TestSocket) ID() SocketID { return s.id }
+func (s *testSocket) ID() SocketID { return s.id }
 
-func (s *TestSocket) Join(room ...Room) {
+func (s *testSocket) Join(room ...Room) {
 	s.Rooms = append(s.Rooms, room...)
 }
 
-func (s *TestSocket) Leave(room Room) {
+func (s *testSocket) Leave(room Room) {
 	remove := func(slice []Room, s int) []Room {
 		return append(slice[:s], slice[s+1:]...)
 	}
@@ -32,16 +34,16 @@ func (s *TestSocket) Leave(room Room) {
 	}
 }
 
-func (s *TestSocket) Emit(eventName string, v ...any) {}
+func (s *testSocket) Emit(eventName string, v ...any) {}
 
-func (s *TestSocket) To(room ...Room) *BroadcastOperator { return nil }
+func (s *testSocket) To(room ...Room) *BroadcastOperator { return nil }
 
-func (s *TestSocket) In(room ...Room) *BroadcastOperator { return nil }
+func (s *testSocket) In(room ...Room) *BroadcastOperator { return nil }
 
-func (s *TestSocket) Except(room ...Room) *BroadcastOperator { return nil }
+func (s *testSocket) Except(room ...Room) *BroadcastOperator { return nil }
 
-func (s *TestSocket) Broadcast() *BroadcastOperator { return nil }
+func (s *testSocket) Broadcast() *BroadcastOperator { return nil }
 
-func (s *TestSocket) Disconnect(close bool) {
+func (s *testSocket) Disconnect(close bool) {
 	s.Connected = false
 }

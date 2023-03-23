@@ -143,7 +143,7 @@ func (s *clientSocket) setRecovered(recovered bool) {
 func (s *clientSocket) Connected() bool {
 	s.connectedMu.RLock()
 	defer s.connectedMu.RUnlock()
-	return s.manager.conn.Connected() && s.connected
+	return s.manager.conn.connected() && s.connected
 }
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
@@ -163,7 +163,7 @@ func (s *clientSocket) registerSubEvents() {
 		}
 		error ManagerErrorFunc = func(err error) {
 			if !s.Connected() {
-				for _, handler := range s.connectErrorHandlers.GetAll() {
+				for _, handler := range s.connectErrorHandlers.getAll() {
 					(*handler)(err)
 				}
 			}
@@ -172,18 +172,18 @@ func (s *clientSocket) registerSubEvents() {
 
 	s.activeMu.Lock()
 	s.active = true
-	s.manager.openHandlers.OnSubEvent(&open)
-	s.manager.errorHandlers.OnSubEvent(&error)
-	s.manager.closeHandlers.OnSubEvent(&close)
+	s.manager.openHandlers.onSubEvent(&open)
+	s.manager.errorHandlers.onSubEvent(&error)
+	s.manager.closeHandlers.onSubEvent(&close)
 	s.activeMu.Unlock()
 }
 
 func (s *clientSocket) deregisterSubEvents() {
 	s.activeMu.Lock()
 	s.active = false
-	s.manager.openHandlers.OffSubEvents()
-	s.manager.errorHandlers.OffSubEvents()
-	s.manager.closeHandlers.OffSubEvents()
+	s.manager.openHandlers.offSubEvents()
+	s.manager.errorHandlers.offSubEvents()
+	s.manager.closeHandlers.offSubEvents()
 	s.activeMu.Unlock()
 }
 
@@ -228,10 +228,10 @@ func (s *clientSocket) Disconnect() {
 
 func (s *clientSocket) Manager() *Manager { return s.manager }
 
-func (s *clientSocket) Auth() any { return s.auth.Get() }
+func (s *clientSocket) Auth() any { return s.auth.get() }
 
 func (s *clientSocket) SetAuth(v any) {
-	err := s.auth.Set(v)
+	err := s.auth.set(v)
 	if err != nil {
 		panic(fmt.Errorf("sio: %w", err))
 	}
@@ -239,7 +239,7 @@ func (s *clientSocket) SetAuth(v any) {
 
 func (s *clientSocket) onOpen() {
 	s.debug.Log("onOpen called. Connecting")
-	authData := s.auth.Get()
+	authData := s.auth.get()
 	s.sendConnectPacket(authData)
 }
 
@@ -295,7 +295,7 @@ func (s *clientSocket) sendConnectPacket(authData any) {
 	}
 	// This function is called from onOpen, and onOpen can be called via `Manager.openHandlers`.
 	// We need to use a goroutine because eioMu is locked inside `Manager.Connect`, which indirectly calls this method.
-	go s.manager.conn.Packet(packet)
+	go s.manager.conn.packet(packet)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -304,7 +304,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		s.onConnect(header, decode)
 
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.eventHandlers.GetAll(eventName)
+		handlers := s.eventHandlers.getAll(eventName)
 
 		go func() {
 			var (
@@ -365,7 +365,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 
 func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
 	connectError := func(err error) {
-		for _, handler := range s.connectErrorHandlers.GetAll() {
+		for _, handler := range s.connectErrorHandlers.getAll() {
 			(*handler)(fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
 		}
 	}
@@ -409,15 +409,15 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.debug.Log("Socket connected")
 
 	s.emitBuffered()
-	for _, handler := range s.connectHandlers.GetAll() {
+	for _, handler := range s.connectHandlers.getAll() {
 		(*handler)()
 	}
 	s.packetQueue.drainQueue(true)
 }
 
 type sendBufferItem struct {
-	AckID  *uint64
-	Packet *eioparser.Packet
+	ackID  *uint64
+	packet *eioparser.Packet
 }
 
 func (s *clientSocket) emitBuffered() {
@@ -481,9 +481,9 @@ func (s *clientSocket) emitBuffered() {
 	if len(s.sendBuffer) != 0 {
 		packets := make([]*eioparser.Packet, len(s.sendBuffer))
 		for i := range packets {
-			packets[i] = s.sendBuffer[i].Packet
+			packets[i] = s.sendBuffer[i].packet
 		}
-		s.manager.conn.Packet(packets...)
+		s.manager.conn.packet(packets...)
 		s.sendBuffer = nil
 	}
 }
@@ -513,7 +513,7 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		return
 	}
 
-	for _, handler := range s.connectErrorHandlers.GetAll() {
+	for _, handler := range s.connectErrorHandlers.getAll() {
 		(*handler)(fmt.Errorf("sio: %s", v.Message))
 	}
 }
@@ -603,7 +603,7 @@ func (s *clientSocket) callEvent(
 		values[len(values)-1] = f
 	}
 
-	_, err := handler.Call(values...)
+	_, err := handler.call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
@@ -648,7 +648,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	err = ack.Call(values...)
+	err = ack.call(values...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
@@ -673,7 +673,7 @@ func (s *clientSocket) onClose(reason Reason) {
 	s.connectedMu.Lock()
 	s.connected = false
 	s.connectedMu.Unlock()
-	for _, handler := range s.disconnectHandlers.GetAll() {
+	for _, handler := range s.disconnectHandlers.getAll() {
 		(*handler)(reason)
 	}
 }
@@ -758,7 +758,7 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 
 		s.sendBufferMu.Lock()
 		for i, packet := range s.sendBuffer {
-			if packet.AckID != nil && *packet.AckID == id {
+			if packet.ackID != nil && *packet.ackID == id {
 				s.debug.Log("Removing packet with ack ID", id)
 				s.sendBuffer = remove(s.sendBuffer, i)
 			}
@@ -863,14 +863,14 @@ func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]by
 		s.connectedMu.RLock()
 		defer s.connectedMu.RUnlock()
 		if s.connected {
-			s.manager.conn.Packet(packets...)
+			s.manager.conn.packet(packets...)
 		} else if !volatile {
 			s.sendBufferMu.Lock()
 			buffers := make([]sendBufferItem, len(packets))
 			for i := range buffers {
 				buffers[i] = sendBufferItem{
-					AckID:  ackID,
-					Packet: packets[i],
+					ackID:  ackID,
+					packet: packets[i],
 				}
 			}
 			s.sendBuffer = append(s.sendBuffer, buffers...)

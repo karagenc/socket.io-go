@@ -24,12 +24,12 @@ func TestPollQueue(t *testing.T) {
 	}
 
 	for _, p := range test {
-		pq.Add(p)
+		pq.add(p)
 	}
 
-	length := pq.Len()
+	length := pq.len()
 
-	packets := pq.Get()
+	packets := pq.get()
 	assert.Equal(t, length, len(packets))
 	assert.Equal(t, len(test), length)
 
@@ -59,11 +59,11 @@ func TestPoll(t *testing.T) {
 	go func() {
 		time.Sleep(waitFor)
 		p := mustCreatePacket(t, parser.PacketTypeMessage, false, nil)
-		pq.Add(p)
+		pq.add(p)
 	}()
 
 	start := time.Now()
-	packets := pq.Poll(1 * time.Second)
+	packets := pq.poll(1 * time.Second)
 	assert.Equal(t, 1, len(packets), "expected 1 packet")
 
 	elapsed := time.Since(start)
@@ -74,7 +74,7 @@ func TestPoll(t *testing.T) {
 		t.Fatal("it takes too much time to receive a packet from a pollQueue")
 	}
 
-	assert.Equal(t, 0, pq.Len(), "pq should be empty after running pq.Poll")
+	assert.Equal(t, 0, pq.len(), "pq should be empty after running pq.Poll")
 }
 
 func TestPollTimeout(t *testing.T) {
@@ -85,10 +85,10 @@ func TestPollTimeout(t *testing.T) {
 	go func() {
 		time.Sleep(waitFor)
 		p := mustCreatePacket(t, parser.PacketTypeMessage, false, nil)
-		pq.Add(p)
+		pq.add(p)
 	}()
 
-	packets := pq.Poll(waitFor - 50*time.Millisecond)
+	packets := pq.poll(waitFor - 50*time.Millisecond)
 	assert.Equal(t, 0, len(packets), "expected 0 packet (because of the timeout)")
 }
 

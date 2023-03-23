@@ -20,26 +20,7 @@ func newNamespaceStore() *namespaceStore {
 	}
 }
 
-func (s *namespaceStore) Len() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.nsps)
-}
-
-func (s *namespaceStore) Set(nsp *Namespace) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.nsps[nsp.Name()] = nsp
-}
-
-func (s *namespaceStore) Get(name string) (nsp *Namespace, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	nsp, ok = s.nsps[name]
-	return
-}
-
-func (s *namespaceStore) GetOrCreate(
+func (s *namespaceStore) getOrCreate(
 	name string,
 	server *Server,
 	adapterCreator adapter.Creator,
@@ -57,7 +38,26 @@ func (s *namespaceStore) GetOrCreate(
 	return
 }
 
-func (s *namespaceStore) Remove(name string) {
+func (s *namespaceStore) len() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.nsps)
+}
+
+func (s *namespaceStore) set(nsp *Namespace) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nsps[nsp.Name()] = nsp
+}
+
+func (s *namespaceStore) get(name string) (nsp *Namespace, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	nsp, ok = s.nsps[name]
+	return
+}
+
+func (s *namespaceStore) remove(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.nsps, name)

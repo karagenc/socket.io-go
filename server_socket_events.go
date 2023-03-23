@@ -8,7 +8,7 @@ func (s *serverSocket) OnEvent(eventName string, handler any) {
 	if err != nil {
 		panic(err)
 	}
-	s.eventHandlers.On(eventName, h)
+	s.eventHandlers.on(eventName, h)
 }
 
 func (s *serverSocket) OnceEvent(eventName string, handler any) {
@@ -19,18 +19,18 @@ func (s *serverSocket) OnceEvent(eventName string, handler any) {
 	if err != nil {
 		panic(err)
 	}
-	s.eventHandlers.Once(eventName, h)
+	s.eventHandlers.once(eventName, h)
 }
 
 func (s *serverSocket) OffEvent(eventName string, handler ...any) {
-	s.eventHandlers.Off(eventName, handler...)
+	s.eventHandlers.off(eventName, handler...)
 }
 
 func (s *serverSocket) OffAll() {
-	s.eventHandlers.OffAll()
-	s.errorHandlers.OffAll()
-	s.disconnectingHandlers.OffAll()
-	s.disconnectHandlers.OffAll()
+	s.eventHandlers.offAll()
+	s.errorHandlers.offAll()
+	s.disconnectingHandlers.offAll()
+	s.disconnectHandlers.offAll()
 }
 
 type (
@@ -40,11 +40,11 @@ type (
 )
 
 func (s *serverSocket) OnError(f ServerSocketErrorFunc) {
-	s.errorHandlers.On(&f)
+	s.errorHandlers.on(&f)
 }
 
 func (s *serverSocket) OnceError(f ServerSocketErrorFunc) {
-	s.errorHandlers.Once(&f)
+	s.errorHandlers.once(&f)
 }
 
 func (s *serverSocket) OffError(_f ...ServerSocketErrorFunc) {
@@ -52,15 +52,15 @@ func (s *serverSocket) OffError(_f ...ServerSocketErrorFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	s.errorHandlers.Off(f...)
+	s.errorHandlers.off(f...)
 }
 
 func (s *serverSocket) OnDisconnecting(f ServerSocketDisconnectingFunc) {
-	s.disconnectingHandlers.On(&f)
+	s.disconnectingHandlers.on(&f)
 }
 
 func (s *serverSocket) OnceDisconnecting(f ServerSocketDisconnectingFunc) {
-	s.disconnectingHandlers.Once(&f)
+	s.disconnectingHandlers.once(&f)
 }
 
 func (s *serverSocket) OffDisconnecting(_f ...ServerSocketDisconnectingFunc) {
@@ -68,15 +68,15 @@ func (s *serverSocket) OffDisconnecting(_f ...ServerSocketDisconnectingFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	s.disconnectingHandlers.Off(f...)
+	s.disconnectingHandlers.off(f...)
 }
 
 func (s *serverSocket) OnDisconnect(f ServerSocketDisconnectFunc) {
-	s.disconnectHandlers.On(&f)
+	s.disconnectHandlers.on(&f)
 }
 
 func (s *serverSocket) OnceDisconnect(f ServerSocketDisconnectFunc) {
-	s.disconnectHandlers.Once(&f)
+	s.disconnectHandlers.once(&f)
 }
 
 func (s *serverSocket) OffDisconnect(_f ...ServerSocketDisconnectFunc) {
@@ -84,5 +84,5 @@ func (s *serverSocket) OffDisconnect(_f ...ServerSocketDisconnectFunc) {
 	for i := range f {
 		f[i] = &_f[i]
 	}
-	s.disconnectHandlers.Off(f...)
+	s.disconnectHandlers.off(f...)
 }
