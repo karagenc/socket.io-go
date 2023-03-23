@@ -27,7 +27,8 @@ type ClientTransport struct {
 
 	callbacks *transport.Callbacks
 
-	once sync.Once
+	pollExit chan any
+	once     sync.Once
 }
 
 func NewClientTransport(
@@ -45,6 +46,7 @@ func NewClientTransport(
 		httpClient: httpClient,
 
 		callbacks: callbacks,
+		pollExit:  make(chan any),
 	}
 }
 
@@ -107,8 +109,14 @@ func (t *ClientTransport) Run() {
 			t.close(err)
 			break
 		}
-
 		t.callbacks.OnPacket(packets...)
+
+		select {
+		case <-t.pollExit:
+			break
+		default:
+			continue
+		}
 	}
 }
 
@@ -166,7 +174,6 @@ func (t *ClientTransport) poll() ([]*parser.Packet, error) {
 		return nil, err
 	}
 	defer r.Close()
-
 	return parser.DecodePayloads(r)
 }
 
@@ -217,8 +224,9 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 }
 
 func (t *ClientTransport) Discard() {
-	// Do nothing.
-	t.once.Do(func() {})
+	t.once.Do(func() {
+		t.pollExit <- nil
+	})
 }
 
 func (t *ClientTransport) close(err error) {
