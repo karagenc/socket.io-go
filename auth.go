@@ -6,16 +6,16 @@ import (
 	"sync"
 )
 
-type Auth struct {
+type auth struct {
 	mu   sync.Mutex
 	data any
 }
 
-func newAuth() *Auth {
-	return new(Auth)
+func newAuth() *auth {
+	return new(auth)
 }
 
-func (a *Auth) set(data any) error {
+func (a *auth) set(data any) error {
 	if data != nil {
 		rt := reflect.TypeOf(data)
 		k := rt.Kind()
@@ -36,7 +36,7 @@ func (a *Auth) set(data any) error {
 	return nil
 }
 
-func (a *Auth) get() (data any) {
+func (a *auth) get() (data any) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.data

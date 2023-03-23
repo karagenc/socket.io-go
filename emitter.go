@@ -5,16 +5,18 @@ import (
 	"time"
 )
 
-type Emitter struct {
-	socket   emitter
-	timeout  time.Duration
-	volatile bool
-}
+type (
+	Emitter struct {
+		socket   emitter
+		timeout  time.Duration
+		volatile bool
+	}
 
-type emitter interface {
-	Socket
-	emit(eventName string, timeout time.Duration, volatile, fromQueue bool, v ...any)
-}
+	emitter interface {
+		Socket
+		emit(eventName string, timeout time.Duration, volatile, fromQueue bool, v ...any)
+	}
+)
 
 func (e *Emitter) Socket() Socket { return e.socket }
 

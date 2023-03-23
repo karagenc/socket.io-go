@@ -16,60 +16,62 @@ import (
 	"nhooyr.io/websocket"
 )
 
-type ServerAuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
+type (
+	ServerAuthFunc func(w http.ResponseWriter, r *http.Request) (ok bool)
 
-type ServerConfig struct {
-	// This is a middleware function to authenticate clients before doing the handshake.
-	// If this function returns false authentication will fail. Or else, the handshake will begin as usual.
-	Authenticator ServerAuthFunc
+	ServerConfig struct {
+		// This is a middleware function to authenticate clients before doing the handshake.
+		// If this function returns false authentication will fail. Or else, the handshake will begin as usual.
+		Authenticator ServerAuthFunc
 
-	// When to send PING packets to clients.
-	PingInterval time.Duration
+		// When to send PING packets to clients.
+		PingInterval time.Duration
 
-	// After sending PING, client should send PONG before this timeout exceeds.
-	PingTimeout time.Duration
+		// After sending PING, client should send PONG before this timeout exceeds.
+		PingTimeout time.Duration
 
-	// Timeout to wait before upgrading a client transport.
-	UpgradeTimeout time.Duration
+		// Timeout to wait before upgrading a client transport.
+		UpgradeTimeout time.Duration
 
-	// MaxBufferSize is used for preventing DOS.
-	// This is the equivalent of maxHTTPBufferSize.
-	MaxBufferSize        int
-	DisableMaxBufferSize bool
+		// MaxBufferSize is used for preventing DOS.
+		// This is the equivalent of maxHTTPBufferSize.
+		MaxBufferSize        int
+		DisableMaxBufferSize bool
 
-	// Custom WebSocket options to use.
-	WebSocketAcceptOptions *websocket.AcceptOptions
+		// Custom WebSocket options to use.
+		WebSocketAcceptOptions *websocket.AcceptOptions
 
-	// Callback function for Engine.IO server errors.
-	// You may use this function to log server errors.
-	OnError ErrorCallback
+		// Callback function for Engine.IO server errors.
+		// You may use this function to log server errors.
+		OnError ErrorCallback
 
-	// For debugging purposes. Leave it nil if it is of no use.
-	Debugger Debugger
-}
+		// For debugging purposes. Leave it nil if it is of no use.
+		Debugger Debugger
+	}
 
-type Server struct {
-	authenticator ServerAuthFunc
+	Server struct {
+		authenticator ServerAuthFunc
 
-	pingInterval   time.Duration
-	pingTimeout    time.Duration
-	upgradeTimeout time.Duration
+		pingInterval   time.Duration
+		pingTimeout    time.Duration
+		upgradeTimeout time.Duration
 
-	maxBufferSize        int
-	disableMaxBufferSize bool
+		maxBufferSize        int
+		disableMaxBufferSize bool
 
-	wsAcceptOptions *websocket.AcceptOptions
+		wsAcceptOptions *websocket.AcceptOptions
 
-	onSocket NewSocketCallback
-	onError  ErrorCallback
+		onSocket NewSocketCallback
+		onError  ErrorCallback
 
-	store *socketStore
+		store *socketStore
 
-	closed    chan struct{}
-	closeOnce sync.Once
+		closed    chan struct{}
+		closeOnce sync.Once
 
-	debug Debugger
-}
+		debug Debugger
+	}
+)
 
 func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 	if onSocket == nil {

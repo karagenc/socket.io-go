@@ -11,79 +11,81 @@ import (
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
 )
 
-type ManagerConfig struct {
-	// A creator function for the Socket.IO parser.
-	// This function is used for creating a parser.Parser object.
-	// You can use a custom parser by changing this variable.
-	//
-	// By default this function is nil and default JSON parser is used.
-	ParserCreator parser.Creator
+type (
+	ManagerConfig struct {
+		// A creator function for the Socket.IO parser.
+		// This function is used for creating a parser.Parser object.
+		// You can use a custom parser by changing this variable.
+		//
+		// By default this function is nil and default JSON parser is used.
+		ParserCreator parser.Creator
 
-	// Configuration for the Engine.IO.
-	EIO eio.ClientConfig
+		// Configuration for the Engine.IO.
+		EIO eio.ClientConfig
 
-	// Should we disallow reconnections?
-	// Default: false (allow reconnections)
-	NoReconnection bool
+		// Should we disallow reconnections?
+		// Default: false (allow reconnections)
+		NoReconnection bool
 
-	// How many reconnection attempts should we try?
-	// Default: 0 (Infinite)
-	ReconnectionAttempts uint32
+		// How many reconnection attempts should we try?
+		// Default: 0 (Infinite)
+		ReconnectionAttempts uint32
 
-	// The time delay between reconnection attempts.
-	// Default: 1 second
-	ReconnectionDelay *time.Duration
+		// The time delay between reconnection attempts.
+		// Default: 1 second
+		ReconnectionDelay *time.Duration
 
-	// The max time delay between reconnection attempts.
-	// Default: 5 seconds
-	ReconnectionDelayMax *time.Duration
+		// The max time delay between reconnection attempts.
+		// Default: 5 seconds
+		ReconnectionDelayMax *time.Duration
 
-	// Used in the exponential backoff jitter when reconnecting.
-	// This value is required to be between 0 and 1
-	//
-	// Default: 0.5
-	RandomizationFactor *float32
+		// Used in the exponential backoff jitter when reconnecting.
+		// This value is required to be between 0 and 1
+		//
+		// Default: 0.5
+		RandomizationFactor *float32
 
-	// For debugging purposes. Leave it nil if it is of no use.
-	//
-	// This only applies to Socket.IO. For Engine.IO, use EIO.Debugger.
-	Debugger Debugger
-}
+		// For debugging purposes. Leave it nil if it is of no use.
+		//
+		// This only applies to Socket.IO. For Engine.IO, use EIO.Debugger.
+		Debugger Debugger
+	}
 
-type Manager struct {
-	url       string
-	eioConfig eio.ClientConfig
-	debug     Debugger
+	Manager struct {
+		url       string
+		eioConfig eio.ClientConfig
+		debug     Debugger
 
-	// This mutex is used for protecting parser from concurrent calls.
-	// Due to the modular and concurrent nature of Engine.IO,
-	// we should use a mutex to ensure that the Engine.IO doesn't access
-	// the parser's Add method from multiple goroutines.
-	parserMu sync.Mutex
-	parser   parser.Parser
+		// This mutex is used for protecting parser from concurrent calls.
+		// Due to the modular and concurrent nature of Engine.IO,
+		// we should use a mutex to ensure that the Engine.IO doesn't access
+		// the parser's Add method from multiple goroutines.
+		parserMu sync.Mutex
+		parser   parser.Parser
 
-	noReconnection       bool
-	reconnectionAttempts uint32
-	reconnectionDelay    time.Duration
-	reconnectionDelayMax time.Duration
-	randomizationFactor  float32
+		noReconnection       bool
+		reconnectionAttempts uint32
+		reconnectionDelay    time.Duration
+		reconnectionDelayMax time.Duration
+		randomizationFactor  float32
 
-	sockets *clientSocketStore
-	backoff *backoff
-	conn    *clientConn
+		sockets *clientSocketStore
+		backoff *backoff
+		conn    *clientConn
 
-	skipReconnect   bool
-	skipReconnectMu sync.RWMutex
+		skipReconnect   bool
+		skipReconnectMu sync.RWMutex
 
-	openHandlers             *handlerStore[*ManagerOpenFunc]
-	pingHandlers             *handlerStore[*ManagerPingFunc]
-	errorHandlers            *handlerStore[*ManagerErrorFunc]
-	closeHandlers            *handlerStore[*ManagerCloseFunc]
-	reconnectHandlers        *handlerStore[*ManagerReconnectFunc]
-	reconnectAttemptHandlers *handlerStore[*ManagerReconnectAttemptFunc]
-	reconnectErrorHandlers   *handlerStore[*ManagerReconnectErrorFunc]
-	reconnectFailedHandlers  *handlerStore[*ManagerReconnectFailedFunc]
-}
+		openHandlers             *handlerStore[*ManagerOpenFunc]
+		pingHandlers             *handlerStore[*ManagerPingFunc]
+		errorHandlers            *handlerStore[*ManagerErrorFunc]
+		closeHandlers            *handlerStore[*ManagerCloseFunc]
+		reconnectHandlers        *handlerStore[*ManagerReconnectFunc]
+		reconnectAttemptHandlers *handlerStore[*ManagerReconnectAttemptFunc]
+		reconnectErrorHandlers   *handlerStore[*ManagerReconnectErrorFunc]
+		reconnectFailedHandlers  *handlerStore[*ManagerReconnectFailedFunc]
+	}
+)
 
 const (
 	DefaultReconnectionDelay            = 1 * time.Second

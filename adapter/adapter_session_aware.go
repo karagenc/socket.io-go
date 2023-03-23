@@ -8,25 +8,27 @@ import (
 	"github.com/tomruk/yeast"
 )
 
-type sessionWithTimestamp struct {
-	SessionToPersist SessionToPersist
-	DisconnectedAt   time.Time
-}
+type (
+	sessionAwareAdapter struct {
+		*inMemoryAdapter
+
+		maxDisconnectDuration time.Duration
+		yeaster               *yeast.Yeaster
+		cleanerDuration       time.Duration
+
+		sessions map[PrivateSessionID]*sessionWithTimestamp
+		packets  []*PersistedPacket
+		mu       sync.Mutex
+	}
+
+	sessionWithTimestamp struct {
+		SessionToPersist SessionToPersist
+		DisconnectedAt   time.Time
+	}
+)
 
 func (s *sessionWithTimestamp) hasExpired(maxDisconnectDuration time.Duration) bool {
 	return time.Now().After(s.DisconnectedAt.Add(maxDisconnectDuration))
-}
-
-type sessionAwareAdapter struct {
-	*inMemoryAdapter
-
-	maxDisconnectDuration time.Duration
-	yeaster               *yeast.Yeaster
-	cleanerDuration       time.Duration
-
-	sessions map[PrivateSessionID]*sessionWithTimestamp
-	packets  []*PersistedPacket
-	mu       sync.Mutex
 }
 
 func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creator {

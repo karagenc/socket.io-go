@@ -7,24 +7,26 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type queuedPacket struct {
-	id     uint64
-	header *parser.PacketHeader
-	v      []any
+type (
+	clientPacketQueue struct {
+		socket *clientSocket
+		debug  Debugger
 
-	mu       *sync.Mutex
-	tryCount int
-	pending  bool
-}
+		mu            sync.Mutex
+		seq           uint64
+		queuedPackets []*queuedPacket
+	}
 
-type clientPacketQueue struct {
-	socket *clientSocket
-	debug  Debugger
+	queuedPacket struct {
+		id     uint64
+		header *parser.PacketHeader
+		v      []any
 
-	mu            sync.Mutex
-	seq           uint64
-	queuedPackets []*queuedPacket
-}
+		mu       *sync.Mutex
+		tryCount int
+		pending  bool
+	}
+)
 
 func newClientPacketQueue(socket *clientSocket) *clientPacketQueue {
 	debug := socket.debug.WithDynamicContext("[sio] clientPacketQueue with socket ID", func() string {

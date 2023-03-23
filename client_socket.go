@@ -14,63 +14,65 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type ClientSocketConfig struct {
-	// Authentication data.
-	//
-	// This can also be set/overridden using Socket.SetAuth method.
-	Auth any
+type (
+	ClientSocketConfig struct {
+		// Authentication data.
+		//
+		// This can also be set/overridden using Socket.SetAuth method.
+		Auth any
 
-	// The maximum number of retries for the packet to be sent.
-	// Above the limit, the packet will be discarded.
-	//
-	// Using `Infinity` means the delivery guarantee is
-	// "at-least-once" (instead of "at-most-once" by default),
-	// but a smaller value like 10 should be sufficient in practice.
-	Retries int
+		// The maximum number of retries for the packet to be sent.
+		// Above the limit, the packet will be discarded.
+		//
+		// Using `Infinity` means the delivery guarantee is
+		// "at-least-once" (instead of "at-most-once" by default),
+		// but a smaller value like 10 should be sufficient in practice.
+		Retries int
 
-	// The default timeout used when waiting for an acknowledgement.
-	AckTimeout time.Duration
-}
+		// The default timeout used when waiting for an acknowledgement.
+		AckTimeout time.Duration
+	}
 
-type clientSocket struct {
-	id atomic.Value
+	clientSocket struct {
+		id atomic.Value
 
-	_pid        atomic.Value
-	_lastOffset atomic.Value
-	_recovered  atomic.Value
+		_pid        atomic.Value
+		_lastOffset atomic.Value
+		_recovered  atomic.Value
 
-	config    *ClientSocketConfig
-	namespace string
-	manager   *Manager
-	parser    parser.Parser
+		config    *ClientSocketConfig
+		namespace string
+		manager   *Manager
+		parser    parser.Parser
 
-	auth *Auth
+		auth *auth
 
-	connected   bool
-	connectedMu sync.RWMutex
+		connected   bool
+		connectedMu sync.RWMutex
 
-	sendBuffer   []sendBufferItem
-	sendBufferMu sync.Mutex
+		sendBuffer   []sendBufferItem
+		sendBufferMu sync.Mutex
 
-	receiveBuffer   []*clientEvent
-	receiveBufferMu sync.Mutex
+		receiveBuffer   []*clientEvent
+		receiveBufferMu sync.Mutex
 
-	eventHandlers        *eventHandlerStore
-	connectHandlers      *handlerStore[*ClientSocketConnectFunc]
-	connectErrorHandlers *handlerStore[*ClientSocketConnectErrorFunc]
-	disconnectHandlers   *handlerStore[*ClientSocketDisconnectFunc]
+		eventHandlers        *eventHandlerStore
+		connectHandlers      *handlerStore[*ClientSocketConnectFunc]
+		connectErrorHandlers *handlerStore[*ClientSocketConnectErrorFunc]
+		disconnectHandlers   *handlerStore[*ClientSocketDisconnectFunc]
 
-	acks   map[uint64]*ackHandler
-	ackID  uint64
-	acksMu sync.Mutex
+		acks   map[uint64]*ackHandler
+		ackID  uint64
+		acksMu sync.Mutex
 
-	active   bool
-	activeMu sync.Mutex
+		active   bool
+		activeMu sync.Mutex
 
-	packetQueue *clientPacketQueue
+		packetQueue *clientPacketQueue
 
-	debug Debugger
-}
+		debug Debugger
+	}
+)
 
 func newClientSocket(
 	config *ClientSocketConfig,

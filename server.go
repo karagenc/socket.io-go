@@ -18,67 +18,69 @@ const (
 
 type BroadcastOperator = adapter.BroadcastOperator
 
-type ServerConfig struct {
-	ParserCreator  parser.Creator
-	AdapterCreator adapter.Creator
+type (
+	ServerConfig struct {
+		ParserCreator  parser.Creator
+		AdapterCreator adapter.Creator
 
-	EIO eio.ServerConfig
+		EIO eio.ServerConfig
 
-	// Duration to wait before a client without namespace is closed.
-	//
-	// Default: 45 seconds
-	ConnectTimeout time.Duration
+		// Duration to wait before a client without namespace is closed.
+		//
+		// Default: 45 seconds
+		ConnectTimeout time.Duration
 
-	// In order for a client to make a connection to a namespace,
-	// the namespace must be created on server via `Server.of`.
-	//
-	// This option permits the client to create the namespace if it is not already created on server.
-	// If this option is disabled, only namespaces created on the server can be connected.
-	//
-	// Default: false
-	AcceptAnyNamespace bool
+		// In order for a client to make a connection to a namespace,
+		// the namespace must be created on server via `Server.of`.
+		//
+		// This option permits the client to create the namespace if it is not already created on server.
+		// If this option is disabled, only namespaces created on the server can be connected.
+		//
+		// Default: false
+		AcceptAnyNamespace bool
 
-	ServerConnectionStateRecovery ServerConnectionStateRecovery
+		ServerConnectionStateRecovery ServerConnectionStateRecovery
 
-	// For debugging purposes. Leave it nil if it is of no use.
-	//
-	// This only applies to Socket.IO. For Engine.IO, use EIO.Debugger.
-	Debugger Debugger
-}
+		// For debugging purposes. Leave it nil if it is of no use.
+		//
+		// This only applies to Socket.IO. For Engine.IO, use EIO.Debugger.
+		Debugger Debugger
+	}
 
-type ServerConnectionStateRecovery struct {
-	// Enable connection state recovery
-	//
-	// Default: false
-	Enabled bool
+	ServerConnectionStateRecovery struct {
+		// Enable connection state recovery
+		//
+		// Default: false
+		Enabled bool
 
-	// The backup duration of the sessions and the packets
-	//
-	// Default: 2 minutes
-	MaxDisconnectionDuration time.Duration
+		// The backup duration of the sessions and the packets
+		//
+		// Default: 2 minutes
+		MaxDisconnectionDuration time.Duration
 
-	// Whether to execute middlewares upon successful connection state recovery.
-	//
-	// Default: false
-	UseMiddlewares bool
-}
+		// Whether to execute middlewares upon successful connection state recovery.
+		//
+		// Default: false
+		UseMiddlewares bool
+	}
 
-type Server struct {
-	parserCreator  parser.Creator
-	adapterCreator adapter.Creator
+	Server struct {
+		parserCreator  parser.Creator
+		adapterCreator adapter.Creator
 
-	eio        *eio.Server
-	namespaces *namespaceStore
+		eio        *eio.Server
+		namespaces *namespaceStore
 
-	connectTimeout     time.Duration
-	acceptAnyNamespace bool
+		connectTimeout     time.Duration
+		acceptAnyNamespace bool
 
-	connectionStateRecovery ServerConnectionStateRecovery
+		connectionStateRecovery ServerConnectionStateRecovery
 
-	debug Debugger
+		debug Debugger
 
-	newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
-}
+		newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
+	}
+)
 
 func NewServer(config *ServerConfig) *Server {
 	if config == nil {

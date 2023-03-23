@@ -6,13 +6,20 @@ import (
 	"sync"
 )
 
-type Debugger interface {
-	Log(main string, v ...any)
-	WithContext(context string) Debugger
-	WithDynamicContext(context string, dynamicContext func() string) Debugger
-}
+type (
+	Debugger interface {
+		Log(main string, v ...any)
+		WithContext(context string) Debugger
+		WithDynamicContext(context string, dynamicContext func() string) Debugger
+	}
 
-type noopDebugger struct{}
+	noopDebugger struct{}
+
+	printDebugger struct {
+		context        string
+		dynamicContext func() string
+	}
+)
 
 func NewNoopDebugger() Debugger {
 	return noopDebugger{}
@@ -23,11 +30,6 @@ func (d noopDebugger) Log(main string, _v ...any) {}
 func (d noopDebugger) WithContext(context string) Debugger { return d }
 
 func (d noopDebugger) WithDynamicContext(context string, _ func() string) Debugger { return d }
-
-type printDebugger struct {
-	context        string
-	dynamicContext func() string
-}
 
 func NewPrintDebugger() Debugger {
 	return new(printDebugger)

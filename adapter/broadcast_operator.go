@@ -8,36 +8,38 @@ import (
 	"github.com/tomruk/socket.io-go/parser"
 )
 
-type BroadcastOptions struct {
-	Rooms  mapset.Set[Room]
-	Except mapset.Set[Room]
-	Flags  BroadcastFlags
-}
+type (
+	BroadcastOperator struct {
+		nsp     string
+		adapter Adapter
+		parser  parser.Parser
 
-type BroadcastFlags struct {
-	// This flag is unused at the moment, but for compatibility with the socket.io API, it stays here.
-	Compress bool
+		rooms       mapset.Set[Room]
+		exceptRooms mapset.Set[Room]
+		flags       BroadcastFlags
 
-	Local bool
-}
+		isEventReserved func(string) bool
+	}
+
+	BroadcastOptions struct {
+		Rooms  mapset.Set[Room]
+		Except mapset.Set[Room]
+		Flags  BroadcastFlags
+	}
+
+	BroadcastFlags struct {
+		// This flag is unused at the moment, but for compatibility with the socket.io API, it stays here.
+		Compress bool
+
+		Local bool
+	}
+)
 
 func NewBroadcastOptions() *BroadcastOptions {
 	return &BroadcastOptions{
 		Rooms:  mapset.NewSet[Room](),
 		Except: mapset.NewSet[Room](),
 	}
-}
-
-type BroadcastOperator struct {
-	nsp     string
-	adapter Adapter
-	parser  parser.Parser
-
-	rooms       mapset.Set[Room]
-	exceptRooms mapset.Set[Room]
-	flags       BroadcastFlags
-
-	isEventReserved func(string) bool
 }
 
 func NewBroadcastOperator(
