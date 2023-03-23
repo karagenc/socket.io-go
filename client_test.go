@@ -2,7 +2,6 @@ package sio
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,8 +11,7 @@ func TestClientAck(t *testing.T) {
 	server, _, manager := newTestServerAndClient(t, nil, nil)
 	socket := manager.Socket("/", nil)
 	socket.Connect()
-	replied := sync.WaitGroup{}
-	replied.Add(5)
+	tw := newTestWaiter(5)
 
 	manager.OnError(func(err error) {
 		t.Fatal(err)
@@ -23,7 +21,7 @@ func TestClientAck(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			fmt.Println("Emitting to server")
 			socket.Emit("ack", "hello", func(reply string) {
-				defer replied.Done()
+				defer tw.Done()
 				fmt.Println("ack")
 				assert.Equal(t, "hi", reply)
 			})
@@ -37,5 +35,5 @@ func TestClientAck(t *testing.T) {
 			ack("hi")
 		})
 	})
-	replied.Wait()
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }

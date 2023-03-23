@@ -68,7 +68,7 @@ func TestPollingAndWebSocket(t *testing.T) {
 }
 
 func testSendReceive(t *testing.T, transports []string) {
-	tw := newTestWaiter(0)
+	tw := NewTestWaiter(0)
 	test := createTestPackets(t)
 
 	check := func(data []byte, isBinary bool) bool {
@@ -153,11 +153,11 @@ func testSendReceive(t *testing.T, transports []string) {
 
 	send(socket)
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestClientWebSocketClose(t *testing.T) {
-	tw := newTestWaiter(1)
+	tw := NewTestWaiter(1)
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
@@ -177,11 +177,11 @@ func TestClientWebSocketClose(t *testing.T) {
 	// This test is to check if the socket.Close is blocking.
 	socket.Close()
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestClientWebSocketDiscard(t *testing.T) {
-	tw := newTestWaiter(1)
+	tw := NewTestWaiter(1)
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
@@ -203,11 +203,11 @@ func TestClientWebSocketDiscard(t *testing.T) {
 	socket.transport.Discard()
 	socket.transportMu.Unlock()
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestClientPollingClose(t *testing.T) {
-	tw := newTestWaiter(1)
+	tw := NewTestWaiter(1)
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
@@ -227,11 +227,11 @@ func TestClientPollingClose(t *testing.T) {
 	// This test is to check if the socket.Close is blocking.
 	socket.Close()
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestClientPollingDiscard(t *testing.T) {
-	tw := newTestWaiter(1)
+	tw := NewTestWaiter(1)
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
@@ -253,11 +253,11 @@ func TestClientPollingDiscard(t *testing.T) {
 	socket.transport.Discard()
 	socket.transportMu.Unlock()
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestPingTimeoutAndPingInterval(t *testing.T) {
-	tw := newTestWaiter(1)
+	tw := NewTestWaiter(1)
 
 	const (
 		pingInterval = 20 * time.Second
@@ -287,11 +287,11 @@ func TestPingTimeoutAndPingInterval(t *testing.T) {
 	assert.Equal(t, pingInterval, socket.PingInterval())
 	assert.Equal(t, pingTimeout, socket.PingTimeout())
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestUpgrade(t *testing.T) {
-	tw := newTestWaiter(1)
+	tw := NewTestWaiter(1)
 
 	io := NewServer(nil, nil)
 
@@ -320,5 +320,5 @@ func TestUpgrade(t *testing.T) {
 
 	assert.Equal(t, "websocket", upgrades[0])
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }

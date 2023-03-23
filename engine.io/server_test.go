@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -16,85 +15,6 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
-
-const defaultTestWaitTimeout = time.Second * 12
-
-// This is a sync.WaitGroup with a WaitTimeout function. Use this for testing purposes.
-type testWaiter struct {
-	wg *sync.WaitGroup
-}
-
-func newTestWaiter(delta int) *testWaiter {
-	wg := new(sync.WaitGroup)
-	wg.Add(delta)
-	return &testWaiter{
-		wg: wg,
-	}
-}
-
-func (w *testWaiter) Add(delta int) {
-	w.wg.Add(delta)
-}
-
-func (w *testWaiter) Done() {
-	w.wg.Done()
-}
-
-func (w *testWaiter) Wait() {
-	w.wg.Wait()
-}
-
-func (w *testWaiter) WaitTimeout(t *testing.T, timeout time.Duration) (timedout bool) {
-	c := make(chan struct{})
-
-	go func() {
-		defer close(c)
-		w.wg.Wait()
-	}()
-
-	select {
-	case <-c:
-		return false
-	case <-time.After(timeout):
-		t.Error("timeout exceeded")
-		return true
-	}
-}
-
-type fakeServerTransport struct {
-	callbacks *transport.Callbacks
-}
-
-var _ ServerTransport = newFakeServerTransport()
-
-func newFakeServerTransport() *fakeServerTransport {
-	return &fakeServerTransport{
-		callbacks: transport.NewCallbacks(),
-	}
-}
-
-func (t *fakeServerTransport) Name() string {
-	return "fake"
-}
-
-func (t *fakeServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
-
-func (t *fakeServerTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
-
-func (t *fakeServerTransport) PostHandshake() {}
-
-func (t *fakeServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
-
-func (t *fakeServerTransport) QueuedPackets() []*parser.Packet { return nil }
-
-func (t *fakeServerTransport) Send(packets ...*parser.Packet) {}
-
-func (t *fakeServerTransport) Discard() {}
-func (t *fakeServerTransport) Close()   {}
 
 func TestServerErrors(t *testing.T) {
 	for i, e1 := range serverErrors {
@@ -272,7 +192,7 @@ func TestAuthenticator(t *testing.T) {
 }
 
 func TestMaxBufferSizePolling(t *testing.T) {
-	tw := newTestWaiter(2) // Wait for the server and client.
+	tw := NewTestWaiter(2) // Wait for the server and client.
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
@@ -316,11 +236,11 @@ func TestMaxBufferSizePolling(t *testing.T) {
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 	socket.Send(packet)
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
-	tw := newTestWaiter(1) // Wait for the server.
+	tw := NewTestWaiter(1) // Wait for the server.
 
 	testData := []byte("12345678")
 
@@ -362,11 +282,11 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 	socket.Send(packet)
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestDisableMaxBufferSizePolling(t *testing.T) {
-	tw := newTestWaiter(1) // Wait for the server.
+	tw := NewTestWaiter(1) // Wait for the server.
 
 	testData := []byte("12345678")
 
@@ -407,11 +327,11 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 	socket.Send(packet)
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestJSONP(t *testing.T) {
-	tw := newTestWaiter(2)
+	tw := NewTestWaiter(2)
 
 	const (
 		pingInterval = 123456 * time.Second
@@ -631,12 +551,12 @@ func TestJSONP(t *testing.T) {
 		t.Fatal("ok expected")
 	}
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
 
 func TestServerClose(t *testing.T) {
-	tw := newTestWaiter(0)
-	utw := newTestWaiter(0) // For upgrades.
+	tw := NewTestWaiter(0)
+	utw := NewTestWaiter(0) // For upgrades.
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		return &Callbacks{
@@ -721,5 +641,40 @@ func TestServerClose(t *testing.T) {
 
 	assert.Equal(t, http.StatusTeapot, resp.StatusCode, "server should have been closed")
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
+
+type fakeServerTransport struct {
+	callbacks *transport.Callbacks
+}
+
+var _ ServerTransport = newFakeServerTransport()
+
+func newFakeServerTransport() *fakeServerTransport {
+	return &fakeServerTransport{
+		callbacks: transport.NewCallbacks(),
+	}
+}
+
+func (t *fakeServerTransport) Name() string {
+	return "fake"
+}
+
+func (t *fakeServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (t *fakeServerTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
+}
+
+func (t *fakeServerTransport) PostHandshake() {}
+
+func (t *fakeServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
+
+func (t *fakeServerTransport) QueuedPackets() []*parser.Packet { return nil }
+
+func (t *fakeServerTransport) Send(packets ...*parser.Packet) {}
+
+func (t *fakeServerTransport) Discard() {}
+func (t *fakeServerTransport) Close()   {}

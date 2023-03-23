@@ -4,19 +4,22 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	eio "github.com/tomruk/socket.io-go/engine.io"
 	"nhooyr.io/websocket"
 )
+
+const defaultTestWaitTimeout = eio.DefaultTestWaitTimeout
+
+var newTestWaiter = eio.NewTestWaiter
 
 func TestServerAck(t *testing.T) {
 	server, _, manager := newTestServerAndClient(t, nil, nil)
 	socket := manager.Socket("/", nil)
 	socket.Connect()
-	replied := sync.WaitGroup{}
-	replied.Add(5)
+	tw := newTestWaiter(5)
 
 	manager.OnError(func(err error) {
 		t.Fatal(err)
@@ -32,13 +35,13 @@ func TestServerAck(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			fmt.Println("Emitting to client")
 			socket.Emit("ack", "hello", func(reply string) {
-				defer replied.Done()
+				defer tw.Done()
 				fmt.Println("ack")
 				assert.Equal(t, "hi", reply)
 			})
 		}
 	})
-	replied.Wait()
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
 func newTestServerAndClient(
