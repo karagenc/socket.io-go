@@ -107,7 +107,7 @@ func (p *Parser) parseHeader(data []byte) (header *parser.PacketHeader, buf []by
 		}
 
 		header.Namespace = string(data[:i])
-		data = data[:i]
+		data = data[i+1:]
 	} else {
 		header.Namespace = "/"
 	}
