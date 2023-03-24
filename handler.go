@@ -16,7 +16,7 @@ func newEventHandler(f any) (*eventHandler, error) {
 	rv := reflect.ValueOf(f)
 	rt := rv.Type()
 
-	if rv.Kind() != reflect.Func {
+	if f == nil || rv.Kind() != reflect.Func {
 		return nil, fmt.Errorf("sio: function expected")
 	}
 
@@ -78,7 +78,7 @@ func newAckHandler(f any, hasError bool) (*ackHandler, error) {
 	rv := reflect.ValueOf(f)
 	rt := rv.Type()
 
-	if rv.Kind() != reflect.Func {
+	if f == nil || rv.Kind() != reflect.Func {
 		return nil, fmt.Errorf("sio: function expected")
 	}
 
@@ -87,7 +87,7 @@ func newAckHandler(f any, hasError bool) (*ackHandler, error) {
 		inputArgs[i] = rt.In(i)
 	}
 
-	err := doesAckHandlerHasReturnValues(f)
+	err := checkAckFunc(f, hasError)
 	if err != nil {
 		return nil, err
 	}
@@ -199,31 +199,24 @@ var (
 	reflectError = reflect.TypeOf(&_emptyError).Elem()
 )
 
-func doesAckHandlerHasAnError(f any) error {
+func checkAckFunc(f any, mustHaveError bool) error {
 	rt := reflect.TypeOf(f)
 
-	if rt.Kind() != reflect.Func {
-		return fmt.Errorf("sio: function expected")
-	}
-
-	if rt.NumIn() == 0 {
-		return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
-	}
-	if rt.In(0).Kind() != reflect.Interface || !rt.In(0).Implements(reflectError) {
-		return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
-	}
-	return nil
-}
-
-func doesAckHandlerHasReturnValues(f any) error {
-	rt := reflect.TypeOf(f)
-
-	if rt.Kind() != reflect.Func {
+	if f == nil || rt.Kind() != reflect.Func {
 		return fmt.Errorf("sio: function expected")
 	}
 
 	if rt.NumOut() != 0 {
 		return fmt.Errorf("sio: ack handler must not have a return value")
+	}
+
+	if mustHaveError {
+		if rt.NumIn() == 0 {
+			return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
+		}
+		if rt.In(0).Kind() != reflect.Interface || !rt.In(0).Implements(reflectError) {
+			return fmt.Errorf("sio: ack handler must have error as its 1st parameter")
+		}
 	}
 	return nil
 }

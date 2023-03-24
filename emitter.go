@@ -21,11 +21,14 @@ type (
 func (e *Emitter) Socket() Socket { return e.socket }
 
 func (e *Emitter) Emit(eventName string, v ...any) {
-	hasAck := len(v) != 0 && reflect.TypeOf(v[len(v)-1]).Kind() == reflect.Func
-	if hasAck && e.timeout != 0 {
-		err := doesAckHandlerHasAnError(v[len(v)-1])
-		if err != nil {
-			panic(err)
+	if len(v) != 0 {
+		f := v[len(v)-1]
+		// Is `f` an ack function?
+		if e.timeout != 0 && f != nil && reflect.TypeOf(f).Kind() == reflect.Func {
+			err := checkAckFunc(f, true)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	e.socket.emit(eventName, e.timeout, e.volatile, false, v...)

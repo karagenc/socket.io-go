@@ -76,7 +76,7 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...any) {
 
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
-	if rt.Kind() == reflect.Func {
+	if f != nil && rt.Kind() == reflect.Func {
 		panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
 	}
 

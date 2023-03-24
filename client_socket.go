@@ -710,7 +710,7 @@ func (s *clientSocket) emit(
 
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
-	if rt.Kind() == reflect.Func {
+	if f != nil && rt.Kind() == reflect.Func {
 		ackID := s.registerAckHandler(f, timeout)
 		header.ID = &ackID
 		v = v[:len(v)-1]
@@ -741,11 +741,6 @@ func (s *clientSocket) registerAckHandler(f any, timeout time.Duration) (id uint
 		s.acks[id] = h
 		s.acksMu.Unlock()
 		return
-	}
-
-	err := doesAckHandlerHasAnError(f)
-	if err != nil {
-		panic(err)
 	}
 
 	h, err := newAckHandlerWithTimeout(f, timeout, func() {

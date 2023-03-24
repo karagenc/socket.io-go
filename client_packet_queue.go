@@ -43,7 +43,7 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 	f := v[len(v)-1]
 	rv := reflect.ValueOf(f)
 	rt := reflect.TypeOf(f)
-	if rt.Kind() == reflect.Func {
+	if f != nil && rt.Kind() == reflect.Func {
 		v = v[:len(v)-1]
 		haveAck = true
 	}
@@ -88,11 +88,7 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 	}
 
 	if haveAck {
-		err := doesAckHandlerHasAnError(f)
-		if err != nil {
-			panic(err)
-		}
-		err = doesAckHandlerHasReturnValues(f)
+		err := checkAckFunc(f, true)
 		if err != nil {
 			panic(err)
 		}
