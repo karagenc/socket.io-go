@@ -21,7 +21,7 @@ type serverConn struct {
 
 	server  *Server
 	sockets *serverSocketStore
-	nsps    *namespaceStore
+	nsps    *nspStore
 
 	// This mutex is used for protecting parser from concurrent calls.
 	// Due to the modular and concurrent nature of Engine.IO,
@@ -45,7 +45,7 @@ func newServerConn(
 
 		server:  server,
 		sockets: newServerSocketStore(),
-		nsps:    newNamespaceStore(),
+		nsps:    newNspStore(),
 
 		parser: creator(),
 		debug:  server.debug.WithContext("[sio] serverConn with engine.io ID: " + _eio.ID()),

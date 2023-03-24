@@ -16,7 +16,7 @@ type Namespace struct {
 
 	debug Debugger
 
-	sockets *namespaceSocketStore
+	sockets *nspSocketStore
 
 	middlewareFuncs   []NspMiddlewareFunc
 	middlewareFuncsMu sync.RWMutex
@@ -37,7 +37,7 @@ func newNamespace(
 	adapterCreator adapter.Creator,
 	parserCreator parser.Creator,
 ) *Namespace {
-	socketStore := newNamespaceSocketStore()
+	socketStore := newNspSocketStore()
 	nsp := &Namespace{
 		name:               name,
 		server:             server,

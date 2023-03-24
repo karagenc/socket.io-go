@@ -14,19 +14,19 @@ type (
 	}
 
 	serverSocketStore struct {
-		socketsByID        map[SocketID]*serverSocket
-		socketsByNamespace map[string]*serverSocket
-		mu                 sync.Mutex
+		socketsByID  map[SocketID]*serverSocket
+		socketsByNsp map[string]*serverSocket
+		mu           sync.Mutex
 	}
 
 	// We could've used mapset instead of this,
 	// but mapset doesn't have an equivalent of the GetOrCreate method.
-	namespaceStore struct {
+	nspStore struct {
 		nsps map[string]*Namespace
 		mu   sync.Mutex
 	}
 
-	namespaceSocketStore struct {
+	nspSocketStore struct {
 		sockets map[SocketID]ServerSocket
 		mu      sync.Mutex
 	}
@@ -35,7 +35,7 @@ type (
 	// right function signature that matches with adapter's
 	// `SocketStore`.
 	adapterSocketStore struct {
-		store *namespaceSocketStore
+		store *nspSocketStore
 	}
 )
 
@@ -45,20 +45,20 @@ func newClientSocketStore() *clientSocketStore {
 
 func newServerSocketStore() *serverSocketStore {
 	return &serverSocketStore{
-		socketsByID:        make(map[SocketID]*serverSocket),
-		socketsByNamespace: make(map[string]*serverSocket),
+		socketsByID:  make(map[SocketID]*serverSocket),
+		socketsByNsp: make(map[string]*serverSocket),
 	}
 }
 
-func newNamespaceStore() *namespaceStore {
-	return &namespaceStore{nsps: make(map[string]*Namespace)}
+func newNspStore() *nspStore {
+	return &nspStore{nsps: make(map[string]*Namespace)}
 }
 
-func newNamespaceSocketStore() *namespaceSocketStore {
-	return &namespaceSocketStore{sockets: make(map[SocketID]ServerSocket)}
+func newNspSocketStore() *nspSocketStore {
+	return &nspSocketStore{sockets: make(map[SocketID]ServerSocket)}
 }
 
-func newAdapterSocketStore(store *namespaceSocketStore) *adapterSocketStore {
+func newAdapterSocketStore(store *nspSocketStore) *adapterSocketStore {
 	return &adapterSocketStore{store: store}
 }
 
@@ -72,7 +72,7 @@ func (s *serverSocketStore) getByID(sid SocketID) (socket *serverSocket, ok bool
 func (s *serverSocketStore) getByNsp(nsp string) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	socket, ok = s.socketsByNamespace[nsp]
+	socket, ok = s.socketsByNsp[nsp]
 	return
 }
 
@@ -100,7 +100,7 @@ func (s *serverSocketStore) getAndRemoveAll() (sockets []*serverSocket) {
 		i++
 	}
 	s.socketsByID = make(map[SocketID]*serverSocket)
-	s.socketsByNamespace = make(map[string]*serverSocket)
+	s.socketsByNsp = make(map[string]*serverSocket)
 	return
 }
 
@@ -108,7 +108,7 @@ func (s *serverSocketStore) set(socket *serverSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.socketsByID[socket.ID()] = socket
-	s.socketsByNamespace[socket.nsp.Name()] = socket
+	s.socketsByNsp[socket.nsp.Name()] = socket
 }
 
 func (s *serverSocketStore) removeByID(sid SocketID) {
@@ -117,55 +117,55 @@ func (s *serverSocketStore) removeByID(sid SocketID) {
 	socket, ok := s.socketsByID[sid]
 	if ok {
 		delete(s.socketsByID, sid)
-		delete(s.socketsByNamespace, socket.nsp.Name())
+		delete(s.socketsByNsp, socket.nsp.Name())
 	}
 }
 
-func (s *namespaceStore) getOrCreate(
+func (s *nspStore) getOrCreate(
 	name string,
 	server *Server,
 	adapterCreator adapter.Creator,
 	parserCreator parser.Creator,
-) (namespace *Namespace, created bool) {
+) (nsp *Namespace, created bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var ok bool
-	namespace, ok = s.nsps[name]
+	nsp, ok = s.nsps[name]
 	if !ok {
-		namespace = newNamespace(name, server, adapterCreator, parserCreator)
-		s.nsps[namespace.Name()] = namespace
+		nsp = newNamespace(name, server, adapterCreator, parserCreator)
+		s.nsps[nsp.Name()] = nsp
 		created = true
 	}
 	return
 }
 
-func (s *namespaceStore) len() int {
+func (s *nspStore) len() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.nsps)
 }
 
-func (s *namespaceStore) set(nsp *Namespace) {
+func (s *nspStore) set(nsp *Namespace) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.nsps[nsp.Name()] = nsp
 }
 
-func (s *namespaceStore) get(name string) (nsp *Namespace, ok bool) {
+func (s *nspStore) get(name string) (nsp *Namespace, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	nsp, ok = s.nsps[name]
 	return
 }
 
-func (s *namespaceStore) remove(name string) {
+func (s *nspStore) remove(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.nsps, name)
 }
 
 // Send Engine.IO packets to a specific socket.
-func (s *namespaceSocketStore) sendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
+func (s *nspSocketStore) sendBuffers(sid SocketID, buffers [][]byte) (ok bool) {
 	_socket, ok := s.get(sid)
 	if !ok {
 		return false
@@ -175,14 +175,14 @@ func (s *namespaceSocketStore) sendBuffers(sid SocketID, buffers [][]byte) (ok b
 	return true
 }
 
-func (s *namespaceSocketStore) get(sid SocketID) (so ServerSocket, ok bool) {
+func (s *nspSocketStore) get(sid SocketID) (socket ServerSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	so, ok = s.sockets[sid]
-	return so, ok
+	socket, ok = s.sockets[sid]
+	return socket, ok
 }
 
-func (s *namespaceSocketStore) getAll() []ServerSocket {
+func (s *nspSocketStore) getAll() []ServerSocket {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -195,13 +195,13 @@ func (s *namespaceSocketStore) getAll() []ServerSocket {
 	return sockets
 }
 
-func (s *namespaceSocketStore) set(so ServerSocket) {
+func (s *nspSocketStore) set(socket ServerSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.sockets[so.ID()] = so
+	s.sockets[socket.ID()] = socket
 }
 
-func (s *namespaceSocketStore) remove(sid SocketID) {
+func (s *nspSocketStore) remove(sid SocketID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sockets, sid)
@@ -212,7 +212,7 @@ func (s *adapterSocketStore) SendBuffers(sid SocketID, buffers [][]byte) (ok boo
 	return s.store.sendBuffers(sid, buffers)
 }
 
-func (s *adapterSocketStore) Get(sid SocketID) (so adapter.Socket, ok bool) {
+func (s *adapterSocketStore) Get(sid SocketID) (socket adapter.Socket, ok bool) {
 	return s.store.get(sid)
 }
 
@@ -229,10 +229,10 @@ func (s *adapterSocketStore) Remove(sid SocketID) {
 	s.store.remove(sid)
 }
 
-func (s *clientSocketStore) get(namespace string) (ss *clientSocket, ok bool) {
+func (s *clientSocketStore) get(nsp string) (socket *clientSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	ss, ok = s.sockets[namespace]
+	socket, ok = s.sockets[nsp]
 	return
 }
 
@@ -242,17 +242,17 @@ func (s *clientSocketStore) getAll() (sockets []*clientSocket) {
 
 	sockets = make([]*clientSocket, len(s.sockets))
 	i := 0
-	for _, ss := range s.sockets {
-		sockets[i] = ss
+	for _, socket := range s.sockets {
+		sockets[i] = socket
 		i++
 	}
 	return
 }
 
-func (s *clientSocketStore) set(ss *clientSocket) {
+func (s *clientSocketStore) set(socket *clientSocket) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.sockets[ss.namespace] = ss
+	s.sockets[socket.namespace] = socket
 }
 
 func (s *clientSocketStore) remove(namespace string) {

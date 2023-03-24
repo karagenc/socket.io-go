@@ -69,7 +69,7 @@ type (
 		adapterCreator adapter.Creator
 
 		eio        *eio.Server
-		namespaces *namespaceStore
+		namespaces *nspStore
 
 		connectTimeout     time.Duration
 		acceptAnyNamespace bool
@@ -93,7 +93,7 @@ func NewServer(config *ServerConfig) *Server {
 	server := &Server{
 		parserCreator:           config.ParserCreator,
 		adapterCreator:          config.AdapterCreator,
-		namespaces:              newNamespaceStore(),
+		namespaces:              newNspStore(),
 		acceptAnyNamespace:      config.AcceptAnyNamespace,
 		connectionStateRecovery: config.ServerConnectionStateRecovery,
 		newNamespaceHandlers:    newHandlerStore[*NamespaceNewNamespaceFunc](),

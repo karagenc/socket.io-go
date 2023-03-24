@@ -68,7 +68,7 @@ func TestServerSocketStore(t *testing.T) {
 	}
 
 	assert.Equal(t, 1, len(store.socketsByID))
-	assert.Equal(t, 1, len(store.socketsByNamespace))
+	assert.Equal(t, 1, len(store.socketsByNsp))
 
 	s, ok := store.getByID(socket.ID())
 	if !assert.True(t, ok) {
@@ -94,7 +94,7 @@ func TestServerSocketStore(t *testing.T) {
 	}
 	assert.Contains(t, sockets, socket)
 	assert.Equal(t, 0, len(store.socketsByID))
-	assert.Equal(t, 0, len(store.socketsByNamespace))
+	assert.Equal(t, 0, len(store.socketsByNsp))
 
 	socketTW.Add(1)
 	server.Of("/asdf").OnConnection(func(_socket ServerSocket) {
@@ -115,7 +115,7 @@ func TestServerSocketStore(t *testing.T) {
 	}
 
 	assert.Equal(t, 1, len(store.socketsByID))
-	assert.Equal(t, 1, len(store.socketsByNamespace))
+	assert.Equal(t, 1, len(store.socketsByNsp))
 
 	s, ok = store.getByNsp("/asdf")
 	if !assert.True(t, ok) {
@@ -125,11 +125,11 @@ func TestServerSocketStore(t *testing.T) {
 
 	store.removeByID(socket.ID())
 	assert.Equal(t, 0, len(store.socketsByID))
-	assert.Equal(t, 0, len(store.socketsByNamespace))
+	assert.Equal(t, 0, len(store.socketsByNsp))
 }
 
 func TestNamespaceStore(t *testing.T) {
-	store := newNamespaceStore()
+	store := newNspStore()
 	server, _, _ := newTestServerAndClient(t, nil, nil)
 
 	main := server.Of("/")
