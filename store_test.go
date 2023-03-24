@@ -2,6 +2,7 @@ package sio
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -242,22 +243,22 @@ func mustCreateEventPacket(socket *serverSocket, eventName string, _v []any) (he
 
 func TestHandlerStore(t *testing.T) {
 	type testFn func()
-	h := newHandlerStore[*testFn]()
+	store := newHandlerStore[*testFn]()
 
 	t.Run("on and off", func(t *testing.T) {
 		count := 0
 		var f testFn = func() {
 			count++
 		}
-		h.on(&f)
+		store.on(&f)
 
-		all := h.getAll()
+		all := store.getAll()
 		c := all[0]
 		(*c)()
 		assert.Equal(t, 1, count)
 
-		h.off(&f)
-		all = h.getAll()
+		store.off(&f)
+		all = store.getAll()
 		assert.Equal(t, 0, len(all))
 	})
 
@@ -266,49 +267,131 @@ func TestHandlerStore(t *testing.T) {
 		var f testFn = func() {
 			count++
 		}
-		h.once(&f)
+		store.once(&f)
 
-		all := h.getAll()
+		all := store.getAll()
 		c := all[0]
 		(*c)()
 		assert.Equal(t, 1, count)
 
-		all = h.getAll()
+		all = store.getAll()
 		assert.Equal(t, 0, len(all))
 
-		h.once(&f)
-		h.off(&f)
+		store.once(&f)
+		store.off(&f)
 
-		all = h.getAll()
+		all = store.getAll()
 		assert.Equal(t, 0, len(all))
 	})
 
 	t.Run("offAll", func(t *testing.T) {
 		var f testFn = func() {}
 
-		h.on(&f)
-		h.once(&f)
-		h.offAll()
+		store.on(&f)
+		store.once(&f)
+		store.offAll()
 
-		all := h.getAll()
+		all := store.getAll()
 		assert.Equal(t, 0, len(all))
 	})
 
 	t.Run("sub events", func(t *testing.T) {
 		var f testFn = func() {}
 
-		h.onSubEvent(&f)
-		if !assert.True(t, h.subs[0] == &f) {
+		store.onSubEvent(&f)
+		if !assert.True(t, store.subs[0] == &f) {
 			return
 		}
-		all := h.getAll()
+		all := store.getAll()
 		if !assert.True(t, all[0] == &f) {
 			return
 		}
 
-		h.offSubEvents()
-		assert.Equal(t, 0, len(h.subs))
-		all = h.getAll()
+		store.offSubEvents()
+		assert.Equal(t, 0, len(store.subs))
+		all = store.getAll()
+		assert.Equal(t, 0, len(all))
+	})
+}
+
+func TestEventHandlerStore(t *testing.T) {
+	store := newEventHandlerStore()
+
+	t.Run("on and off", func(t *testing.T) {
+		sum := 0
+		f := func(x, y int) {
+			sum = x + y
+		}
+
+		h, err := newEventHandler(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		store.on("sum", h)
+
+		all := store.getAll("sum")
+		if !assert.Equal(t, 1, len(all)) {
+			return
+		}
+		c := all[0]
+
+		x := 6
+		y := 3
+		_, err = c.call(reflect.ValueOf(x), reflect.ValueOf(y))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !assert.Equal(t, 9, sum) {
+			return
+		}
+
+		store.off("sum")
+		all = store.getAll("sum")
+		assert.Equal(t, 0, len(all))
+	})
+
+	t.Run("once", func(t *testing.T) {
+		f := func() {}
+
+		h, err := newEventHandler(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		store.once("ff", h)
+
+		all := store.getAll("ff")
+		if !assert.Equal(t, 1, len(all)) {
+			return
+		}
+		c := all[0]
+		assert.True(t, c == h)
+
+		all = store.getAll("ff")
+		if !assert.Equal(t, 0, len(all)) {
+			return
+		}
+
+		store.once("ff", h)
+		store.off("ff")
+
+		all = store.getAll("ff")
+		assert.Equal(t, 0, len(all))
+	})
+
+	t.Run("offAll", func(t *testing.T) {
+		f := func() {}
+
+		h, err := newEventHandler(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		store.on("ff", h)
+		store.once("ff", h)
+		store.offAll()
+
+		all := store.getAll("ff")
 		assert.Equal(t, 0, len(all))
 	})
 }
