@@ -117,6 +117,9 @@ func (s *clientSocket) setID(id SocketID) {
 
 func (s *clientSocket) pid() (pid adapter.PrivateSessionID, ok bool) {
 	pid, ok = s._pid.Load().(adapter.PrivateSessionID)
+	if ok && pid == "" {
+		return "", false
+	}
 	return
 }
 
