@@ -1,10 +1,13 @@
 package sio
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 func (n *Namespace) OnEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
-		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
+		panic(fmt.Errorf("sio: OnEvent: attempted to register a reserved event: `%s`", eventName))
 	}
 	h, err := newEventHandler(handler)
 	if err != nil {
@@ -15,7 +18,7 @@ func (n *Namespace) OnEvent(eventName string, handler any) {
 
 func (n *Namespace) OnceEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
-		panic("sio: OnceEvent: attempted to register a reserved event: `" + eventName + "`")
+		panic(fmt.Errorf("sio: OnceEvent: attempted to register a reserved event: `%s`", eventName))
 	}
 	h, err := newEventHandler(handler)
 	if err != nil {

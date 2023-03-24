@@ -723,7 +723,7 @@ func (s *clientSocket) emit(
 	}
 
 	if IsEventReservedForClient(eventName) {
-		panic("sio: Emit: attempted to emit a reserved event: `" + eventName + "`")
+		panic(fmt.Errorf("sio: Emit: attempted to emit a reserved event: `%s`", eventName))
 	}
 
 	if eventName != "" {

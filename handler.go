@@ -159,7 +159,7 @@ func (f *ackHandler) call(args ...reflect.Value) (err error) {
 
 func (f *ackHandler) callWithError(e error, args ...reflect.Value) (err error) {
 	if !f.hasError {
-		panic("sio: hasError is false. this shouldn't have happened")
+		panic(fmt.Errorf("sio: hasError is false. this shouldn't have happened"))
 	}
 
 	f.mu.Lock()

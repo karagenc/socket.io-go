@@ -40,26 +40,34 @@ func (s *serverSocket) Use(f any) {
 	s.middlewareFuncsMu.Lock()
 	defer s.middlewareFuncsMu.Unlock()
 	rv := reflect.ValueOf(f)
+	err := s.checkMiddlewareFunc(rv)
+	if err != nil {
+		panic(fmt.Errorf("sio: %w", err))
+	}
+	s.middlewareFuncs = append(s.middlewareFuncs, rv)
+}
+
+func (s *serverSocket) checkMiddlewareFunc(rv reflect.Value) error {
 	if rv.Kind() != reflect.Func {
-		panic("sio: function expected")
+		return fmt.Errorf("function expected")
 	}
 	rt := rv.Type()
 	if rt.NumIn() != 2 {
-		panic("sio: function signature: func(eventName string, v ...any) error")
+		return fmt.Errorf("function signature: func(eventName string, v ...any) error")
 	}
 	if rt.In(0).Kind() != reflect.String {
-		panic("sio: function signature: func(eventName string, v ...any) error")
+		return fmt.Errorf("function signature: func(eventName string, v ...any) error")
 	}
 	if rt.In(1).Kind() != reflect.Slice || rt.In(1).Elem().Kind() != reflect.Interface {
-		panic("sio: function signature: func(eventName string, v ...any) error")
+		return fmt.Errorf("function signature: func(eventName string, v ...any) error")
 	}
 	if rt.NumOut() != 1 {
-		panic("sio: function signature: func(eventName string, v ...any) error")
+		return fmt.Errorf("function signature: func(eventName string, v ...any) error")
 	}
 	if rt.Out(0).Kind() != reflect.Interface || !rt.Out(0).Implements(reflectError) {
-		panic("sio: function signature: func(eventName string, v ...any) error")
+		return fmt.Errorf("function signature: func(eventName string, v ...any) error")
 	}
-	s.middlewareFuncs = append(s.middlewareFuncs, rv)
+	return nil
 }
 
 func (s *serverSocket) callMiddlewares(values []reflect.Value) error {

@@ -226,7 +226,7 @@ func mustCreateEventPacket(socket *serverSocket, eventName string, _v []any) (he
 	}
 
 	if IsEventReservedForServer(eventName) {
-		panic("sio: Emit: attempted to emit a reserved event: `" + eventName + "`")
+		panic(fmt.Errorf("sio: Emit: attempted to emit a reserved event: `%s`", eventName))
 	}
 
 	v := make([]any, 0, len(_v)+1)

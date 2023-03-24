@@ -1,6 +1,8 @@
 package jsonparser
 
 import (
+	"fmt"
+
 	"github.com/tomruk/socket.io-go/parser"
 	"github.com/tomruk/socket.io-go/parser/json/serializer"
 )
@@ -9,7 +11,7 @@ import (
 // If maxAttachments is 0, there will be no limit set for binary attachments.
 func NewCreator(maxAttachments int, json serializer.JSONSerializer) parser.Creator {
 	if json == nil {
-		panic("sio: jsonparser.NewCreator: `json` must be set")
+		panic(fmt.Errorf("sio: jsonparser.NewCreator: `json` must be set"))
 	}
 	return func() parser.Parser {
 		return &Parser{

@@ -2,6 +2,7 @@ package sio
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -68,7 +69,7 @@ func (n *Namespace) ServerSideEmit(eventName string, _v ...any) {
 	}
 
 	if IsEventReservedForNsp(eventName) {
-		panic("sio: broadcastOperator.Emit: attempted to emit to a reserved event")
+		panic(fmt.Errorf("sio: BroadcastOperator.Emit: attempted to emit to a reserved event"))
 	}
 
 	// One extra space for eventName,
