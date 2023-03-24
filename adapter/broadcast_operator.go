@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"fmt"
 	"reflect"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -12,7 +13,6 @@ type (
 	BroadcastOperator struct {
 		nsp     string
 		adapter Adapter
-		parser  parser.Parser
 
 		rooms       mapset.Set[Room]
 		exceptRooms mapset.Set[Room]
@@ -45,15 +45,14 @@ func NewBroadcastOptions() *BroadcastOptions {
 func NewBroadcastOperator(
 	nsp string,
 	adapter Adapter,
-	parser parser.Parser,
 	isEventReserved func(string) bool,
 ) *BroadcastOperator {
 	return &BroadcastOperator{
-		nsp:         nsp,
-		adapter:     adapter,
-		parser:      parser,
-		rooms:       mapset.NewSet[Room](),
-		exceptRooms: mapset.NewSet[Room](),
+		nsp:             nsp,
+		adapter:         adapter,
+		rooms:           mapset.NewSet[Room](),
+		exceptRooms:     mapset.NewSet[Room](),
+		isEventReserved: isEventReserved,
 	}
 }
 
@@ -65,7 +64,7 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...any) {
 	}
 
 	if b.isEventReserved(eventName) {
-		panic("sio: broadcastOperator.Emit: attempted to emit a reserved event: `" + eventName + "`")
+		panic(fmt.Errorf("sio: BroadcastOperator.Emit: attempted to emit a reserved event: `%s`", eventName))
 	}
 
 	// One extra space for eventName,
@@ -77,7 +76,7 @@ func (b *BroadcastOperator) Emit(eventName string, _v ...any) {
 	f := v[len(v)-1]
 	rt := reflect.TypeOf(f)
 	if f != nil && rt.Kind() == reflect.Func {
-		panic("sio: broadcastOperator.Emit: callbacks are not supported when broadcasting")
+		panic(fmt.Errorf("sio: BroadcastOperator.Emit: callbacks are not supported when broadcasting"))
 	}
 
 	opts := NewBroadcastOptions()
