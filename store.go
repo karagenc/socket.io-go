@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/tomruk/socket.io-go/adapter"
@@ -369,11 +370,7 @@ func (e *eventHandlerStore) once(eventName string, handler *eventHandler) {
 	e.mu.Unlock()
 }
 
-func (e *eventHandlerStore) off(eventName string, handler ...any) {
-	if eventName == "" {
-		return
-	}
-
+func (e *eventHandlerStore) off(eventName string, handler ...reflect.Value) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -387,28 +384,40 @@ func (e *eventHandlerStore) off(eventName string, handler ...any) {
 		return append(slice[:s], slice[s+1:]...)
 	}
 
-	handlers, ok := e.events[eventName]
+	events, ok := e.events[eventName]
 	if ok {
-		for i, h := range handlers {
-			for _, _h := range handler {
-				if h.rv.Interface() == _h {
-					handlers = remove(handlers, i)
+		for i, event := range events {
+			for _, h := range handler {
+				ep := event.rv.Pointer()
+				hp := h.Pointer()
+				if ep == hp {
+					events = remove(events, i)
 				}
 			}
 		}
-		e.events[eventName] = handlers
+		if len(events) == 0 {
+			delete(e.events, eventName)
+		} else {
+			e.events[eventName] = events
+		}
 	}
 
-	handlers, ok = e.eventsOnce[eventName]
+	eventsOnce, ok := e.eventsOnce[eventName]
 	if ok {
-		for i, h := range handlers {
-			for _, _h := range handler {
-				if h == _h {
-					handlers = remove(handlers, i)
+		for i, event := range eventsOnce {
+			for _, h := range handler {
+				ep := event.rv.Pointer()
+				hp := h.Pointer()
+				if ep == hp {
+					eventsOnce = remove(eventsOnce, i)
 				}
 			}
 		}
-		e.eventsOnce[eventName] = handlers
+		if len(eventsOnce) == 0 {
+			delete(e.eventsOnce, eventName)
+		} else {
+			e.eventsOnce[eventName] = eventsOnce
+		}
 	}
 }
 

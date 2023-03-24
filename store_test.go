@@ -353,7 +353,6 @@ func TestEventHandlerStore(t *testing.T) {
 
 	t.Run("once", func(t *testing.T) {
 		f := func() {}
-
 		h, err := newEventHandler(f)
 		if err != nil {
 			t.Fatal(err)
@@ -377,6 +376,40 @@ func TestEventHandlerStore(t *testing.T) {
 
 		all = store.getAll("ff")
 		assert.Equal(t, 0, len(all))
+	})
+
+	t.Run("off", func(t *testing.T) {
+		f1 := func() {}
+		h1, err := newEventHandler(f1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		f2 := func() {}
+		h2, err := newEventHandler(f2)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		store.on("ff", h1)
+		store.once("ff", h2)
+
+		store.off("ff", reflect.ValueOf(f1), reflect.ValueOf(f2))
+
+		assert.Equal(t, 0, len(store.events))
+		assert.Equal(t, 0, len(store.eventsOnce))
+
+		store.on("ff", h1)
+		store.on("ff", h2)
+		store.once("ff", h1)
+		store.once("ff", h2)
+
+		store.off("ff", reflect.ValueOf(f1))
+
+		assert.Equal(t, 1, len(store.events))
+		assert.Equal(t, 1, len(store.eventsOnce))
+
+		store.offAll() // Cleanup
 	})
 
 	t.Run("offAll", func(t *testing.T) {

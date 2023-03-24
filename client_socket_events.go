@@ -1,5 +1,7 @@
 package sio
 
+import "reflect"
+
 func (s *clientSocket) OnEvent(eventName string, handler any) {
 	if IsEventReservedForClient(eventName) {
 		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
@@ -23,7 +25,11 @@ func (s *clientSocket) OnceEvent(eventName string, handler any) {
 }
 
 func (s *clientSocket) OffEvent(eventName string, handler ...any) {
-	s.eventHandlers.off(eventName, handler...)
+	values := make([]reflect.Value, len(handler))
+	for i := range values {
+		values[i] = reflect.ValueOf(handler[i])
+	}
+	s.eventHandlers.off(eventName, values...)
 }
 
 func (s *clientSocket) OffAll() {

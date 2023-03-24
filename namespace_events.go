@@ -1,5 +1,7 @@
 package sio
 
+import "reflect"
+
 func (n *Namespace) OnEvent(eventName string, handler any) {
 	if IsEventReservedForNsp(eventName) {
 		panic("sio: OnEvent: attempted to register a reserved event: `" + eventName + "`")
@@ -23,7 +25,11 @@ func (n *Namespace) OnceEvent(eventName string, handler any) {
 }
 
 func (n *Namespace) OffEvent(eventName string, handler ...any) {
-	n.eventHandlers.off(eventName, handler...)
+	values := make([]reflect.Value, len(handler))
+	for i := range values {
+		values[i] = reflect.ValueOf(handler[i])
+	}
+	n.eventHandlers.off(eventName, values...)
 }
 
 func (n *Namespace) OffAll() {
