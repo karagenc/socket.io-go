@@ -127,3 +127,35 @@ func TestServerSocketStore(t *testing.T) {
 	assert.Equal(t, 0, len(store.socketsByID))
 	assert.Equal(t, 0, len(store.socketsByNamespace))
 }
+
+func TestNamespaceStore(t *testing.T) {
+	store := newNamespaceStore()
+	server, _, _ := newTestServerAndClient(t, nil, nil)
+
+	main := server.Of("/")
+	asdf := server.Of("/asdf")
+	store.set(main)
+	store.set(asdf)
+
+	assert.Equal(t, 2, store.len())
+	n, ok := store.get("/")
+	assert.True(t, ok)
+	assert.True(t, n == main)
+
+	n, ok = store.get("/asdf")
+	assert.True(t, ok)
+	assert.True(t, n == asdf)
+
+	store.remove("/asdf")
+	n, ok = store.get("/asdf")
+	assert.False(t, ok)
+	assert.True(t, n == nil)
+
+	n, created := store.getOrCreate("/jkl", server, server.adapterCreator, server.parserCreator)
+	assert.True(t, created)
+	assert.Equal(t, "/jkl", n.Name())
+
+	n, created = store.getOrCreate("/", server, server.adapterCreator, server.parserCreator)
+	assert.False(t, created)
+	assert.True(t, n == main)
+}
