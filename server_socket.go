@@ -329,7 +329,7 @@ func (s *serverSocket) Broadcast() *BroadcastOperator {
 }
 
 func (s *serverSocket) newBroadcastOperator() *BroadcastOperator {
-	return adapter.NewBroadcastOperator(s.nsp.Name(), s.adapter, s.parser, IsEventReservedForServer).Except(Room(s.ID()))
+	return adapter.NewBroadcastOperator(s.nsp.Name(), s.adapter, IsEventReservedForServer).Except(Room(s.ID()))
 }
 
 type sidInfo struct {

@@ -165,7 +165,7 @@ func (n *Namespace) DisconnectSockets(close bool) {
 }
 
 func (n *Namespace) newBroadcastOperator() *BroadcastOperator {
-	return adapter.NewBroadcastOperator(n.Name(), n.adapter, n.parser, IsEventReservedForServer)
+	return adapter.NewBroadcastOperator(n.Name(), n.adapter, IsEventReservedForServer)
 }
 
 type authRecoveryFields struct {
