@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 func TestServerErrors(t *testing.T) {
@@ -643,38 +642,3 @@ func TestServerClose(t *testing.T) {
 
 	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
-
-type fakeServerTransport struct {
-	callbacks *transport.Callbacks
-}
-
-var _ ServerTransport = newFakeServerTransport()
-
-func newFakeServerTransport() *fakeServerTransport {
-	return &fakeServerTransport{
-		callbacks: transport.NewCallbacks(),
-	}
-}
-
-func (t *fakeServerTransport) Name() string {
-	return "fake"
-}
-
-func (t *fakeServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
-
-func (t *fakeServerTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
-
-func (t *fakeServerTransport) PostHandshake() {}
-
-func (t *fakeServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
-
-func (t *fakeServerTransport) QueuedPackets() []*parser.Packet { return nil }
-
-func (t *fakeServerTransport) Send(packets ...*parser.Packet) {}
-
-func (t *fakeServerTransport) Discard() {}
-func (t *fakeServerTransport) Close()   {}

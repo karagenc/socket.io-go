@@ -1,11 +1,13 @@
 package eio
 
 import (
+	"net/http"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/engine.io/transport"
 )
 
 const DefaultTestWaitTimeout = time.Second * 12
@@ -81,3 +83,38 @@ func (s *TestSocket) Send(packets ...*parser.Packet) {
 func (s *TestSocket) Close() {
 	s.Closed = true
 }
+
+type testServerTransport struct {
+	callbacks *transport.Callbacks
+}
+
+var _ ServerTransport = newTestServerTransport()
+
+func newTestServerTransport() *testServerTransport {
+	return &testServerTransport{
+		callbacks: transport.NewCallbacks(),
+	}
+}
+
+func (t *testServerTransport) Name() string {
+	return "fake"
+}
+
+func (t *testServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (t *testServerTransport) Callbacks() *transport.Callbacks {
+	return t.callbacks
+}
+
+func (t *testServerTransport) PostHandshake() {}
+
+func (t *testServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
+
+func (t *testServerTransport) QueuedPackets() []*parser.Packet { return nil }
+
+func (t *testServerTransport) Send(packets ...*parser.Packet) {}
+
+func (t *testServerTransport) Discard() {}
+func (t *testServerTransport) Close()   {}
