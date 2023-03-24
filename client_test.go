@@ -37,3 +37,40 @@ func TestClientAck(t *testing.T) {
 	})
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
+
+func TestAuth(t *testing.T) {
+	_, _, manager := newTestServerAndClient(t, nil, nil)
+	socket := manager.Socket("/", nil).(*clientSocket)
+
+	type S struct {
+		Num int
+	}
+	s := &S{
+		Num: 500,
+	}
+
+	err := socket.setAuth(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, ok := socket.Auth().(*S)
+	if !assert.True(t, ok) {
+		t.Fail()
+	}
+	assert.Equal(t, s.Num, 500)
+
+	err = socket.setAuth("Donkey")
+	if !assert.NotNil(t, err, "err must be non-nil for a string value") {
+		return
+	}
+
+	err = func() (err error) {
+		defer func() {
+			err = recover().(error)
+		}()
+		socket.SetAuth("Donkey")
+		return
+	}()
+	assert.NotNil(t, err, "err must be non-nil for a string value. panic should have been occured")
+}

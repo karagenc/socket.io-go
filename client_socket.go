@@ -45,7 +45,8 @@ type (
 		manager   *Manager
 		parser    parser.Parser
 
-		auth *auth
+		authData   any
+		authDataMu sync.Mutex
 
 		connected   bool
 		connectedMu sync.RWMutex
@@ -85,7 +86,6 @@ func newClientSocket(
 		namespace: namespace,
 		manager:   manager,
 		parser:    parser,
-		auth:      newAuth(),
 		acks:      make(map[uint64]*ackHandler),
 
 		eventHandlers:        newEventHandlerStore(),
@@ -230,18 +230,42 @@ func (s *clientSocket) Disconnect() {
 
 func (s *clientSocket) Manager() *Manager { return s.manager }
 
-func (s *clientSocket) Auth() any { return s.auth.get() }
+func (s *clientSocket) Auth() any {
+	s.authDataMu.Lock()
+	defer s.authDataMu.Unlock()
+	return s.authData
+}
 
-func (s *clientSocket) SetAuth(v any) {
-	err := s.auth.set(v)
+func (s *clientSocket) SetAuth(data any) {
+	err := s.setAuth(data)
 	if err != nil {
 		panic(fmt.Errorf("sio: %w", err))
 	}
 }
 
+func (s *clientSocket) setAuth(data any) error {
+	if data != nil {
+		rt := reflect.TypeOf(data)
+		k := rt.Kind()
+
+		if k == reflect.Ptr {
+			rt = rt.Elem()
+			k = rt.Kind()
+		}
+
+		if k != reflect.Struct && k != reflect.Map {
+			return fmt.Errorf("SetAuth: non-JSON data cannot be accepted. please provide a struct or map")
+		}
+	}
+	s.authDataMu.Lock()
+	s.authData = data
+	s.authDataMu.Unlock()
+	return nil
+}
+
 func (s *clientSocket) onOpen() {
 	s.debug.Log("onOpen called. Connecting")
-	authData := s.auth.get()
+	authData := s.Auth()
 	s.sendConnectPacket(authData)
 }
 
