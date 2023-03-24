@@ -3,6 +3,8 @@ package sio
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBackoff(t *testing.T) {
@@ -11,16 +13,35 @@ func TestBackoff(t *testing.T) {
 	testBackoffDuration(t, b)
 
 	b.reset()
-	if b.numAttempts != 0 {
-		t.Fatalf("attempts variable should be zero")
+	if !assert.Equal(t, uint32(0), b.attempts()) {
+		return
 	}
 
 	d := b.duration()
-	if d != 1*time.Second {
-		t.Fatalf("d should be equal to 1 but it is equal to %d", d)
+	if !assert.Equal(t, 1*time.Second, d) {
+		return
 	}
 
 	testBackoffDuration(t, b)
+}
+
+func TestBackoffWithJitter(t *testing.T) {
+	// const jitter = 0.5
+	// b := newBackoff(1*time.Second, 50*time.Second, jitter)
+
+	// testBackoffDuration(t, b)
+
+	// b.reset()
+	// if !assert.Equal(t, uint32(0), b.attempts()) {
+	// 	return
+	// }
+
+	// d := b.duration()
+	// if !assert.Equal(t, 1*time.Second, d) {
+	// 	return
+	// }
+
+	// testBackoffDuration(t, b)
 }
 
 func testBackoffDuration(t *testing.T, b *backoff) {
