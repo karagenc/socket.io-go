@@ -23,7 +23,7 @@ func TestSocketStore(t *testing.T) {
 
 	for i := 0; i < max; i++ {
 		sid := strconv.Itoa(i)
-		ft := newFakeServerTransport()
+		ft := newTestServerTransport()
 		c := ft.callbacks
 		socket := newServerSocket(sid, nil, ft, c, 0, 0, NewNoopDebugger(), onClose)
 
