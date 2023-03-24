@@ -1,7 +1,9 @@
 package sio
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -37,4 +39,91 @@ func TestClientSocketStore(t *testing.T) {
 		return
 	}
 	assert.True(t, main == sockets[0])
+}
+
+func TestServerSocketStore(t *testing.T) {
+	store := newServerSocketStore()
+	server, _, manager := newTestServerAndClient(t, nil, nil)
+
+	var (
+		socket   *serverSocket
+		socketTW = newTestWaiter(0)
+	)
+
+	socketTW.Add(1)
+	server.Of("/").OnConnection(func(_socket ServerSocket) {
+		fmt.Printf("New connection to `/` with sid: %s\n", _socket.ID())
+		_socket.OnError(func(err error) {
+			t.Fatal(err)
+		})
+		socket = _socket.(*serverSocket)
+		store.set(socket)
+		socketTW.Done()
+	})
+
+	manager.Socket("/", nil).Connect()
+	timedout := socketTW.WaitTimeout(t, 15*time.Second)
+	if timedout {
+		return
+	}
+
+	assert.Equal(t, 1, len(store.socketsByID))
+	assert.Equal(t, 1, len(store.socketsByNamespace))
+
+	s, ok := store.getByID(socket.ID())
+	if !assert.True(t, ok) {
+		return
+	}
+	assert.True(t, socket == s)
+
+	s, ok = store.getByNsp("/")
+	if !assert.True(t, ok) {
+		return
+	}
+	assert.True(t, socket == s)
+
+	sockets := store.getAll()
+	if !assert.Equal(t, 1, len(sockets)) {
+		return
+	}
+	assert.Contains(t, sockets, socket)
+
+	sockets = store.getAndRemoveAll()
+	if !assert.Equal(t, 1, len(sockets)) {
+		return
+	}
+	assert.Contains(t, sockets, socket)
+	assert.Equal(t, 0, len(store.socketsByID))
+	assert.Equal(t, 0, len(store.socketsByNamespace))
+
+	socketTW.Add(1)
+	server.Of("/asdf").OnConnection(func(_socket ServerSocket) {
+		fmt.Printf("New connection to `/asdf` with sid: %s\n", _socket.ID())
+		_socket.OnError(func(err error) {
+			t.Fatal(err)
+		})
+		socket = _socket.(*serverSocket)
+		store.set(socket)
+		socketTW.Done()
+	})
+
+	//manager = NewManager(httpServer.URL, nil)
+	manager.Socket("/asdf", nil).Connect()
+	timedout = socketTW.WaitTimeout(t, 15*time.Second)
+	if timedout {
+		return
+	}
+
+	assert.Equal(t, 1, len(store.socketsByID))
+	assert.Equal(t, 1, len(store.socketsByNamespace))
+
+	s, ok = store.getByNsp("/asdf")
+	if !assert.True(t, ok) {
+		return
+	}
+	assert.True(t, socket == s)
+
+	store.removeByID(socket.ID())
+	assert.Equal(t, 0, len(store.socketsByID))
+	assert.Equal(t, 0, len(store.socketsByNamespace))
 }
