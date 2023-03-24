@@ -13,10 +13,6 @@ func TestClientAck(t *testing.T) {
 	socket.Connect()
 	tw := newTestWaiter(5)
 
-	manager.OnError(func(err error) {
-		t.Fatal(err)
-	})
-
 	socket.OnConnect(func() {
 		for i := 0; i < 5; i++ {
 			fmt.Println("Emitting to server")

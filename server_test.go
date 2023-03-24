@@ -21,10 +21,6 @@ func TestServerAck(t *testing.T) {
 	socket.Connect()
 	tw := newTestWaiter(5)
 
-	manager.OnError(func(err error) {
-		t.Fatal(err)
-	})
-
 	socket.OnEvent("ack", func(message string, ack func(reply string)) {
 		fmt.Printf("event %s\n", message)
 		assert.Equal(t, "hello", message)
@@ -85,5 +81,14 @@ func newTestServerAndClient(
 
 	httpServer = httptest.NewServer(server)
 	manager = NewManager(httpServer.URL, managerConfig)
+
+	manager.OnError(func(err error) {
+		t.Fatal(err)
+	})
+	server.OnAnyConnection(func(namespace string, socket ServerSocket) {
+		socket.OnError(func(err error) {
+			t.Fatal(err)
+		})
+	})
 	return server, httpServer, manager
 }

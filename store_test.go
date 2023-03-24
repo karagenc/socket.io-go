@@ -53,9 +53,6 @@ func TestServerSocketStore(t *testing.T) {
 	socketTW.Add(1)
 	server.Of("/").OnConnection(func(_socket ServerSocket) {
 		fmt.Printf("New connection to `/` with sid: %s\n", _socket.ID())
-		_socket.OnError(func(err error) {
-			t.Fatal(err)
-		})
 		socket = _socket.(*serverSocket)
 		store.set(socket)
 		socketTW.Done()
@@ -99,9 +96,6 @@ func TestServerSocketStore(t *testing.T) {
 	socketTW.Add(1)
 	server.Of("/asdf").OnConnection(func(_socket ServerSocket) {
 		fmt.Printf("New connection to `/asdf` with sid: %s\n", _socket.ID())
-		_socket.OnError(func(err error) {
-			t.Fatal(err)
-		})
 		socket = _socket.(*serverSocket)
 		store.set(socket)
 		socketTW.Done()

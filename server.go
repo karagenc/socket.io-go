@@ -78,7 +78,8 @@ type (
 
 		debug Debugger
 
-		newNamespaceHandlers *handlerStore[*NamespaceNewNamespaceFunc]
+		newNamespaceHandlers  *handlerStore[*ServerNewNamespaceFunc]
+		anyConnectionHandlers *handlerStore[*ServerAnyConnectionFunc]
 	}
 )
 
@@ -96,7 +97,8 @@ func NewServer(config *ServerConfig) *Server {
 		namespaces:              newNspStore(),
 		acceptAnyNamespace:      config.AcceptAnyNamespace,
 		connectionStateRecovery: config.ServerConnectionStateRecovery,
-		newNamespaceHandlers:    newHandlerStore[*NamespaceNewNamespaceFunc](),
+		newNamespaceHandlers:    newHandlerStore[*ServerNewNamespaceFunc](),
+		anyConnectionHandlers:   newHandlerStore[*ServerAnyConnectionFunc](),
 	}
 
 	if server.connectionStateRecovery.Enabled {
