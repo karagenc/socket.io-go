@@ -194,6 +194,12 @@ func (c *clientConn) packet(packets ...*eioparser.Packet) {
 	c.eioPacketQueue.add(packets...)
 }
 
+func (c *clientConn) onClose() {
+	c.eioMu.RLock()
+	defer c.eioMu.RUnlock()
+	c.eioPacketQueue.reset()
+}
+
 func (c *clientConn) disconnect() {
 	c.debug.Log("Disconnecting")
 
@@ -207,8 +213,8 @@ func (c *clientConn) disconnect() {
 
 	c.manager.onClose(ReasonForcedClose, nil)
 
-	c.eioMu.Lock()
-	defer c.eioMu.Unlock()
+	c.eioMu.RLock()
+	defer c.eioMu.RUnlock()
 	if c.eio != nil {
 		c.eio.Close()
 	}

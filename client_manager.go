@@ -263,6 +263,8 @@ func (m *Manager) onClose(reason Reason, err error) {
 	m.parser.Reset()
 	m.backoff.reset()
 
+	m.conn.onClose()
+
 	for _, handler := range m.closeHandlers.getAll() {
 		(*handler)(reason, err)
 	}
