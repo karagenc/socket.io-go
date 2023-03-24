@@ -62,6 +62,38 @@ func newAdapterSocketStore(store *nspSocketStore) *adapterSocketStore {
 	return &adapterSocketStore{store: store}
 }
 
+func (s *clientSocketStore) get(nsp string) (socket *clientSocket, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	socket, ok = s.sockets[nsp]
+	return
+}
+
+func (s *clientSocketStore) getAll() (sockets []*clientSocket) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	sockets = make([]*clientSocket, len(s.sockets))
+	i := 0
+	for _, socket := range s.sockets {
+		sockets[i] = socket
+		i++
+	}
+	return
+}
+
+func (s *clientSocketStore) set(socket *clientSocket) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sockets[socket.namespace] = socket
+}
+
+func (s *clientSocketStore) remove(namespace string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sockets, namespace)
+}
+
 func (s *serverSocketStore) getByID(sid SocketID) (socket *serverSocket, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -227,36 +259,4 @@ func (s *adapterSocketStore) GetAll() []adapter.Socket {
 
 func (s *adapterSocketStore) Remove(sid SocketID) {
 	s.store.remove(sid)
-}
-
-func (s *clientSocketStore) get(nsp string) (socket *clientSocket, ok bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	socket, ok = s.sockets[nsp]
-	return
-}
-
-func (s *clientSocketStore) getAll() (sockets []*clientSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sockets = make([]*clientSocket, len(s.sockets))
-	i := 0
-	for _, socket := range s.sockets {
-		sockets[i] = socket
-		i++
-	}
-	return
-}
-
-func (s *clientSocketStore) set(socket *clientSocket) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sockets[socket.namespace] = socket
-}
-
-func (s *clientSocketStore) remove(namespace string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.sockets, namespace)
 }
