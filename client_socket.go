@@ -685,7 +685,7 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 }
 
 func (s *clientSocket) onError(err error) {
-	// In original socket.io, errors are emitted only on `Manager` (`Client` in this implementation).
+	// In original socket.io, errors are only emitted on manager.
 	s.manager.onError(err)
 }
 
