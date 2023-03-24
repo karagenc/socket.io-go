@@ -37,6 +37,19 @@ type (
 	adapterSocketStore struct {
 		store *nspSocketStore
 	}
+
+	handlerStore[T comparable] struct {
+		mu        sync.Mutex
+		funcs     []T
+		funcsOnce []T
+		subs      []T
+	}
+
+	eventHandlerStore struct {
+		mu         sync.Mutex
+		events     map[string][]*eventHandler
+		eventsOnce map[string][]*eventHandler
+	}
 )
 
 func newClientSocketStore() *clientSocketStore {
@@ -60,6 +73,17 @@ func newNspSocketStore() *nspSocketStore {
 
 func newAdapterSocketStore(store *nspSocketStore) *adapterSocketStore {
 	return &adapterSocketStore{store: store}
+}
+
+func newHandlerStore[T comparable]() *handlerStore[T] {
+	return new(handlerStore[T])
+}
+
+func newEventHandlerStore() *eventHandlerStore {
+	return &eventHandlerStore{
+		events:     make(map[string][]*eventHandler),
+		eventsOnce: make(map[string][]*eventHandler),
+	}
 }
 
 func (s *clientSocketStore) get(nsp string) (socket *clientSocket, ok bool) {
@@ -259,4 +283,159 @@ func (s *adapterSocketStore) GetAll() []adapter.Socket {
 
 func (s *adapterSocketStore) Remove(sid SocketID) {
 	s.store.remove(sid)
+}
+
+func (e *handlerStore[T]) on(handler T) {
+	e.mu.Lock()
+	e.funcs = append(e.funcs, handler)
+	e.mu.Unlock()
+}
+
+func (e *handlerStore[T]) onSubEvent(handler T) {
+	e.mu.Lock()
+	e.subs = append(e.subs, handler)
+	e.mu.Unlock()
+}
+
+func (e *handlerStore[T]) offSubEvents() {
+	e.mu.Lock()
+	e.subs = nil
+	e.mu.Unlock()
+}
+
+func (e *handlerStore[T]) once(handler T) {
+	e.mu.Lock()
+	e.funcsOnce = append(e.funcsOnce, handler)
+	e.mu.Unlock()
+}
+
+func (e *handlerStore[T]) off(handler ...T) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	remove := func(slice []T, s int) []T {
+		return append(slice[:s], slice[s+1:]...)
+	}
+
+	for i, h := range e.funcs {
+		for _, _h := range handler {
+			if h == _h {
+				e.funcs = remove(e.funcs, i)
+			}
+		}
+	}
+
+	for i, h := range e.funcsOnce {
+		for _, _h := range handler {
+			if h == _h {
+				e.funcsOnce = remove(e.funcsOnce, i)
+			}
+		}
+	}
+}
+
+func (e *handlerStore[T]) offAll() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.funcs = nil
+	e.funcsOnce = nil
+}
+
+func (e *handlerStore[T]) getAll() (handlers []T) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	handlers = make([]T, 0, len(e.subs)+len(e.funcs)+len(e.funcsOnce))
+	handlers = append(handlers, e.subs...)
+	handlers = append(handlers, e.funcs...)
+	handlers = append(handlers, e.funcsOnce...)
+	e.funcsOnce = nil
+	return
+}
+
+func (e *eventHandlerStore) on(eventName string, handler *eventHandler) {
+	e.mu.Lock()
+	handlers, _ := e.events[eventName]
+	handlers = append(handlers, handler)
+	e.events[eventName] = handlers
+	e.mu.Unlock()
+}
+
+func (e *eventHandlerStore) once(eventName string, handler *eventHandler) {
+	e.mu.Lock()
+	handlers, _ := e.eventsOnce[eventName]
+	handlers = append(handlers, handler)
+	e.eventsOnce[eventName] = handlers
+	e.mu.Unlock()
+}
+
+func (e *eventHandlerStore) off(eventName string, handler ...any) {
+	if eventName == "" {
+		return
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if handler == nil {
+		delete(e.events, eventName)
+		delete(e.eventsOnce, eventName)
+		return
+	}
+
+	remove := func(slice []*eventHandler, s int) []*eventHandler {
+		return append(slice[:s], slice[s+1:]...)
+	}
+
+	handlers, ok := e.events[eventName]
+	if ok {
+		for i, h := range handlers {
+			for _, _h := range handler {
+				if h.rv.Interface() == _h {
+					handlers = remove(handlers, i)
+				}
+			}
+		}
+		e.events[eventName] = handlers
+	}
+
+	handlers, ok = e.eventsOnce[eventName]
+	if ok {
+		for i, h := range handlers {
+			for _, _h := range handler {
+				if h == _h {
+					handlers = remove(handlers, i)
+				}
+			}
+		}
+		e.eventsOnce[eventName] = handlers
+	}
+}
+
+func (e *eventHandlerStore) offAll() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	for k := range e.events {
+		delete(e.events, k)
+	}
+
+	for k := range e.eventsOnce {
+		delete(e.eventsOnce, k)
+	}
+}
+
+func (e *eventHandlerStore) getAll(eventName string) (handlers []*eventHandler) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	h, _ := e.events[eventName]
+	hOnce, _ := e.eventsOnce[eventName]
+
+	delete(e.eventsOnce, eventName)
+
+	handlers = make([]*eventHandler, 0, len(h)+len(hOnce))
+	handlers = append(handlers, h...)
+	handlers = append(handlers, hOnce...)
+	return
 }

@@ -239,3 +239,76 @@ func mustCreateEventPacket(socket *serverSocket, eventName string, _v []any) (he
 	}
 	return
 }
+
+func TestHandlerStore(t *testing.T) {
+	type testFn func()
+	h := newHandlerStore[*testFn]()
+
+	t.Run("on and off", func(t *testing.T) {
+		count := 0
+		var f testFn = func() {
+			count++
+		}
+		h.on(&f)
+
+		all := h.getAll()
+		c := all[0]
+		(*c)()
+		assert.Equal(t, 1, count)
+
+		h.off(&f)
+		all = h.getAll()
+		assert.Equal(t, 0, len(all))
+	})
+
+	t.Run("once", func(t *testing.T) {
+		count := 0
+		var f testFn = func() {
+			count++
+		}
+		h.once(&f)
+
+		all := h.getAll()
+		c := all[0]
+		(*c)()
+		assert.Equal(t, 1, count)
+
+		all = h.getAll()
+		assert.Equal(t, 0, len(all))
+
+		h.once(&f)
+		h.off(&f)
+
+		all = h.getAll()
+		assert.Equal(t, 0, len(all))
+	})
+
+	t.Run("offAll", func(t *testing.T) {
+		var f testFn = func() {}
+
+		h.on(&f)
+		h.once(&f)
+		h.offAll()
+
+		all := h.getAll()
+		assert.Equal(t, 0, len(all))
+	})
+
+	t.Run("sub events", func(t *testing.T) {
+		var f testFn = func() {}
+
+		h.onSubEvent(&f)
+		if !assert.True(t, h.subs[0] == &f) {
+			return
+		}
+		all := h.getAll()
+		if !assert.True(t, all[0] == &f) {
+			return
+		}
+
+		h.offSubEvents()
+		assert.Equal(t, 0, len(h.subs))
+		all = h.getAll()
+		assert.Equal(t, 0, len(all))
+	})
+}
