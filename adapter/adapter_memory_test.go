@@ -46,10 +46,10 @@ func TestInMemoryAdapterAddDelete(t *testing.T) {
 
 func TestSockets(t *testing.T) {
 	adapter := newTestInMemoryAdapter()
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
-	store.Set(newTestSocket("s2"))
-	store.Set(newTestSocket("s3"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
+	store.Set(NewTestSocket("s2"))
+	store.Set(NewTestSocket("s3"))
 
 	adapter.AddAll("s1", []Room{"r1", "r2"})
 	adapter.AddAll("s2", []Room{"r2", "r3"})
@@ -83,10 +83,10 @@ func TestExcludeSockets(t *testing.T) {
 	adapter.AddAll("s2", nil)
 	adapter.AddAll("s3", []Room{"r1"})
 
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
-	store.Set(newTestSocket("s2"))
-	store.Set(newTestSocket("s3"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
+	store.Set(NewTestSocket("s2"))
+	store.Set(NewTestSocket("s3"))
 
 	header := parser.PacketHeader{}
 	opts := NewBroadcastOptions()
@@ -113,10 +113,10 @@ func TestExcludeSocketsWhenBroadcastingToRooms(t *testing.T) {
 	adapter.AddAll("s2", []Room{"r2"})
 	adapter.AddAll("s3", []Room{"r1"})
 
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
-	store.Set(newTestSocket("s2"))
-	store.Set(newTestSocket("s3"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
+	store.Set(NewTestSocket("s2"))
+	store.Set(NewTestSocket("s3"))
 
 	header := parser.PacketHeader{}
 	opts := NewBroadcastOptions()
@@ -144,10 +144,10 @@ func TestFetchSockets(t *testing.T) {
 	adapter.AddAll("s2", []Room{"s2"})
 	adapter.AddAll("s3", []Room{"s3"})
 
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
-	store.Set(newTestSocket("s2"))
-	store.Set(newTestSocket("s3"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
+	store.Set(NewTestSocket("s2"))
+	store.Set(NewTestSocket("s3"))
 
 	sockets := adapter.FetchSockets(NewBroadcastOptions())
 
@@ -159,9 +159,9 @@ func TestAddAndDelSockets(t *testing.T) {
 	adapter.AddAll("s1", []Room{"s1"})
 	adapter.AddAll("s2", []Room{"s2"})
 
-	socket1 := newTestSocket("s1")
-	socket2 := newTestSocket("s2")
-	store := adapter.sockets.(*testSocketStore)
+	socket1 := NewTestSocket("s1")
+	socket2 := NewTestSocket("s2")
+	store := adapter.sockets.(*TestSocketStore)
 	store.Set(socket1)
 	store.Set(socket2)
 
@@ -195,9 +195,9 @@ func TestDisconnectSockets(t *testing.T) {
 	adapter.AddAll("s1", []Room{"s1"})
 	adapter.AddAll("s2", []Room{"s2"})
 
-	socket1 := newTestSocket("s1")
-	socket2 := newTestSocket("s2")
-	store := adapter.sockets.(*testSocketStore)
+	socket1 := NewTestSocket("s1")
+	socket2 := NewTestSocket("s2")
+	store := adapter.sockets.(*TestSocketStore)
 	store.Set(socket1)
 	store.Set(socket2)
 
@@ -215,10 +215,10 @@ func TestReturnMatchingSocketsWithinRoom(t *testing.T) {
 	adapter.AddAll("s2", []Room{"r1"})
 	adapter.AddAll("s3", []Room{"r2"})
 
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
-	store.Set(newTestSocket("s2"))
-	store.Set(newTestSocket("s3"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
+	store.Set(NewTestSocket("s2"))
+	store.Set(NewTestSocket("s3"))
 
 	opts := NewBroadcastOptions()
 	opts.Rooms.Add("r1")
@@ -231,5 +231,5 @@ func TestReturnMatchingSocketsWithinRoom(t *testing.T) {
 
 func newTestInMemoryAdapter() *inMemoryAdapter {
 	creator := NewInMemoryAdapterCreator()
-	return creator(newTestSocketStore(), jsonparser.NewCreator(0, stdjson.New())).(*inMemoryAdapter)
+	return creator(NewTestSocketStore(), jsonparser.NewCreator(0, stdjson.New())).(*inMemoryAdapter)
 }

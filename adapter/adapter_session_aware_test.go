@@ -14,8 +14,8 @@ import (
 func TestPersistAndRestoreSession(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	adapter.PersistSession(&SessionToPersist{
 		SID:   "s1",
@@ -56,8 +56,8 @@ func TestPersistAndRestoreSession(t *testing.T) {
 func TestRestoreMissedPackets(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	adapter.PersistSession(&SessionToPersist{
 		SID:   "s1",
@@ -159,8 +159,8 @@ func TestRestoreMissedPackets(t *testing.T) {
 func TestUnknownSession(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	_, ok := adapter.RestoreSession("p1", "snfskjfnekwjnfw")
 	assert.False(t, ok)
@@ -169,8 +169,8 @@ func TestUnknownSession(t *testing.T) {
 func TestUnknownOffset(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	adapter.PersistSession(&SessionToPersist{
 		SID:   "s1",
@@ -185,8 +185,8 @@ func TestUnknownOffset(t *testing.T) {
 func TestCleaner(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(500*time.Millisecond, 50*time.Millisecond)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	adapter.PersistSession(&SessionToPersist{
 		SID:   "s1",
@@ -234,8 +234,8 @@ func TestCleaner(t *testing.T) {
 func TestSessionExpiration(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(1*time.Millisecond, 0)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	adapter.PersistSession(&SessionToPersist{
 		SID:   "s1",
@@ -273,8 +273,8 @@ func TestSessionExpiration(t *testing.T) {
 func TestSessionCopy(t *testing.T) {
 	adapter := newTestSessionAwareAdapter(100*time.Second, 0)
 	adapter.AddAll("s1", []Room{"r1"})
-	store := adapter.sockets.(*testSocketStore)
-	store.Set(newTestSocket("s1"))
+	store := adapter.sockets.(*TestSocketStore)
+	store.Set(NewTestSocket("s1"))
 
 	originalSession := &SessionToPersist{
 		SID:   "s1",
@@ -313,7 +313,7 @@ func TestSessionCopy(t *testing.T) {
 }
 
 func newTestSessionAwareAdapter(maxDisconnectionDuration, cleanerDuration time.Duration) *sessionAwareAdapter {
-	socketStore := newTestSocketStore()
+	socketStore := NewTestSocketStore()
 	parserCreator := jsonparser.NewCreator(0, stdjson.New())
 	inMemoryAdapter := NewInMemoryAdapterCreator()(socketStore, parserCreator).(*inMemoryAdapter)
 
