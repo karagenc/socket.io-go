@@ -70,3 +70,29 @@ func TestAuth(t *testing.T) {
 	}()
 	assert.NotNil(t, err, "err must be non-nil for a string value. panic should have been occured")
 }
+
+func TestConnectToANamespaceAfterConnectionEstablished(t *testing.T) {
+	_, _, manager := newTestServerAndClient(
+		t,
+		&ServerConfig{
+			AcceptAnyNamespace: true,
+		},
+		nil,
+	)
+	tw := newTestWaiter(1)
+	socket := manager.Socket("/", nil)
+	socket.Connect()
+
+	socket.OnConnect(func() {
+		t.Log("/ connected")
+		asdf := manager.Socket("/asdf", nil)
+		asdf.OnConnect(func() {
+			t.Log("/asdf connected")
+			tw.Done()
+		})
+		asdf.Connect()
+	})
+
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.Wait()
+}
