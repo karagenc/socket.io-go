@@ -1,7 +1,6 @@
 package jsonparser
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -12,7 +11,6 @@ import (
 func TestDecode(t *testing.T) {
 	c := NewCreator(0, stdjson.New())
 	p := c()
-
 	tests := createDecodeTests(t)
 
 	for _, test := range tests {
@@ -27,14 +25,14 @@ func TestDecode(t *testing.T) {
 					t.Fatalf("decode error: %v", err)
 				}
 
-				printValues(values...)
+				printValues(t, values...)
 
 				values, err = decode(test.ExpectedTypes...)
 				if err != nil {
 					t.Fatalf("decode error: %v", err)
 				}
 
-				printValues(values...)
+				printValues(t, values...)
 
 				finishHappened = true
 			}
@@ -88,7 +86,7 @@ func TestMaxAttachmentsDecode(t *testing.T) {
 	}
 }
 
-func printValues(values ...reflect.Value) {
+func printValues(t *testing.T, values ...reflect.Value) {
 	for i, rv := range values {
 		k := rv.Kind()
 		if k == reflect.Interface || k == reflect.Ptr {
@@ -100,13 +98,12 @@ func printValues(values ...reflect.Value) {
 
 		switch val := v.(type) {
 		case Binary, *Binary:
-			fmt.Printf("Data %d: %s\n", i, val)
+			t.Logf("Data %d: %s", i, val)
 		default:
-			fmt.Printf("Data %d: %v\n", i, v)
+			t.Logf("Data %d: %v", i, v)
 		}
 	}
-
-	fmt.Print("\n")
+	t.Logf("\n")
 }
 
 func createDecodeTests(t *testing.T) []*decodeTest {

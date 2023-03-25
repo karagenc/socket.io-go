@@ -1,7 +1,6 @@
 package sio
 
 import (
-	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -22,17 +21,17 @@ func TestServerAck(t *testing.T) {
 	tw := newTestWaiter(5)
 
 	socket.OnEvent("ack", func(message string, ack func(reply string)) {
-		fmt.Printf("event %s\n", message)
+		t.Logf("event %s", message)
 		assert.Equal(t, "hello", message)
 		ack("hi")
 	})
 
 	server.OnConnection(func(socket ServerSocket) {
 		for i := 0; i < 5; i++ {
-			fmt.Println("Emitting to client")
+			t.Log("Emitting to client")
 			socket.Emit("ack", "hello", func(reply string) {
 				defer tw.Done()
-				fmt.Println("ack")
+				t.Log("ack")
 				assert.Equal(t, "hi", reply)
 			})
 		}

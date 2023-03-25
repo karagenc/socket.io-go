@@ -12,20 +12,19 @@ import (
 func TestEncode(t *testing.T) {
 	c := NewCreator(0, stdjson.New())
 	p := c()
-
 	tests := createEncodeTests(t)
 
-	for _, test := range tests {
-		// fmt.Printf("\nTEST %d\n", i)
+	for i, test := range tests {
+		t.Logf("\nTEST %d\n", i)
 
 		buffers, err := p.Encode(test.Header, test.V)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// for i, buf := range buffers {
-		// 	fmt.Printf("buf #%d: %s\n", i, buf)
-		// }
+		for i, buf := range buffers {
+			t.Logf("buf #%d: %s", i, buf)
+		}
 
 		if len(buffers) > 1 && !test.Header.IsBinary() {
 			t.Fatal("type of the packet should have been binary")

@@ -101,13 +101,10 @@ func TestSplitByte(t *testing.T) {
 
 	for i, test := range tests {
 		splitted := splitByte(test, delim)
-
-		/*
-			for _i, s := range splitted {
-				fmt.Printf("splitted[%d]: %s\n", _i, s)
-			}
-			fmt.Print("\n")
-		*/
+		for _i, s := range splitted {
+			t.Logf("splitted[%d]: %s", _i, s)
+		}
+		t.Logf("\n")
 
 		if !assert.Equal(t, len(expected[i]), len(splitted), "expected and splitted should be equal") {
 			return

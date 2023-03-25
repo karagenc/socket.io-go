@@ -37,7 +37,7 @@ func TestPersistAndRestoreSession(t *testing.T) {
 		// Yank the offset with a regex.
 		re := regexp.MustCompile(`.*".*".*"(.*)"`)
 		_offset := re.FindStringSubmatch(string(buffers[0]))
-		//fmt.Printf("'%s'\n", _offset[1])
+		t.Logf("'%s'", _offset[1])
 		offset = _offset[1]
 		return true
 	}
@@ -74,7 +74,7 @@ func TestRestoreMissedPackets(t *testing.T) {
 			// Yank the offset with a regex.
 			re := regexp.MustCompile(`.*".*".*"(.*)"`)
 			_offset := re.FindStringSubmatch(string(buffers[0]))
-			//fmt.Printf("'%s'\n", _offset[1])
+			t.Logf("'%s'", _offset[1])
 			offset = _offset[1]
 		}
 		return true
@@ -208,7 +208,7 @@ func TestCleaner(t *testing.T) {
 		// Yank the offset with a regex.
 		re := regexp.MustCompile(`.*".*".*"(.*)"`)
 		_offset := re.FindStringSubmatch(string(buffers[0]))
-		//fmt.Printf("'%s'\n", _offset[1])
+		t.Logf("'%s'", _offset[1])
 		offset = _offset[1]
 		return true
 	}
@@ -257,7 +257,7 @@ func TestSessionExpiration(t *testing.T) {
 		// Yank the offset with a regex.
 		re := regexp.MustCompile(`.*".*".*"(.*)"`)
 		_offset := re.FindStringSubmatch(string(buffers[0]))
-		//fmt.Printf("'%s'\n", _offset[1])
+		t.Logf("'%s'", _offset[1])
 		offset = _offset[1]
 		return true
 	}
@@ -297,7 +297,7 @@ func TestSessionCopy(t *testing.T) {
 		// Yank the offset with a regex.
 		re := regexp.MustCompile(`.*".*".*"(.*)"`)
 		_offset := re.FindStringSubmatch(string(buffers[0]))
-		//fmt.Printf("'%s'\n", _offset[1])
+		t.Logf("'%s'", _offset[1])
 		offset = _offset[1]
 		return true
 	}

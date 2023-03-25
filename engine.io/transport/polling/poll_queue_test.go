@@ -68,7 +68,7 @@ func TestPoll(t *testing.T) {
 
 	elapsed := time.Since(start)
 
-	//fmt.Printf("waitFor: %dms\nelapsed time: %dms\n", waitFor.Milliseconds(), elapsed.Milliseconds())
+	t.Logf("waitFor: %dms\nelapsed time: %dms\n", waitFor.Milliseconds(), elapsed.Milliseconds())
 
 	if elapsed >= max {
 		t.Fatal("it takes too much time to receive a packet from a pollQueue")
