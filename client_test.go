@@ -56,18 +56,13 @@ func TestAuth(t *testing.T) {
 	assert.Equal(t, s.Num, 500)
 
 	err = socket.setAuth("Donkey")
-	if !assert.NotNil(t, err, "err must be non-nil for a string value") {
-		return
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	err = func() (err error) {
-		defer func() {
-			err = recover().(error)
-		}()
+	assert.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
 		socket.SetAuth("Donkey")
-		return
-	}()
-	assert.NotNil(t, err, "err must be non-nil for a string value. panic should have been occured")
+	})
 }
 
 func TestConnectToANamespaceAfterConnectionEstablished(t *testing.T) {
