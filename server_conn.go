@@ -252,5 +252,5 @@ func (c *serverConn) close() {
 	c.debug.Log("Closing engine.io")
 	c.eio.Close()
 	c.eioPacketQueue.reset()
-	c.onClose("forced server close", nil)
+	c.onClose(ReasonForcedServerClose, nil)
 }

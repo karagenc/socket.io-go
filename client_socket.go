@@ -684,29 +684,6 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 	}
 }
 
-func (s *clientSocket) onError(err error) {
-	// In original socket.io, errors are only emitted on manager.
-	s.manager.onError(err)
-}
-
-// Called upon forced client/server side disconnections,
-// this method ensures the `Client` (manager on original socket.io implementation)
-// stops tracking us and that reconnections don't get triggered for this.
-func (s *clientSocket) destroy() {
-	s.deregisterSubEvents()
-	s.manager.destroy(s)
-}
-
-func (s *clientSocket) onClose(reason Reason) {
-	s.debug.Log("Going to close the socket. Reason", reason)
-	s.connectedMu.Lock()
-	s.connected = false
-	s.connectedMu.Unlock()
-	for _, handler := range s.disconnectHandlers.getAll() {
-		(*handler)(reason)
-	}
-}
-
 func (s *clientSocket) Emit(eventName string, v ...any) {
 	s.emit(eventName, 0, false, false, v...)
 }
@@ -902,5 +879,28 @@ func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]by
 		} else {
 			s.debug.Log("Packet is discarded")
 		}
+	}
+}
+
+func (s *clientSocket) onError(err error) {
+	// In original socket.io, errors are only emitted on manager.
+	s.manager.onError(err)
+}
+
+// Called upon forced client/server side disconnections,
+// this method ensures the `Client` (manager on original socket.io implementation)
+// stops tracking us and that reconnections don't get triggered for this.
+func (s *clientSocket) destroy() {
+	s.deregisterSubEvents()
+	s.manager.destroy(s)
+}
+
+func (s *clientSocket) onClose(reason Reason) {
+	s.debug.Log("Going to close the socket. Reason", reason)
+	s.connectedMu.Lock()
+	s.connected = false
+	s.connectedMu.Unlock()
+	for _, handler := range s.disconnectHandlers.getAll() {
+		(*handler)(reason)
 	}
 }

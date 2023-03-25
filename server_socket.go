@@ -182,7 +182,7 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 
 func (s *serverSocket) onDisconnect() {
 	s.debug.Log("Got disconnect packet")
-	s.onClose("client namespace disconnect")
+	s.onClose(ReasonClientNamespaceDisconnect)
 }
 
 func (s *serverSocket) onEvent(
@@ -566,6 +566,6 @@ func (s *serverSocket) Disconnect(close bool) {
 		s.conn.close()
 	} else {
 		s.sendControlPacket(parser.PacketTypeDisconnect)
-		s.onClose("server namespace disconnect")
+		s.onClose(ReasonServerNamespaceDisconnect)
 	}
 }
