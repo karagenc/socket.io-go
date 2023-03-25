@@ -178,7 +178,10 @@ func (m *Manager) open() {
 func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSocket {
 	if namespace == "" {
 		namespace = "/"
+	} else if len(namespace) > 0 && namespace[0] != '/' {
+		namespace = "/" + namespace
 	}
+
 	if config == nil {
 		config = new(ClientSocketConfig)
 	} else {
