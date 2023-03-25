@@ -333,8 +333,8 @@ func (s *serverSocket) newBroadcastOperator() *BroadcastOperator {
 }
 
 type sidInfo struct {
-	SID string  `json:"sid"`
-	PID *string `json:"pid"`
+	SID string `json:"sid"`
+	PID string `json:"pid,omitempty"`
 }
 
 func (s *serverSocket) onConnect() error {
@@ -350,13 +350,12 @@ func (s *serverSocket) onConnect() error {
 		Namespace: s.nsp.Name(),
 	}
 
-	pid := string(s.pid)
-	c := &sidInfo{
+	c := sidInfo{
 		SID: string(s.ID()),
-		PID: &pid,
+		PID: string(s.pid),
 	}
 
-	buffers, err := s.parser.Encode(header, c)
+	buffers, err := s.parser.Encode(header, &c)
 	if err != nil {
 		return wrapInternalError(err)
 	}

@@ -421,12 +421,12 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 		return
 	}
 
-	if v.PID != nil {
+	if v.PID != "" {
 		pid, ok := s.pid()
-		if ok && pid == adapter.PrivateSessionID(*v.PID) {
+		if ok && pid == adapter.PrivateSessionID(v.PID) {
 			s.setRecovered(true)
 		}
-		s.setPID(adapter.PrivateSessionID(*v.PID))
+		s.setPID(adapter.PrivateSessionID(v.PID))
 	}
 
 	s.setID(SocketID(v.SID))
