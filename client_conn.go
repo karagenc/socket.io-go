@@ -90,10 +90,11 @@ func (c *clientConn) connect(again bool) (err error) {
 	c.manager.parser.Reset()
 
 	go c.eioPacketQueue.pollAndSend(c.eio)
-
-	for _, handler := range c.manager.openHandlers.getAll() {
-		(*handler)()
-	}
+	go func() {
+		for _, handler := range c.manager.openHandlers.getAll() {
+			(*handler)()
+		}
+	}()
 	return
 }
 

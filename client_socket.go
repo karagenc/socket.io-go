@@ -36,6 +36,9 @@ type (
 	clientSocket struct {
 		id atomic.Value
 
+		state   clientSocketConnectionState
+		stateMu sync.RWMutex
+
 		_pid        atomic.Value
 		_lastOffset atomic.Value
 		_recovered  atomic.Value
@@ -47,9 +50,6 @@ type (
 
 		authData   any
 		authDataMu sync.Mutex
-
-		connected   bool
-		connectedMu sync.RWMutex
 
 		sendBuffer   []sendBufferItem
 		sendBufferMu sync.Mutex
@@ -75,6 +75,15 @@ type (
 	}
 )
 
+type clientSocketConnectionState int
+
+const (
+	clientSocketConnStateConnected clientSocketConnectionState = iota
+	// CONNECT packet was sent. Waiting for server's response.
+	clientSocketConnStateConnectPending
+	clientSocketConnStateDisconnected
+)
+
 func newClientSocket(
 	config *ClientSocketConfig,
 	manager *Manager,
@@ -82,6 +91,7 @@ func newClientSocket(
 	parser parser.Parser,
 ) *clientSocket {
 	s := &clientSocket{
+		state:     clientSocketConnStateDisconnected,
 		config:    config,
 		namespace: namespace,
 		manager:   manager,
@@ -146,9 +156,15 @@ func (s *clientSocket) setRecovered(recovered bool) {
 }
 
 func (s *clientSocket) Connected() bool {
-	s.connectedMu.RLock()
-	defer s.connectedMu.RUnlock()
-	return s.manager.conn.connected() && s.connected
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.manager.conn.connected() && s.state == clientSocketConnStateConnected
+}
+
+func (s *clientSocket) connectedOrConnectPending() bool {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.manager.conn.connected() && (s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending)
 }
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
@@ -161,13 +177,19 @@ func (s *clientSocket) Active() bool {
 func (s *clientSocket) registerSubEvents() {
 	var (
 		open ManagerOpenFunc = func() {
+			s.stateMu.RLock()
+			defer s.stateMu.RUnlock()
+			if s.state == clientSocketConnStateConnectPending {
+				return
+			}
+			s.state = clientSocketConnStateConnectPending
 			s.onOpen()
 		}
 		close ManagerCloseFunc = func(reason Reason, err error) {
 			s.onClose(reason)
 		}
 		error ManagerErrorFunc = func(err error) {
-			if !s.Connected() {
+			if !s.connectedOrConnectPending() {
 				for _, handler := range s.connectErrorHandlers.getAll() {
 					(*handler)(err)
 				}
@@ -193,40 +215,38 @@ func (s *clientSocket) deregisterSubEvents() {
 }
 
 func (s *clientSocket) Connect() {
-	s.connectedMu.RLock()
-	connected := s.connected
-	s.connectedMu.RUnlock()
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 
-	if connected {
+	if s.state == clientSocketConnStateConnected {
 		return
 	}
 
 	s.registerSubEvents()
 
-	go func() {
-		s.manager.conn.stateMu.RLock()
-		connState := s.manager.conn.state
-		s.manager.conn.stateMu.RUnlock()
-		if connState != clientConnStateReconnecting {
-			s.manager.open()
-		}
+	s.manager.conn.stateMu.RLock()
+	managerConnState := s.manager.conn.state
+	s.manager.conn.stateMu.RUnlock()
+	if managerConnState != clientConnStateReconnecting {
+		go s.manager.open()
+	}
 
-		// If already connected, send a CONNECT packet.
-		if connState == clientConnStateConnected {
-			s.onOpen()
-		}
-	}()
+	// If already connected, send a CONNECT packet.
+	if managerConnState == clientConnStateConnected && s.state != clientSocketConnStateConnectPending {
+		s.state = clientSocketConnStateConnectPending
+		s.onOpen()
+	}
 }
 
 func (s *clientSocket) Disconnect() {
-	if s.Connected() {
+	if s.connectedOrConnectPending() {
 		s.debug.Log("Performing disconnect", s.namespace)
 		s.sendControlPacket(parser.PacketTypeDisconnect)
 	}
 
 	s.destroy()
 
-	if s.Connected() {
+	if s.connectedOrConnectPending() {
 		s.onClose(ReasonIOClientDisconnect)
 	}
 }
@@ -431,9 +451,9 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 
 	s.setID(SocketID(v.SID))
 
-	s.connectedMu.Lock()
-	s.connected = true
-	s.connectedMu.Unlock()
+	s.stateMu.Lock()
+	s.state = clientSocketConnStateConnected
+	s.stateMu.Unlock()
 
 	s.debug.Log("Socket connected")
 
@@ -584,9 +604,10 @@ func (s *clientSocket) onEvent(
 		return
 	}
 
-	s.connectedMu.RLock()
-	defer s.connectedMu.RUnlock()
-	if s.connected {
+	s.stateMu.RLock()
+	connected := s.state == clientSocketConnStateConnected
+	s.stateMu.RUnlock()
+	if connected {
 		return s.callEvent(handler, header, values, sendAck)
 	} else {
 		s.receiveBufferMu.Lock()
@@ -861,9 +882,10 @@ func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]by
 			}
 		}
 
-		s.connectedMu.RLock()
-		defer s.connectedMu.RUnlock()
-		if s.connected {
+		s.stateMu.RLock()
+		sendImmediately := s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending
+		s.stateMu.RUnlock()
+		if sendImmediately {
 			s.manager.conn.packet(packets...)
 		} else if !volatile {
 			s.sendBufferMu.Lock()
@@ -897,9 +919,9 @@ func (s *clientSocket) destroy() {
 
 func (s *clientSocket) onClose(reason Reason) {
 	s.debug.Log("Going to close the socket. Reason", reason)
-	s.connectedMu.Lock()
-	s.connected = false
-	s.connectedMu.Unlock()
+	s.stateMu.Lock()
+	s.state = clientSocketConnStateDisconnected
+	s.stateMu.Unlock()
 	for _, handler := range s.disconnectHandlers.getAll() {
 		(*handler)(reason)
 	}

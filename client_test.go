@@ -52,7 +52,7 @@ func TestAuth(t *testing.T) {
 
 	s, ok := socket.Auth().(*S)
 	if !assert.True(t, ok) {
-		t.Fail()
+		return
 	}
 	assert.Equal(t, s.Num, 500)
 

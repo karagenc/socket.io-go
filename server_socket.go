@@ -17,6 +17,7 @@ type serverSocket struct {
 	pid       adapter.PrivateSessionID
 	recovered bool
 
+	// `connected` means "did we receive the CONNECT packet?"
 	connected   bool
 	connectedMu sync.RWMutex
 
@@ -387,6 +388,10 @@ func (s *serverSocket) onClose(reason Reason) {
 		if !s.Connected() {
 			return
 		}
+		s.connectedMu.Lock()
+		s.connected = false
+		s.connectedMu.Unlock()
+
 		for _, handler := range s.disconnectingHandlers.getAll() {
 			(*handler)(reason)
 		}
@@ -412,9 +417,6 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.nsp.remove(s)
 		s.conn.remove(s)
 
-		s.connectedMu.Lock()
-		s.connected = false
-		s.connectedMu.Unlock()
 		for _, handler := range s.disconnectHandlers.getAll() {
 			(*handler)(reason)
 		}
