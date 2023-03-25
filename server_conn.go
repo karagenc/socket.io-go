@@ -214,7 +214,7 @@ func (c *serverConn) onFatalError(err error) {
 	for _, socket := range sockets {
 		socket.onError(err)
 	}
-	c.eio.Close()
+	go c.eio.Close()
 }
 
 func (c *serverConn) onClose(reason Reason, err error) {

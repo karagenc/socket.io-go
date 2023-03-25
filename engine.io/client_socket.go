@@ -283,7 +283,7 @@ func (s *clientSocket) onError(err error) {
 }
 
 func (s *clientSocket) onTransportClose(name string, err error) {
-	s.debug.Log("Transport", name, "closed")
+	s.debug.Log("Transport", name, "closed. Error", err)
 
 	select {
 	case <-s.closeChan:
