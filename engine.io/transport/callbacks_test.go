@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCallbacks(t *testing.T) {
@@ -12,8 +12,8 @@ func TestCallbacks(t *testing.T) {
 	callbacks.Set(nil, nil)
 
 	v := reflect.ValueOf(callbacks)
-	assert.Equal(t, 2, v.NumField(), "number of fields must be 2, if not, that means another field is added. add that field to the test and increase the number")
+	require.Equal(t, 2, v.NumField(), "number of fields must be 2, if not, that means another field is added. add that field to the test and increase the number")
 
-	assert.NotNil(t, callbacks.onPacket.Load())
-	assert.NotNil(t, callbacks.onClose.Load())
+	require.NotNil(t, callbacks.onPacket.Load())
+	require.NotNil(t, callbacks.onClose.Load())
 }

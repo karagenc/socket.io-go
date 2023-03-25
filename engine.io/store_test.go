@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSocketStore(t *testing.T) {
@@ -28,37 +28,32 @@ func TestSocketStore(t *testing.T) {
 		socket := newServerSocket(sid, nil, ft, c, 0, 0, NewNoopDebugger(), onClose)
 
 		ok := store.set(socket.ID(), socket)
-		assert.True(t, ok)
+		require.True(t, ok)
 	}
 
 	all := store.getAll()
-	assert.Equal(t, max, len(all))
+	require.Equal(t, max, len(all))
 
 	for _, socket1 := range all {
-		if !assert.NotNil(t, socket1) {
-			break
-		}
+		require.NotNil(t, socket1)
 
 		sid := socket1.ID()
 		socket2, ok := store.get(sid)
 
-		if socket1 != socket2 {
-			t.Fatal("socket1 and socket2 should be the same one")
-		}
+		require.NotNil(t, socket2)
+		require.True(t, socket1 != socket2)
+		require.True(t, ok)
 
-		assert.NotNil(t, socket2)
-		assert.True(t, ok)
-
-		assert.Equal(t, sid, socket2.ID())
+		require.Equal(t, sid, socket2.ID())
 
 		exists := store.exists(sid)
-		assert.True(t, exists)
+		require.True(t, exists)
 	}
 
 	store.closeAll()
 
 	countMu.Lock()
-	assert.Equal(t, max, count, "all sockets should be closed")
+	require.Equal(t, max, count, "all sockets should be closed")
 	countMu.Unlock()
 
 	for i := 0; i < max; i++ {
@@ -66,6 +61,6 @@ func TestSocketStore(t *testing.T) {
 
 		store.delete(sid)
 		exists := store.exists(sid)
-		assert.False(t, exists)
+		require.False(t, exists)
 	}
 }

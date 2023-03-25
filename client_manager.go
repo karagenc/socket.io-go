@@ -206,7 +206,7 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 		case eioparser.PacketTypeMessage:
 			err := m.parser.Add(packet.Data, m.onParserFinish)
 			if err != nil {
-				m.onClose(ReasonParseError, err)
+				go m.onClose(ReasonParseError, err)
 				return
 			}
 
@@ -261,8 +261,8 @@ func (m *Manager) destroy(socket *clientSocket) {
 func (m *Manager) onClose(reason Reason, err error) {
 	m.debug.Log("Closed. Reason", reason)
 
-	m.parserMu.Lock()
-	defer m.parserMu.Unlock()
+	// m.parserMu.Lock()
+	// defer m.parserMu.Unlock()
 	m.parser.Reset()
 	m.backoff.reset()
 

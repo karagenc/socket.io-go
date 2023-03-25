@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/parser"
 )
 
@@ -16,30 +16,24 @@ func TestClientSocketStore(t *testing.T) {
 
 	store.set(main)
 	s, ok := store.get("/")
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.True(t, main == s)
+	require.True(t, ok)
+	require.True(t, main == s)
 
 	foo := manager.Socket("/foo", nil).(*clientSocket)
 	store.set(foo)
 
 	sockets := store.getAll()
-	if !assert.Equal(t, 2, len(sockets)) {
-		return
-	}
-	assert.Contains(t, sockets, main)
-	assert.Contains(t, sockets, foo)
+	require.Equal(t, 2, len(sockets))
+	require.Contains(t, sockets, main)
+	require.Contains(t, sockets, foo)
 	// We used to this, but maps are not ordered, so we do the above test.
-	// assert.True(t, main == sockets[0])
-	// assert.True(t, foo == sockets[1])
+	// require.True(t, main == sockets[0])
+	// require.True(t, foo == sockets[1])
 
 	store.remove("/foo")
 	sockets = store.getAll()
-	if !assert.Equal(t, 1, len(sockets)) {
-		return
-	}
-	assert.True(t, main == sockets[0])
+	require.Equal(t, 1, len(sockets))
+	require.True(t, main == sockets[0])
 }
 
 func TestServerSocketStore(t *testing.T) {
@@ -65,34 +59,26 @@ func TestServerSocketStore(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, 1, len(store.socketsByID))
-	assert.Equal(t, 1, len(store.socketsByNsp))
+	require.Equal(t, 1, len(store.socketsByID))
+	require.Equal(t, 1, len(store.socketsByNsp))
 
 	s, ok := store.getByID(socket.ID())
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.True(t, socket == s)
+	require.True(t, ok)
+	require.True(t, socket == s)
 
 	s, ok = store.getByNsp("/")
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.True(t, socket == s)
+	require.True(t, ok)
+	require.True(t, socket == s)
 
 	sockets := store.getAll()
-	if !assert.Equal(t, 1, len(sockets)) {
-		return
-	}
-	assert.Contains(t, sockets, socket)
+	require.Equal(t, 1, len(sockets))
+	require.Contains(t, sockets, socket)
 
 	sockets = store.getAndRemoveAll()
-	if !assert.Equal(t, 1, len(sockets)) {
-		return
-	}
-	assert.Contains(t, sockets, socket)
-	assert.Equal(t, 0, len(store.socketsByID))
-	assert.Equal(t, 0, len(store.socketsByNsp))
+	require.Equal(t, 1, len(sockets))
+	require.Contains(t, sockets, socket)
+	require.Equal(t, 0, len(store.socketsByID))
+	require.Equal(t, 0, len(store.socketsByNsp))
 
 	socketTW.Add(1)
 	server.Of("/asdf").OnConnection(func(_socket ServerSocket) {
@@ -109,18 +95,16 @@ func TestServerSocketStore(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, 1, len(store.socketsByID))
-	assert.Equal(t, 1, len(store.socketsByNsp))
+	require.Equal(t, 1, len(store.socketsByID))
+	require.Equal(t, 1, len(store.socketsByNsp))
 
 	s, ok = store.getByNsp("/asdf")
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.True(t, socket == s)
+	require.True(t, ok)
+	require.True(t, socket == s)
 
 	store.removeByID(socket.ID())
-	assert.Equal(t, 0, len(store.socketsByID))
-	assert.Equal(t, 0, len(store.socketsByNsp))
+	require.Equal(t, 0, len(store.socketsByID))
+	require.Equal(t, 0, len(store.socketsByNsp))
 }
 
 func TestNamespaceStore(t *testing.T) {
@@ -132,27 +116,27 @@ func TestNamespaceStore(t *testing.T) {
 	store.set(main)
 	store.set(asdf)
 
-	assert.Equal(t, 2, store.len())
+	require.Equal(t, 2, store.len())
 	n, ok := store.get("/")
-	assert.True(t, ok)
-	assert.True(t, n == main)
+	require.True(t, ok)
+	require.True(t, n == main)
 
 	n, ok = store.get("/asdf")
-	assert.True(t, ok)
-	assert.True(t, n == asdf)
+	require.True(t, ok)
+	require.True(t, n == asdf)
 
 	store.remove("/asdf")
 	n, ok = store.get("/asdf")
-	assert.False(t, ok)
-	assert.True(t, n == nil)
+	require.False(t, ok)
+	require.True(t, n == nil)
 
 	n, created := store.getOrCreate("/jkl", server, server.adapterCreator, server.parserCreator)
-	assert.True(t, created)
-	assert.Equal(t, "/jkl", n.Name())
+	require.True(t, created)
+	require.Equal(t, "/jkl", n.Name())
 
 	n, created = store.getOrCreate("/", server, server.adapterCreator, server.parserCreator)
-	assert.False(t, created)
-	assert.True(t, n == main)
+	require.False(t, created)
+	require.True(t, n == main)
 }
 
 func TestNamespaceSocketStore(t *testing.T) {
@@ -183,32 +167,32 @@ func TestNamespaceSocketStore(t *testing.T) {
 
 	store.set(main)
 	store.set(asdf)
-	assert.Equal(t, 2, len(store.sockets))
+	require.Equal(t, 2, len(store.sockets))
 
 	s, ok := store.get(main.ID())
-	assert.True(t, ok)
-	assert.True(t, s == main)
+	require.True(t, ok)
+	require.True(t, s == main)
 
 	s, ok = store.get(asdf.ID())
-	assert.True(t, ok)
-	assert.True(t, s == asdf)
+	require.True(t, ok)
+	require.True(t, s == asdf)
 
 	store.remove(asdf.ID())
 	s, ok = store.get("/asdf")
-	assert.False(t, ok)
-	assert.True(t, s == nil)
+	require.False(t, ok)
+	require.True(t, s == nil)
 
 	sockets := store.getAll()
-	assert.Equal(t, 1, len(sockets))
-	assert.True(t, sockets[0] == main)
+	require.Equal(t, 1, len(sockets))
+	require.True(t, sockets[0] == main)
 
 	// There is no such socket.
 	ok = store.sendBuffers("", nil)
-	assert.False(t, ok)
+	require.False(t, ok)
 
 	tw.Add(1)
 	manager.Socket("/", nil).OnEvent("hi", func(message string) {
-		assert.Equal(t, "I am Groot", message)
+		require.Equal(t, "I am Groot", message)
 		tw.Done()
 	})
 
@@ -255,11 +239,11 @@ func TestHandlerStore(t *testing.T) {
 		all := store.getAll()
 		c := all[0]
 		(*c)()
-		assert.Equal(t, 1, count)
+		require.Equal(t, 1, count)
 
 		store.off(&f)
 		all = store.getAll()
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 
 	t.Run("once", func(t *testing.T) {
@@ -272,16 +256,16 @@ func TestHandlerStore(t *testing.T) {
 		all := store.getAll()
 		c := all[0]
 		(*c)()
-		assert.Equal(t, 1, count)
+		require.Equal(t, 1, count)
 
 		all = store.getAll()
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 
 		store.once(&f)
 		store.off(&f)
 
 		all = store.getAll()
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 
 	t.Run("offAll", func(t *testing.T) {
@@ -292,25 +276,22 @@ func TestHandlerStore(t *testing.T) {
 		store.offAll()
 
 		all := store.getAll()
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 
 	t.Run("sub events", func(t *testing.T) {
 		var f testFn = func() {}
 
 		store.onSubEvent(&f)
-		if !assert.True(t, store.subs[0] == &f) {
-			return
-		}
+		require.True(t, store.subs[0] == &f)
+
 		all := store.getAll()
-		if !assert.True(t, all[0] == &f) {
-			return
-		}
+		require.True(t, all[0] == &f)
 
 		store.offSubEvents()
-		assert.Equal(t, 0, len(store.subs))
+		require.Equal(t, 0, len(store.subs))
 		all = store.getAll()
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 }
 
@@ -330,9 +311,7 @@ func TestEventHandlerStore(t *testing.T) {
 		store.on("sum", h)
 
 		all := store.getAll("sum")
-		if !assert.Equal(t, 1, len(all)) {
-			return
-		}
+		require.Equal(t, 1, len(all))
 		c := all[0]
 
 		x := 6
@@ -342,13 +321,11 @@ func TestEventHandlerStore(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !assert.Equal(t, 9, sum) {
-			return
-		}
+		require.Equal(t, 9, sum)
 
 		store.off("sum")
 		all = store.getAll("sum")
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 
 	t.Run("once", func(t *testing.T) {
@@ -360,22 +337,18 @@ func TestEventHandlerStore(t *testing.T) {
 		store.once("ff", h)
 
 		all := store.getAll("ff")
-		if !assert.Equal(t, 1, len(all)) {
-			return
-		}
+		require.Equal(t, 1, len(all))
 		c := all[0]
-		assert.True(t, c == h)
+		require.True(t, c == h)
 
 		all = store.getAll("ff")
-		if !assert.Equal(t, 0, len(all)) {
-			return
-		}
+		require.Equal(t, 0, len(all))
 
 		store.once("ff", h)
 		store.off("ff")
 
 		all = store.getAll("ff")
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 
 	t.Run("off", func(t *testing.T) {
@@ -396,8 +369,8 @@ func TestEventHandlerStore(t *testing.T) {
 
 		store.off("ff", reflect.ValueOf(f1), reflect.ValueOf(f2))
 
-		assert.Equal(t, 0, len(store.events))
-		assert.Equal(t, 0, len(store.eventsOnce))
+		require.Equal(t, 0, len(store.events))
+		require.Equal(t, 0, len(store.eventsOnce))
 
 		store.on("ff", h1)
 		store.on("ff", h2)
@@ -406,8 +379,8 @@ func TestEventHandlerStore(t *testing.T) {
 
 		store.off("ff", reflect.ValueOf(f1))
 
-		assert.Equal(t, 1, len(store.events))
-		assert.Equal(t, 1, len(store.eventsOnce))
+		require.Equal(t, 1, len(store.events))
+		require.Equal(t, 1, len(store.eventsOnce))
 
 		store.offAll() // Cleanup
 	})
@@ -425,6 +398,6 @@ func TestEventHandlerStore(t *testing.T) {
 		store.offAll()
 
 		all := store.getAll("ff")
-		assert.Equal(t, 0, len(all))
+		require.Equal(t, 0, len(all))
 	})
 }

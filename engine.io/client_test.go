@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
@@ -266,10 +266,8 @@ func TestPingTimeoutAndPingInterval(t *testing.T) {
 
 	onSocket := func(socket ServerSocket) *Callbacks {
 		defer tw.Done()
-
-		assert.Equal(t, pingInterval, socket.PingInterval())
-		assert.Equal(t, pingTimeout, socket.PingTimeout())
-
+		require.Equal(t, pingInterval, socket.PingInterval())
+		require.Equal(t, pingTimeout, socket.PingTimeout())
 		return nil
 	}
 
@@ -281,11 +279,10 @@ func TestPingTimeoutAndPingInterval(t *testing.T) {
 	}
 
 	s := httptest.NewServer(io)
-
 	socket := testDial(t, s.URL, nil, nil)
 
-	assert.Equal(t, pingInterval, socket.PingInterval())
-	assert.Equal(t, pingTimeout, socket.PingTimeout())
+	require.Equal(t, pingInterval, socket.PingInterval())
+	require.Equal(t, pingTimeout, socket.PingTimeout())
 
 	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }
@@ -314,11 +311,8 @@ func TestUpgrade(t *testing.T) {
 	socket := testDial(t, s.URL, nil, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone})
 	upgrades := socket.Upgrades()
 
-	if !assert.Equal(t, 1, len(upgrades)) {
-		return
-	}
-
-	assert.Equal(t, "websocket", upgrades[0])
+	require.Equal(t, 1, len(upgrades))
+	require.Equal(t, "websocket", upgrades[0])
 
 	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }

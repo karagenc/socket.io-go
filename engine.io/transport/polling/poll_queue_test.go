@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
@@ -30,8 +30,8 @@ func TestPollQueue(t *testing.T) {
 	length := pq.len()
 
 	packets := pq.get()
-	assert.Equal(t, length, len(packets))
-	assert.Equal(t, len(test), length)
+	require.Equal(t, length, len(packets))
+	require.Equal(t, len(test), length)
 
 	for i, p1 := range packets {
 		p2 := test[i]
@@ -64,7 +64,7 @@ func TestPoll(t *testing.T) {
 
 	start := time.Now()
 	packets := pq.poll(1 * time.Second)
-	assert.Equal(t, 1, len(packets), "expected 1 packet")
+	require.Equal(t, 1, len(packets), "expected 1 packet")
 
 	elapsed := time.Since(start)
 
@@ -74,7 +74,7 @@ func TestPoll(t *testing.T) {
 		t.Fatal("it takes too much time to receive a packet from a pollQueue")
 	}
 
-	assert.Equal(t, 0, pq.len(), "pq should be empty after running pq.Poll")
+	require.Equal(t, 0, pq.len(), "pq should be empty after running pq.Poll")
 }
 
 func TestPollTimeout(t *testing.T) {
@@ -89,7 +89,7 @@ func TestPollTimeout(t *testing.T) {
 	}()
 
 	packets := pq.poll(waitFor - 50*time.Millisecond)
-	assert.Equal(t, 0, len(packets), "expected 0 packet (because of the timeout)")
+	require.Equal(t, 0, len(packets), "expected 0 packet (because of the timeout)")
 }
 
 func mustCreatePacket(t *testing.T, packetType parser.PacketType, isBinary bool, data []byte) *parser.Packet {

@@ -3,7 +3,7 @@ package eio
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBase64IDOutputLength(t *testing.T) {
@@ -11,11 +11,10 @@ func TestBase64IDOutputLength(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	assert.Equal(t, 20, len(id), "invalid base64 ID length")
+	require.Equal(t, 20, len(id), "invalid base64 ID length")
 }
 
 func TestBase64IDInvalidSize(t *testing.T) {
 	_, err := GenerateBase64ID(1 /* something smaller than 4 */)
-	assert.Equal(t, errBase64IDInvalidSize, err)
+	require.Equal(t, errBase64IDInvalidSize, err)
 }

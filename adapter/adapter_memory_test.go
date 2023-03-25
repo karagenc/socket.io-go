@@ -5,6 +5,7 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
@@ -16,32 +17,32 @@ func TestInMemoryAdapterAddDelete(t *testing.T) {
 	adapter.AddAll("s2", []Room{"r2", "r3"})
 
 	_, ok := adapter.rooms["r1"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = adapter.rooms["r2"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = adapter.rooms["r3"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = adapter.rooms["r4"]
-	assert.False(t, ok)
+	require.False(t, ok)
 
 	_, ok = adapter.sids["s1"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = adapter.sids["s2"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = adapter.sids["s3"]
-	assert.False(t, ok)
+	require.False(t, ok)
 
 	adapter.Delete("s1", "r1")
 	_, ok = adapter.rooms["r1"]
-	assert.False(t, ok)
+	require.False(t, ok)
 
 	adapter.DeleteAll("s2")
 	_, ok = adapter.sids["s2"]
-	assert.False(t, ok)
+	require.False(t, ok)
 	_, ok = adapter.rooms["r2"]
-	assert.True(t, ok)
+	require.True(t, ok)
 	_, ok = adapter.rooms["r3"]
-	assert.False(t, ok)
+	require.False(t, ok)
 }
 
 func TestSockets(t *testing.T) {
@@ -56,12 +57,12 @@ func TestSockets(t *testing.T) {
 	adapter.AddAll("s3", []Room{"r3"})
 
 	sockets := adapter.Sockets(mapset.NewThreadUnsafeSet[Room]())
-	assert.Equal(t, 3, sockets.Cardinality())
+	require.Equal(t, 3, sockets.Cardinality())
 
 	sockets = adapter.Sockets(mapset.NewThreadUnsafeSet[Room]("r2"))
-	assert.Equal(t, 2, sockets.Cardinality())
+	require.Equal(t, 2, sockets.Cardinality())
 	sockets = adapter.Sockets(mapset.NewThreadUnsafeSet[Room]("r4"))
-	assert.Equal(t, 0, sockets.Cardinality())
+	require.Equal(t, 0, sockets.Cardinality())
 }
 
 func TestSocketRooms(t *testing.T) {
@@ -71,10 +72,10 @@ func TestSocketRooms(t *testing.T) {
 	adapter.AddAll("s3", []Room{"r3"})
 
 	rooms, ok := adapter.SocketRooms("s2")
-	assert.True(t, ok)
-	assert.Equal(t, 2, rooms.Cardinality())
+	require.True(t, ok)
+	require.Equal(t, 2, rooms.Cardinality())
 	_, ok = adapter.SocketRooms("s4")
-	assert.False(t, ok)
+	require.False(t, ok)
 }
 
 func TestExcludeSockets(t *testing.T) {
@@ -103,8 +104,8 @@ func TestExcludeSockets(t *testing.T) {
 
 	adapter.Broadcast(&header, v, opts)
 
-	assert.Equal(t, 1, len(ids))
-	assert.Equal(t, SocketID("s2"), ids[0])
+	require.Equal(t, 1, len(ids))
+	require.Equal(t, SocketID("s2"), ids[0])
 }
 
 func TestExcludeSocketsWhenBroadcastingToRooms(t *testing.T) {
@@ -134,8 +135,8 @@ func TestExcludeSocketsWhenBroadcastingToRooms(t *testing.T) {
 
 	adapter.Broadcast(&header, v, opts)
 
-	assert.Equal(t, 1, len(ids))
-	assert.Equal(t, SocketID("s3"), ids[0])
+	require.Equal(t, 1, len(ids))
+	require.Equal(t, SocketID("s3"), ids[0])
 }
 
 func TestFetchSockets(t *testing.T) {
@@ -151,7 +152,7 @@ func TestFetchSockets(t *testing.T) {
 
 	sockets := adapter.FetchSockets(NewBroadcastOptions())
 
-	assert.Equal(t, 3, len(sockets))
+	require.Equal(t, 3, len(sockets))
 }
 
 func TestAddAndDelSockets(t *testing.T) {
@@ -169,25 +170,25 @@ func TestAddAndDelSockets(t *testing.T) {
 	opts.Rooms.Add("s1")
 	adapter.AddSockets(opts, "r1", "r2", "r3")
 
-	assert.Equal(t, 4, len(socket1.Rooms))
-	assert.Equal(t, Room("s1"), socket1.Rooms[0])
-	assert.Equal(t, Room("r1"), socket1.Rooms[1])
-	assert.Equal(t, Room("r2"), socket1.Rooms[2])
-	assert.Equal(t, Room("r3"), socket1.Rooms[3])
+	require.Equal(t, 4, len(socket1.Rooms))
+	require.Equal(t, Room("s1"), socket1.Rooms[0])
+	require.Equal(t, Room("r1"), socket1.Rooms[1])
+	require.Equal(t, Room("r2"), socket1.Rooms[2])
+	require.Equal(t, Room("r3"), socket1.Rooms[3])
 
-	assert.Equal(t, 1, len(socket2.Rooms))
-	assert.Equal(t, Room("s2"), socket2.Rooms[0])
+	require.Equal(t, 1, len(socket2.Rooms))
+	require.Equal(t, Room("s2"), socket2.Rooms[0])
 
 	opts = NewBroadcastOptions()
 	opts.Rooms.Add("s1")
 	opts.Rooms.Add("s2")
 	adapter.DelSockets(opts, "r3", "r2", "s2")
 
-	assert.Equal(t, 2, len(socket1.Rooms))
-	assert.Equal(t, Room("s1"), socket1.Rooms[0])
-	assert.Equal(t, Room("r1"), socket1.Rooms[1])
+	require.Equal(t, 2, len(socket1.Rooms))
+	require.Equal(t, Room("s1"), socket1.Rooms[0])
+	require.Equal(t, Room("r1"), socket1.Rooms[1])
 
-	assert.Equal(t, 0, len(socket2.Rooms))
+	require.Equal(t, 0, len(socket2.Rooms))
 }
 
 func TestDisconnectSockets(t *testing.T) {
@@ -205,8 +206,8 @@ func TestDisconnectSockets(t *testing.T) {
 	opts.Rooms.Add("s1")
 	adapter.DisconnectSockets(opts, true)
 
-	assert.False(t, socket1.Connected)
-	assert.True(t, socket2.Connected)
+	require.False(t, socket1.Connected)
+	require.True(t, socket2.Connected)
 }
 
 func TestReturnMatchingSocketsWithinRoom(t *testing.T) {
@@ -225,8 +226,8 @@ func TestReturnMatchingSocketsWithinRoom(t *testing.T) {
 	opts.Except.Add("r2")
 	sockets := adapter.FetchSockets(opts)
 
-	assert.Equal(t, 1, len(sockets))
-	assert.Equal(t, SocketID("s2"), sockets[0].ID())
+	require.Equal(t, 1, len(sockets))
+	require.Equal(t, SocketID("s2"), sockets[0].ID())
 }
 
 func newTestInMemoryAdapter() *inMemoryAdapter {

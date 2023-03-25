@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClientAck(t *testing.T) {
@@ -50,17 +51,15 @@ func TestAuth(t *testing.T) {
 	}
 
 	s, ok := socket.Auth().(*S)
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.Equal(t, s.Num, 500)
+	require.True(t, ok)
+	require.Equal(t, s.Num, 500)
 
 	err = socket.setAuth("Donkey")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
+	require.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
 		socket.SetAuth("Donkey")
 	})
 }
@@ -88,5 +87,4 @@ func TestConnectToANamespaceAfterConnectionEstablished(t *testing.T) {
 	})
 
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
-	tw.Wait()
 }

@@ -6,7 +6,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandshakeResponse(t *testing.T) {
@@ -39,13 +39,13 @@ func TestHandshakeResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, testSID, hr.SID)
+	require.Equal(t, testSID, hr.SID)
 
-	assert.Equal(t, testPingInterval, hr.PingInterval)
-	assert.Equal(t, testPingTimeout, hr.PingTimeout)
+	require.Equal(t, testPingInterval, hr.PingInterval)
+	require.Equal(t, testPingTimeout, hr.PingTimeout)
 
 	for i, u := range hr.Upgrades {
-		assert.Equal(t, testUpgrades[i], u)
+		require.Equal(t, testUpgrades[i], u)
 	}
 }
 
@@ -86,6 +86,6 @@ func TestPingIntervalAndPingTimeout(t *testing.T) {
 		PingTimeout:  testPingTimeout,
 	}
 
-	assert.Equal(t, time.Duration(testPingInterval)*time.Millisecond, hr.GetPingInterval())
-	assert.Equal(t, time.Duration(testPingTimeout)*time.Millisecond, hr.GetPingTimeout())
+	require.Equal(t, time.Duration(testPingInterval)*time.Millisecond, hr.GetPingInterval())
+	require.Equal(t, time.Duration(testPingTimeout)*time.Millisecond, hr.GetPingTimeout())
 }

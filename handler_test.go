@@ -3,7 +3,7 @@ package sio
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAckCheckAckFunc(t *testing.T) {
@@ -13,17 +13,17 @@ func TestAckCheckAckFunc(t *testing.T) {
 	ackWithReturn := func() string { return "123" }
 
 	err := checkAckFunc(nil, false)
-	assert.NotNil(t, err)
+	require.Error(t, err)
 
 	err = checkAckFunc(ackWithError, true)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	err = checkAckFunc(ackWithoutError, true)
-	assert.NotNil(t, err)
+	require.Error(t, err)
 
 	err = checkAckFunc(ackWithInt, true)
-	assert.NotNil(t, err)
+	require.Error(t, err)
 
 	err = checkAckFunc(ackWithReturn, false)
-	assert.NotNil(t, err)
+	require.Error(t, err)
 }

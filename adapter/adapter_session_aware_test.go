@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/parser"
 	jsonparser "github.com/tomruk/socket.io-go/parser/json"
 	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
@@ -45,12 +46,10 @@ func TestPersistAndRestoreSession(t *testing.T) {
 	adapter.Broadcast(&header, v, opts)
 
 	session, ok := adapter.RestoreSession("p1", offset)
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.Equal(t, SocketID("s1"), session.SID)
-	assert.Equal(t, PrivateSessionID("p1"), session.PID)
-	assert.Equal(t, 0, len(session.MissedPackets))
+	require.True(t, ok)
+	require.Equal(t, SocketID("s1"), session.SID)
+	require.Equal(t, PrivateSessionID("p1"), session.PID)
+	require.Equal(t, 0, len(session.MissedPackets))
 }
 
 func TestRestoreMissedPackets(t *testing.T) {
@@ -142,18 +141,16 @@ func TestRestoreMissedPackets(t *testing.T) {
 	adapter.Broadcast(&header, v, opts)
 
 	session, ok := adapter.RestoreSession("p1", offset)
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.Equal(t, SocketID("s1"), session.SID)
-	assert.Equal(t, PrivateSessionID("p1"), session.PID)
+	require.True(t, ok)
+	require.Equal(t, SocketID("s1"), session.SID)
+	require.Equal(t, PrivateSessionID("p1"), session.PID)
 
-	assert.Equal(t, 3, len(session.MissedPackets))
-	assert.Equal(t, 2, len(session.MissedPackets[0].Data))
+	require.Equal(t, 3, len(session.MissedPackets))
+	require.Equal(t, 2, len(session.MissedPackets[0].Data))
 
-	assert.Equal(t, "all", session.MissedPackets[0].Data[0])
-	assert.Equal(t, "room", session.MissedPackets[1].Data[0])
-	assert.Equal(t, "no except", session.MissedPackets[2].Data[0])
+	require.Equal(t, "all", session.MissedPackets[0].Data[0])
+	require.Equal(t, "room", session.MissedPackets[1].Data[0])
+	require.Equal(t, "no except", session.MissedPackets[2].Data[0])
 }
 
 func TestUnknownSession(t *testing.T) {
@@ -163,7 +160,7 @@ func TestUnknownSession(t *testing.T) {
 	store.Set(NewTestSocket("s1"))
 
 	_, ok := adapter.RestoreSession("p1", "snfskjfnekwjnfw")
-	assert.False(t, ok)
+	require.False(t, ok)
 }
 
 func TestUnknownOffset(t *testing.T) {
@@ -179,7 +176,7 @@ func TestUnknownOffset(t *testing.T) {
 	})
 
 	_, ok := adapter.RestoreSession("p1", "snfskjfnekwjnfw")
-	assert.False(t, ok)
+	require.False(t, ok)
 }
 
 func TestCleaner(t *testing.T) {
@@ -216,19 +213,15 @@ func TestCleaner(t *testing.T) {
 	adapter.Broadcast(&header, v, opts)
 
 	session, ok := adapter.RestoreSession("p1", offset)
-	if !assert.True(t, ok) {
-		return
-	}
-	assert.Equal(t, SocketID("s1"), session.SID)
-	assert.Equal(t, PrivateSessionID("p1"), session.PID)
-	assert.Equal(t, 0, len(session.MissedPackets))
+	require.True(t, ok)
+	require.Equal(t, SocketID("s1"), session.SID)
+	require.Equal(t, PrivateSessionID("p1"), session.PID)
+	require.Equal(t, 0, len(session.MissedPackets))
 
 	// Ensure at least 500 millisecond passes
 	time.Sleep(600 * time.Millisecond)
 	_, ok = adapter.RestoreSession("p1", offset)
-	if !assert.False(t, ok) {
-		return
-	}
+	require.False(t, ok)
 }
 
 func TestSessionExpiration(t *testing.T) {
@@ -267,7 +260,7 @@ func TestSessionExpiration(t *testing.T) {
 	// Ensure at least 1 millisecond passes
 	time.Sleep(time.Millisecond * 2)
 	_, ok := adapter.RestoreSession("p1", offset)
-	assert.False(t, ok)
+	require.False(t, ok)
 }
 
 func TestSessionCopy(t *testing.T) {
@@ -305,11 +298,9 @@ func TestSessionCopy(t *testing.T) {
 	adapter.Broadcast(&header, v, opts)
 
 	persistedSession, ok := adapter.RestoreSession("p1", offset)
-	if !assert.True(t, ok) {
-		return
-	}
+	require.True(t, ok)
 	// Session should be copied.
-	assert.True(t, originalSession != persistedSession)
+	require.True(t, originalSession != persistedSession)
 }
 
 func newTestSessionAwareAdapter(maxDisconnectionDuration, cleanerDuration time.Duration) *sessionAwareAdapter {

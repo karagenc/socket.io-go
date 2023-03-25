@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
@@ -17,14 +18,14 @@ func TestPacketQueue(t *testing.T) {
 		pq.add(mustCreateEIOPacket(parser.PacketTypePing, false, nil))
 
 		packets := pq.get()
-		assert.Equal(t, 2, len(packets))
-		assert.Equal(t, 0, len(pq.packets))
+		require.Equal(t, 2, len(packets))
+		require.Equal(t, 0, len(pq.packets))
 
 		pq.add(mustCreateEIOPacket(parser.PacketTypeMessage, false, nil))
 		pq.add(mustCreateEIOPacket(parser.PacketTypePing, false, nil))
 
 		pq.reset()
-		assert.Equal(t, 0, len(pq.packets))
+		require.Equal(t, 0, len(pq.packets))
 	})
 
 	t.Run("poll", func(t *testing.T) {
@@ -38,12 +39,8 @@ func TestPacketQueue(t *testing.T) {
 		}()
 
 		packets, ok := pq.poll()
-		if !assert.True(t, ok) {
-			return
-		}
-		if !assert.Equal(t, 2, len(packets)) {
-			return
-		}
+		require.True(t, ok)
+		require.Equal(t, 2, len(packets))
 
 		// This time, synchronously add packets.
 		pq.add(
@@ -52,26 +49,18 @@ func TestPacketQueue(t *testing.T) {
 		)
 
 		packets, ok = pq.poll()
-		if !assert.True(t, ok) {
-			return
-		}
-		if !assert.Equal(t, 2, len(packets)) {
-			return
-		}
+		require.True(t, ok)
+		require.Equal(t, 2, len(packets))
 
 		// Do reset.
 		pq.reset()
 		packets, ok = pq.poll()
-		if !assert.False(t, ok) {
-			return
-		}
-		if !assert.True(t, packets == nil) {
-			return
-		}
+		require.False(t, ok)
+		require.True(t, packets == nil)
 
 		// `alreadyDrained` should be true.
 		timedout := pq.waitForDrain(10000 * time.Second /* Forever */)
-		assert.False(t, timedout)
+		require.False(t, timedout)
 	})
 
 	t.Run("waitForDrain", func(t *testing.T) {
@@ -81,7 +70,7 @@ func TestPacketQueue(t *testing.T) {
 		pq.packets = append(pq.packets, mustCreateEIOPacket(parser.PacketTypeMessage, false, nil))
 
 		timedout := pq.waitForDrain(1 * time.Millisecond)
-		assert.True(t, timedout)
+		require.True(t, timedout)
 	})
 
 	t.Run("pollAndSend", func(t *testing.T) {

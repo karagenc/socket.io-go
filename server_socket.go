@@ -392,9 +392,11 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.connected = false
 		s.connectedMu.Unlock()
 
-		for _, handler := range s.disconnectingHandlers.getAll() {
-			(*handler)(reason)
-		}
+		go func() {
+			for _, handler := range s.disconnectingHandlers.getAll() {
+				(*handler)(reason)
+			}
+		}()
 
 		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
 			s.debug.Log("Connection state recovery is enabled")

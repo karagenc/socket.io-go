@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
@@ -21,8 +21,8 @@ func TestServerErrors(t *testing.T) {
 		if !ok {
 			t.Fatal("serverErrors[i] should be set")
 		}
-		assert.Equal(t, e1, e2)
-		assert.Equal(t, i, e1.Code)
+		require.Equal(t, e1, e2)
+		require.Equal(t, i, e1.Code)
 	}
 }
 
@@ -46,7 +46,7 @@ func TestInvalidEIOVersion(t *testing.T) {
 
 	io.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	e := new(ServerError)
 	err = json.Unmarshal(rec.Body.Bytes(), e)
@@ -54,8 +54,8 @@ func TestInvalidEIOVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Code, e.Code)
-	assert.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Message, e.Message)
+	require.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Code, e.Code)
+	require.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Message, e.Message)
 }
 
 func TestUnknownTransport(t *testing.T) {
@@ -81,7 +81,7 @@ func TestUnknownTransport(t *testing.T) {
 
 	io.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	e := new(ServerError)
 	err = json.Unmarshal(rec.Body.Bytes(), e)
@@ -89,8 +89,8 @@ func TestUnknownTransport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, serverErrors[ErrorUnknownTransport].Code, e.Code)
-	assert.Equal(t, serverErrors[ErrorUnknownTransport].Message, e.Message)
+	require.Equal(t, serverErrors[ErrorUnknownTransport].Code, e.Code)
+	require.Equal(t, serverErrors[ErrorUnknownTransport].Message, e.Message)
 }
 
 func TestUnknownSID(t *testing.T) {
@@ -114,7 +114,7 @@ func TestUnknownSID(t *testing.T) {
 
 	io.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	e := new(ServerError)
 	err = json.Unmarshal(rec.Body.Bytes(), e)
@@ -122,8 +122,8 @@ func TestUnknownSID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, serverErrors[ErrorUnknownSID].Code, e.Code)
-	assert.Equal(t, serverErrors[ErrorUnknownSID].Message, e.Message)
+	require.Equal(t, serverErrors[ErrorUnknownSID].Code, e.Code)
+	require.Equal(t, serverErrors[ErrorUnknownSID].Message, e.Message)
 }
 
 func TestBadHandshakeMethod(t *testing.T) {
@@ -147,7 +147,7 @@ func TestBadHandshakeMethod(t *testing.T) {
 
 	io.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	e := new(ServerError)
 	err = json.Unmarshal(rec.Body.Bytes(), e)
@@ -155,8 +155,8 @@ func TestBadHandshakeMethod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, serverErrors[ErrorBadHandshakeMethod].Code, e.Code)
-	assert.Equal(t, serverErrors[ErrorBadHandshakeMethod].Message, e.Message)
+	require.Equal(t, serverErrors[ErrorBadHandshakeMethod].Code, e.Code)
+	require.Equal(t, serverErrors[ErrorBadHandshakeMethod].Message, e.Message)
 }
 
 func TestAuthenticator(t *testing.T) {
@@ -187,7 +187,7 @@ func TestAuthenticator(t *testing.T) {
 
 	io.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusForbidden, rec.Code)
+	require.Equal(t, http.StatusForbidden, rec.Code)
 }
 
 func TestMaxBufferSizePolling(t *testing.T) {
@@ -230,7 +230,7 @@ func TestMaxBufferSizePolling(t *testing.T) {
 		Transports: []string{"polling"},
 	})
 
-	assert.Equal(t, "polling", socket.TransportName())
+	require.Equal(t, "polling", socket.TransportName())
 
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 	socket.Send(packet)
@@ -276,7 +276,7 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 		Transports: []string{"websocket"},
 	})
 
-	assert.Equal(t, "websocket", socket.TransportName())
+	require.Equal(t, "websocket", socket.TransportName())
 
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 	socket.Send(packet)
@@ -286,7 +286,6 @@ func TestDisableMaxBufferSizeWebSocket(t *testing.T) {
 
 func TestDisableMaxBufferSizePolling(t *testing.T) {
 	tw := NewTestWaiter(1) // Wait for the server.
-
 	testData := []byte("12345678")
 
 	onSocket := func(socket ServerSocket) *Callbacks {
@@ -316,12 +315,11 @@ func TestDisableMaxBufferSizePolling(t *testing.T) {
 	}
 
 	s := httptest.NewServer(io)
-
 	socket := testDial(t, s.URL, nil, &ClientConfig{
 		Transports: []string{"polling"},
 	})
 
-	assert.Equal(t, "polling", socket.TransportName())
+	require.Equal(t, "polling", socket.TransportName())
 
 	packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 	socket.Send(packet)
@@ -402,7 +400,6 @@ func TestJSONP(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-
 	head := "___eio[" + jsonp + "](\""
 	foot := "\");"
 
@@ -430,8 +427,8 @@ func TestJSONP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, pingInterval, hr.GetPingInterval())
-	assert.Equal(t, pingTimeout, hr.GetPingTimeout())
+	require.Equal(t, pingInterval, hr.GetPingInterval())
+	require.Equal(t, pingTimeout, hr.GetPingTimeout())
 
 	sid := hr.SID
 
@@ -638,7 +635,7 @@ func TestServerClose(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusTeapot, resp.StatusCode, "server should have been closed")
+	require.Equal(t, http.StatusTeapot, resp.StatusCode, "server should have been closed")
 
 	tw.WaitTimeout(t, DefaultTestWaitTimeout)
 }

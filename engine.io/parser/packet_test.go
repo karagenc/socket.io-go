@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPacketCreate(t *testing.T) {
@@ -16,7 +16,7 @@ func TestPacketCreate(t *testing.T) {
 	)
 
 	_, err := NewPacket(packetType, isBinary, data)
-	assert.Equal(t, errInvalidPacketType, err, "if the packet type is not MESSAGE, packet cannot contain a binary data")
+	require.Equal(t, errInvalidPacketType, err, "if the packet type is not MESSAGE, packet cannot contain a binary data")
 }
 
 func TestPacketDecode(t *testing.T) {
@@ -42,7 +42,7 @@ func TestPacketDecode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assert.Equal(t, l, buf.Len())
+		require.Equal(t, l, buf.Len())
 
 		binaryData := p1.Type == PacketTypeMessage && p1.IsBinary == true
 
@@ -51,8 +51,8 @@ func TestPacketDecode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assert.Equal(t, p1.Type, p2.Type, "packet type doesn't match")
-		assert.Equal(t, p1.IsBinary, p2.IsBinary, "isBinary doesn't match")
+		require.Equal(t, p1.Type, p2.Type, "packet type doesn't match")
+		require.Equal(t, p1.IsBinary, p2.IsBinary, "isBinary doesn't match")
 
 		if !bytes.Equal(p1.Data, p2.Data) {
 			t.Fatal("packet data doesn't match")
@@ -67,15 +67,15 @@ func TestPacketDecode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assert.Equal(t, l, buf.Len())
+		require.Equal(t, l, buf.Len())
 
 		p2, err = Decode(buf, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		assert.Equal(t, p1.Type, p2.Type, "packet type doesn't match")
-		assert.Equal(t, p1.IsBinary, p2.IsBinary, "isBinary doesn't match")
+		require.Equal(t, p1.Type, p2.Type, "packet type doesn't match")
+		require.Equal(t, p1.IsBinary, p2.IsBinary, "isBinary doesn't match")
 
 		if !bytes.Equal(p1.Data, p2.Data) {
 			t.Fatal("packet data doesn't match")
@@ -122,12 +122,10 @@ func TestPacketWrite(t *testing.T) {
 		}
 
 		if packet.Type != PacketTypeMessage || (packet.Type == PacketTypeMessage && packet.IsBinary == false) {
-			if !assert.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a non-binary packet is 1") {
-				return
-			}
+			require.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a non-binary packet is 1")
 
 			pt := buf.Bytes()[0]
-			assert.Equal(t, packet.Type.ToChar(), pt, "packet type doesn't match")
+			require.Equal(t, packet.Type.ToChar(), pt, "packet type doesn't match")
 
 			if !bytes.Equal(packet.Data, buf.Bytes()[1:]) {
 				t.Fatal("packet data doesn't match")
@@ -147,20 +145,18 @@ func TestPacketWrite(t *testing.T) {
 		}
 
 		if packet.Type != PacketTypeMessage || (packet.Type == PacketTypeMessage && packet.IsBinary == false) {
-			if !assert.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a non-binary packet is 1") {
-				return
-			}
+			require.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a non-binary packet is 1")
 
 			pt := buf.Bytes()[0]
-			assert.Equal(t, packet.Type.ToChar(), pt, "packet type doesn't match")
+			require.Equal(t, packet.Type.ToChar(), pt, "packet type doesn't match")
 
 			if !bytes.Equal(packet.Data, buf.Bytes()[1:]) {
 				t.Fatal("packet data doesn't match")
 			}
 		} else {
-			assert.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a base64 encoded binary packet is 1")
+			require.GreaterOrEqual(t, buf.Len(), 1, "minimum length for a base64 encoded binary packet is 1")
 
-			assert.Equal(t, base64Prefix, buf.Bytes()[0], "a base64 encoded binary packet should start with base64Prefix: '%d'", base64Prefix)
+			require.Equal(t, base64Prefix, buf.Bytes()[0], "a base64 encoded binary packet should start with base64Prefix: '%d'", base64Prefix)
 
 			data := buf.Bytes()[1:]
 			dl := base64.StdEncoding.DecodedLen(len(data))

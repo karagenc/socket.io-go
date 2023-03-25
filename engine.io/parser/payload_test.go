@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncodeDecodePayloads(t *testing.T) {
@@ -26,11 +26,8 @@ func TestEncodeDecodePayloads(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, l, buf.Len())
-
-	if !assert.Greater(t, buf.Len(), 0) {
-		return
-	}
+	require.Greater(t, buf.Len(), 0)
+	require.Equal(t, l, buf.Len())
 
 	packets, err := DecodePayloads(buf)
 	if err != nil {
@@ -40,8 +37,8 @@ func TestEncodeDecodePayloads(t *testing.T) {
 	for i, p1 := range packets {
 		p2 := test[i]
 
-		assert.Equal(t, p2.Type, p1.Type, "packet type doesn't match")
-		assert.Equal(t, p2.IsBinary, p1.IsBinary, "isBinary doesn't match")
+		require.Equal(t, p2.Type, p1.Type, "packet type doesn't match")
+		require.Equal(t, p2.IsBinary, p1.IsBinary, "isBinary doesn't match")
 
 		if !bytes.Equal(p1.Data, p2.Data) {
 			t.Fatal("packet data doesn't match")
@@ -106,9 +103,7 @@ func TestSplitByte(t *testing.T) {
 		}
 		t.Logf("\n")
 
-		if !assert.Equal(t, len(expected[i]), len(splitted), "expected and splitted should be equal") {
-			return
-		}
+		require.Equal(t, len(expected[i]), len(splitted), "expected and splitted should be equal")
 
 		for j, e := range expected[i] {
 			if !bytes.Equal(splitted[j], e) {
@@ -128,22 +123,20 @@ func TestDecodeSinglePayload(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !assert.Greater(t, buf.Len(), 0) {
-		return
-	}
+	require.Greater(t, buf.Len(), 0)
 
 	packets, err := DecodePayloads(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, 1, len(packets))
+	require.Equal(t, 1, len(packets))
 
 	p1 := test
 	p2 := packets[0]
 
-	assert.Equal(t, p2.Type, p1.Type, "packet type doesn't match")
-	assert.Equal(t, p2.IsBinary, p1.IsBinary, "isBinary doesn't match")
+	require.Equal(t, p2.Type, p1.Type, "packet type doesn't match")
+	require.Equal(t, p2.IsBinary, p1.IsBinary, "isBinary doesn't match")
 
 	if !bytes.Equal(p1.Data, p2.Data) {
 		t.Fatal("packet data doesn't match")
@@ -159,9 +152,7 @@ func TestDecodeInvalidPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !assert.Greater(t, buf.Len(), 0) {
-		return
-	}
+	require.Greater(t, buf.Len(), 0)
 
 	buf.Bytes()[0] = 2 // Lower than 48. To provoke errInvalidPacketType.
 

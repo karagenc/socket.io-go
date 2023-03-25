@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackoff(t *testing.T) {
@@ -13,14 +13,10 @@ func TestBackoff(t *testing.T) {
 	testBackoffDuration(t, b)
 
 	b.reset()
-	if !assert.Equal(t, uint32(0), b.attempts()) {
-		return
-	}
+	require.Equal(t, uint32(0), b.attempts())
 
 	d := b.duration()
-	if !assert.Equal(t, 1*time.Second, d) {
-		return
-	}
+	require.Equal(t, 1*time.Second, d)
 
 	testBackoffDuration(t, b)
 }
@@ -32,14 +28,10 @@ func TestBackoffWithJitter(t *testing.T) {
 	// testBackoffDuration(t, b)
 
 	// b.reset()
-	// if !assert.Equal(t, uint32(0), b.attempts()) {
-	// 	return
-	// }
+	// require.Equal(t, uint32(0), b.attempts())
 
 	// d := b.duration()
-	// if !assert.Equal(t, 1*time.Second, d) {
-	// 	return
-	// }
+	// require.Equal(t, 1*time.Second, d)
 
 	// testBackoffDuration(t, b)
 }
