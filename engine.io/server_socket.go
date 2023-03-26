@@ -56,7 +56,7 @@ func newServerSocket(
 
 		closeChan: make(chan struct{}),
 		onClose:   onClose,
-		debug:     debug.WithContext("[eio] serverSocket with ID: " + id),
+		debug:     debug.WithContext("[eio] Server socket with ID: " + id),
 	}
 
 	s.setCallbacks(nil)

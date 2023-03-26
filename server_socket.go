@@ -102,7 +102,8 @@ func newServerSocket(
 			s.pid = adapter.PrivateSessionID(id)
 		}
 	}
-	s.debug = server.debug.WithContext("[sio] serverSocket with ID: " + string(s.id))
+	nsp.debug.Log("New socket! ID", s.id)
+	s.debug = server.debug.WithContext("[sio] Server socket (nsp: `" + nsp.Name() + "`)")
 	return s, nil
 }
 

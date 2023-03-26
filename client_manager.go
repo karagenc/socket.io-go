@@ -251,7 +251,7 @@ func (m *Manager) onError(err error) {
 func (m *Manager) destroy(socket *clientSocket) {
 	for _, socket := range m.sockets.getAll() {
 		if socket.Active() {
-			m.debug.Log("Socket with ID", socket.ID(), "still active, skipping close")
+			m.debug.Log("Socket (nsp: `" + socket.namespace + "`) is still active, skipping close")
 			return
 		}
 	}

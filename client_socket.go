@@ -103,13 +103,7 @@ func newClientSocket(
 		connectErrorHandlers: newHandlerStore[*ClientSocketConnectErrorFunc](),
 		disconnectHandlers:   newHandlerStore[*ClientSocketDisconnectFunc](),
 	}
-	s.debug = manager.debug.WithDynamicContext("[sio] clientSocket with ID", func() string {
-		id := s.ID()
-		if id == "" {
-			return "<none>"
-		}
-		return string(id)
-	})
+	s.debug = manager.debug.WithContext("[sio] Client socket (nsp: `" + namespace + "`)")
 	s.packetQueue = newClientPacketQueue(s)
 	s.setRecovered(false)
 	s.SetAuth(config.Auth)
@@ -122,6 +116,7 @@ func (s *clientSocket) ID() SocketID {
 }
 
 func (s *clientSocket) setID(id SocketID) {
+	s.debug.Log("sid is set to", id)
 	s.id.Store(id)
 }
 
