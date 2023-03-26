@@ -227,9 +227,8 @@ func mustCreateEventPacket(socket *serverSocket, eventName string, _v []any) (he
 
 func TestHandlerStore(t *testing.T) {
 	type testFn func()
-	store := newHandlerStore[*testFn]()
-
 	t.Run("on and off", func(t *testing.T) {
+		store := newHandlerStore[*testFn]()
 		count := 0
 		var f testFn = func() {
 			count++
@@ -247,6 +246,7 @@ func TestHandlerStore(t *testing.T) {
 	})
 
 	t.Run("once", func(t *testing.T) {
+		store := newHandlerStore[*testFn]()
 		count := 0
 		var f testFn = func() {
 			count++
@@ -269,6 +269,7 @@ func TestHandlerStore(t *testing.T) {
 	})
 
 	t.Run("offAll", func(t *testing.T) {
+		store := newHandlerStore[*testFn]()
 		var f testFn = func() {}
 
 		store.on(&f)
@@ -280,6 +281,7 @@ func TestHandlerStore(t *testing.T) {
 	})
 
 	t.Run("sub events", func(t *testing.T) {
+		store := newHandlerStore[*testFn]()
 		var f testFn = func() {}
 
 		store.onSubEvent(&f)
@@ -296,9 +298,8 @@ func TestHandlerStore(t *testing.T) {
 }
 
 func TestEventHandlerStore(t *testing.T) {
-	store := newEventHandlerStore()
-
 	t.Run("on and off", func(t *testing.T) {
+		store := newEventHandlerStore()
 		sum := 0
 		f := func(x, y int) {
 			sum = x + y
@@ -329,6 +330,7 @@ func TestEventHandlerStore(t *testing.T) {
 	})
 
 	t.Run("once", func(t *testing.T) {
+		store := newEventHandlerStore()
 		f := func() {}
 		h, err := newEventHandler(f)
 		if err != nil {
@@ -352,6 +354,7 @@ func TestEventHandlerStore(t *testing.T) {
 	})
 
 	t.Run("off", func(t *testing.T) {
+		store := newEventHandlerStore()
 		f1 := func() {}
 		h1, err := newEventHandler(f1)
 		if err != nil {
@@ -386,6 +389,7 @@ func TestEventHandlerStore(t *testing.T) {
 	})
 
 	t.Run("offAll", func(t *testing.T) {
+		store := newEventHandlerStore()
 		f := func() {}
 
 		h, err := newEventHandler(f)
