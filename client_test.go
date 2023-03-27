@@ -2,9 +2,11 @@ package sio
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	eio "github.com/tomruk/socket.io-go/engine.io"
 )
 
 func TestClientAck(t *testing.T) {
@@ -74,7 +76,6 @@ func TestConnectToANamespaceAfterConnectionEstablished(t *testing.T) {
 	)
 	tw := newTestWaiter(1)
 	socket := manager.Socket("/", nil)
-	socket.Connect()
 
 	socket.OnConnect(func() {
 		t.Log("/ connected")
@@ -85,6 +86,69 @@ func TestConnectToANamespaceAfterConnectionEstablished(t *testing.T) {
 		})
 		asdf.Connect()
 	})
+	socket.Connect()
+
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
+}
+
+func TestOpenANewNamespaceAfterConnectionGetsClosed(t *testing.T) {
+	_, _, manager := newTestServerAndClient(
+		t,
+		&ServerConfig{
+			AcceptAnyNamespace: true,
+		},
+		nil,
+	)
+	socket := manager.Socket("/", nil)
+	socket.Connect()
+	tw := newTestWaiter(1)
+
+	socket.OnConnect(func() {
+		t.Log("/ connected")
+		socket.Disconnect()
+	})
+	socket.OnDisconnect(func(reason Reason) {
+		t.Logf("/ disconnected with reason: %s", reason)
+		asdf := manager.Socket("/asdf", nil)
+		asdf.OnConnect(func() {
+			t.Log("/asdf connected")
+			tw.Done()
+		})
+		t.Log("/asdf is connecting")
+		asdf.Connect()
+	})
+	socket.Connect()
+
+	//tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.Wait()
+}
+
+func TestManagerOpenWithoutSocket(t *testing.T) {
+	server, _, manager := newTestServerAndClient(
+		t,
+		&ServerConfig{
+			AcceptAnyNamespace: true,
+			ConnectTimeout:     1000 * time.Millisecond,
+		},
+		&ManagerConfig{
+			EIO: eio.ClientConfig{Transports: []string{"polling"}},
+		},
+	)
+	tw := newTestWaiter(2)
+
+	server.OnAnyConnection(func(namespace string, socket ServerSocket) {
+		t.Fatalf("Connection to `%s` was received. This shouldn't have happened", namespace)
+	})
+
+	manager.OnOpen(func() {
+		t.Log("Manager connection is established")
+		tw.Done()
+	})
+	manager.OnClose(func(reason Reason, err error) {
+		assert.Equal(t, Reason("transport close"), reason)
+		tw.Done()
+	})
+	manager.Open()
 
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
