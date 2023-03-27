@@ -145,11 +145,7 @@ func (s *Server) Of(namespace string) *Namespace {
 	}
 	n, created := s.namespaces.getOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
 	if created && namespace != "/" {
-		go func() {
-			for _, handler := range s.newNamespaceHandlers.getAll() {
-				(*handler)(n)
-			}
-		}()
+		s.newNamespaceHandlers.forEach(func(handler *ServerNewNamespaceFunc) { (*handler)(n) }, true)
 	}
 	return n
 }

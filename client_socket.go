@@ -185,9 +185,7 @@ func (s *clientSocket) registerSubEvents() {
 		}
 		error ManagerErrorFunc = func(err error) {
 			if !s.connectedOrConnectPending() {
-				for _, handler := range s.connectErrorHandlers.getAll() {
-					(*handler)(err)
-				}
+				s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(err) }, true)
 			}
 		}
 	)
@@ -409,9 +407,8 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 
 func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
 	connectError := func(err error) {
-		for _, handler := range s.connectErrorHandlers.getAll() {
-			(*handler)(fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err))
-		}
+		err = fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err)
+		s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(err) }, true)
 	}
 
 	var v *sidInfo
@@ -453,9 +450,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.debug.Log("Socket connected")
 
 	s.emitBuffered()
-	for _, handler := range s.connectHandlers.getAll() {
-		(*handler)()
-	}
+	s.connectHandlers.forEach(func(handler *ClientSocketConnectFunc) { (*handler)() }, true)
 	s.packetQueue.drainQueue(true)
 }
 
@@ -556,10 +551,7 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed")))
 		return
 	}
-
-	for _, handler := range s.connectErrorHandlers.getAll() {
-		(*handler)(fmt.Errorf("sio: %s", v.Message))
-	}
+	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(fmt.Errorf("sio: %s", v.Message)) }, true)
 }
 
 func (s *clientSocket) onDisconnect() {
@@ -914,10 +906,10 @@ func (s *clientSocket) destroy() {
 
 func (s *clientSocket) onClose(reason Reason) {
 	s.debug.Log("Going to close the socket. Reason", reason)
+
 	s.stateMu.Lock()
 	s.state = clientSocketConnStateDisconnected
 	s.stateMu.Unlock()
-	for _, handler := range s.disconnectHandlers.getAll() {
-		(*handler)(reason)
-	}
+	s.setID("")
+	s.disconnectHandlers.forEach(func(handler *ClientSocketDisconnectFunc) { (*handler)(reason) }, true)
 }

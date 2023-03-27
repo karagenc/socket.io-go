@@ -354,6 +354,24 @@ func (e *handlerStore[T]) getAll() (handlers []T) {
 	return
 }
 
+func (e *handlerStore[T]) forEach(f func(handler T), concurrent bool) {
+	handlers := e.getAll()
+	if len(handlers) == 0 {
+		return
+	}
+	if concurrent {
+		go func() {
+			for _, handler := range handlers {
+				f(handler)
+			}
+		}()
+	} else {
+		for _, handler := range handlers {
+			f(handler)
+		}
+	}
+}
+
 func (e *eventHandlerStore) on(eventName string, handler *eventHandler) {
 	e.mu.Lock()
 	handlers, _ := e.events[eventName]

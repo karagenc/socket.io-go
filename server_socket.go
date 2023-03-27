@@ -368,14 +368,7 @@ func (s *serverSocket) onConnect() error {
 }
 
 func (s *serverSocket) onError(err error) {
-	handlers := s.errorHandlers.getAll()
-	if len(handlers) > 0 {
-		go func() {
-			for _, handler := range handlers {
-				(*handler)(err)
-			}
-		}()
-	}
+	s.errorHandlers.forEach(func(handler *ServerSocketErrorFunc) { (*handler)(err) }, true)
 }
 
 func (s *serverSocket) onClose(reason Reason) {
@@ -393,11 +386,7 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.connected = false
 		s.connectedMu.Unlock()
 
-		go func() {
-			for _, handler := range s.disconnectingHandlers.getAll() {
-				(*handler)(reason)
-			}
-		}()
+		s.disconnectingHandlers.forEach(func(handler *ServerSocketDisconnectingFunc) { (*handler)(reason) }, true)
 
 		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
 			s.debug.Log("Connection state recovery is enabled")
@@ -420,9 +409,7 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.nsp.remove(s)
 		s.conn.remove(s)
 
-		for _, handler := range s.disconnectHandlers.getAll() {
-			(*handler)(reason)
-		}
+		s.disconnectHandlers.forEach(func(handler *ServerSocketDisconnectFunc) { (*handler)(reason) }, true)
 	})
 }
 

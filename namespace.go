@@ -239,12 +239,8 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 	}
 
 	go func() {
-		for _, handler := range n.server.anyConnectionHandlers.getAll() {
-			(*handler)(n.name, socket)
-		}
-		for _, handler := range n.connectionHandlers.getAll() {
-			(*handler)(socket)
-		}
+		n.server.anyConnectionHandlers.forEach(func(handler *ServerAnyConnectionFunc) { (*handler)(n.name, socket) }, false)
+		n.connectionHandlers.forEach(func(handler *NamespaceConnectionFunc) { (*handler)(socket) }, false)
 	}()
 	return nil
 }

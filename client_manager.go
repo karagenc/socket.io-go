@@ -211,15 +211,7 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 			}
 
 		case eioparser.PacketTypePing:
-			handlers := m.pingHandlers.getAll()
-			// Avoid unnecessary overhead of creating a goroutine.
-			if len(handlers) > 0 {
-				go func() {
-					for _, handler := range handlers {
-						(*handler)()
-					}
-				}()
-			}
+			m.pingHandlers.forEach(func(handler *ManagerPingFunc) { (*handler)() }, true)
 		}
 	}
 }
@@ -237,15 +229,7 @@ func (m *Manager) onParserFinish(header *parser.PacketHeader, eventName string, 
 }
 
 func (m *Manager) onError(err error) {
-	handlers := m.errorHandlers.getAll()
-	// Avoid unnecessary overhead of creating a goroutine.
-	if len(handlers) > 0 {
-		go func() {
-			for _, handler := range handlers {
-				(*handler)(err)
-			}
-		}()
-	}
+	m.errorHandlers.forEach(func(handler *ManagerErrorFunc) { (*handler)(err) }, true)
 }
 
 func (m *Manager) destroy(socket *clientSocket) {
@@ -267,10 +251,7 @@ func (m *Manager) onClose(reason Reason, err error) {
 	m.backoff.reset()
 
 	m.conn.onClose()
-
-	for _, handler := range m.closeHandlers.getAll() {
-		(*handler)(reason, err)
-	}
+	m.closeHandlers.forEach(func(handler *ManagerCloseFunc) { (*handler)(reason, err) }, true)
 
 	m.skipReconnectMu.RLock()
 	skipReconnect := m.skipReconnect

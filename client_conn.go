@@ -74,12 +74,8 @@ func (c *clientConn) connect(again bool) (err error) {
 		c.manager.parserMu.Lock()
 		defer c.manager.parserMu.Unlock()
 		c.manager.parser.Reset()
-
 		c.state = clientConnStateDisconnected
-
-		for _, handler := range c.manager.errorHandlers.getAll() {
-			(*handler)(err)
-		}
+		c.manager.errorHandlers.forEach(func(handler *ManagerErrorFunc) { (*handler)(err) }, true)
 		return err
 	}
 	c.eio = _eio
@@ -90,11 +86,7 @@ func (c *clientConn) connect(again bool) (err error) {
 	c.manager.parser.Reset()
 
 	go c.eioPacketQueue.pollAndSend(c.eio)
-	go func() {
-		for _, handler := range c.manager.openHandlers.getAll() {
-			(*handler)()
-		}
-	}()
+	c.manager.openHandlers.forEach(func(handler *ManagerOpenFunc) { (*handler)() }, true)
 	return
 }
 
@@ -140,9 +132,7 @@ func (c *clientConn) reconnect(again bool) {
 		c.debug.Log("Maximum attempts reached. Attempts made so far", attempts)
 		c.manager.backoff.reset()
 		c.state = clientConnStateDisconnected
-		for _, handler := range c.manager.reconnectFailedHandlers.getAll() {
-			(*handler)()
-		}
+		c.manager.reconnectFailedHandlers.forEach(func(handler *ManagerReconnectFailedFunc) { (*handler)() }, true)
 		return
 	}
 
@@ -156,9 +146,7 @@ func (c *clientConn) reconnect(again bool) {
 	}
 
 	attempts = c.manager.backoff.attempts()
-	for _, handler := range c.manager.reconnectAttemptHandlers.getAll() {
-		(*handler)(attempts)
-	}
+	c.manager.reconnectAttemptHandlers.forEach(func(handler *ManagerReconnectAttemptFunc) { (*handler)(attempts) }, true)
 
 	if c.manager.skipReconnect {
 		c.debug.Log("Skipping reconnect")
@@ -170,9 +158,7 @@ func (c *clientConn) reconnect(again bool) {
 	if err != nil {
 		c.debug.Log("Reconnect failed", err)
 		c.state = clientConnStateDisconnected
-		for _, handler := range c.manager.reconnectErrorHandlers.getAll() {
-			(*handler)(err)
-		}
+		c.manager.reconnectErrorHandlers.forEach(func(handler *ManagerReconnectErrorFunc) { (*handler)(err) }, true)
 		c.reconnect(true)
 		return
 	}
@@ -184,9 +170,7 @@ func (c *clientConn) reconnect(again bool) {
 func (c *clientConn) onReconnect() {
 	attempts := c.manager.backoff.attempts()
 	c.manager.backoff.reset()
-	for _, handler := range c.manager.reconnectHandlers.getAll() {
-		(*handler)(attempts)
-	}
+	c.manager.reconnectHandlers.forEach(func(handler *ManagerReconnectFunc) { (*handler)(attempts) }, true)
 }
 
 func (c *clientConn) packet(packets ...*eioparser.Packet) {
