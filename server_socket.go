@@ -123,56 +123,52 @@ func (s *serverSocket) Connected() bool {
 func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) error {
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.eventHandlers.getAll(eventName)
+		var (
+			hasAckFunc bool // This doesn't need mutex
 
-		go func() {
-			var (
-				hasAckFunc bool // This doesn't need mutex
+			mu   sync.Mutex
+			sent bool
+		)
 
-				mu   sync.Mutex
-				sent bool
-			)
-
-			sendAck := func(ackID uint64, values []reflect.Value) {
-				mu.Lock()
-				if sent {
-					mu.Unlock()
-					return
-				}
-				sent = true
+		sendAck := func(ackID uint64, values []reflect.Value) {
+			mu.Lock()
+			if sent {
 				mu.Unlock()
-
-				s.debug.Log("Sending ack with ID", ackID)
-				s.sendAckPacket(ackID, values)
+				return
 			}
+			sent = true
+			mu.Unlock()
 
-			for _, handler := range handlers {
-				_hasAckFunc := s.onEvent(handler, header, decode, sendAck)
-				if _hasAckFunc {
-					hasAckFunc = true
-				}
+			s.debug.Log("Sending ack with ID", ackID)
+			s.sendAckPacket(ackID, values)
+		}
+
+		for _, handler := range s.eventHandlers.getAll(eventName) {
+			_hasAckFunc := s.onEvent(handler, header, decode, sendAck)
+			if _hasAckFunc {
+				hasAckFunc = true
 			}
-			if header.ID != nil {
-				mu.Lock()
-				send := !hasAckFunc
-				if sent {
-					mu.Unlock()
-					return
-				}
-				sent = true
+		}
+		if header.ID != nil {
+			mu.Lock()
+			send := !hasAckFunc
+			if sent {
 				mu.Unlock()
-
-				// If there is no acknowledgement function
-				// and there is no response already sent,
-				// then send an empty acknowledgement.
-				if send {
-					s.debug.Log("Sending ack with ID", *header.ID)
-					s.sendAckPacket(*header.ID, nil)
-				}
+				return nil
 			}
-		}()
+			sent = true
+			mu.Unlock()
+
+			// If there is no acknowledgement function
+			// and there is no response already sent,
+			// then send an empty acknowledgement.
+			if send {
+				s.debug.Log("Sending ack with ID", *header.ID)
+				s.sendAckPacket(*header.ID, nil)
+			}
+		}
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
-		go s.onAck(header, decode)
+		s.onAck(header, decode)
 
 	case parser.PacketTypeDisconnect:
 		s.onDisconnect()

@@ -226,7 +226,7 @@ func (m *Manager) onParserFinish(header *parser.PacketHeader, eventName string, 
 	if !ok {
 		return
 	}
-	socket.onPacket(header, eventName, decode)
+	go socket.onPacket(header, eventName, decode)
 }
 
 func (m *Manager) onError(err error) {

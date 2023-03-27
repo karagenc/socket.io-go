@@ -350,56 +350,52 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		s.onConnect(header, decode)
 
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
-		handlers := s.eventHandlers.getAll(eventName)
+		var (
+			hasAckFunc bool // This doesn't need mutex
 
-		go func() {
-			var (
-				hasAckFunc bool // This doesn't need mutex
+			mu   sync.Mutex
+			sent bool
+		)
 
-				mu   sync.Mutex
-				sent bool
-			)
-
-			sendAck := func(ackID uint64, values []reflect.Value) {
-				mu.Lock()
-				if sent {
-					mu.Unlock()
-					return
-				}
-				sent = true
+		sendAck := func(ackID uint64, values []reflect.Value) {
+			mu.Lock()
+			if sent {
 				mu.Unlock()
-
-				s.debug.Log("Sending ack with ID", ackID)
-				s.sendAckPacket(ackID, values)
+				return
 			}
+			sent = true
+			mu.Unlock()
 
-			for _, handler := range handlers {
-				_hasAckFunc := s.onEvent(handler, header, decode, sendAck)
-				if _hasAckFunc {
-					hasAckFunc = true
-				}
+			s.debug.Log("Sending ack with ID", ackID)
+			s.sendAckPacket(ackID, values)
+		}
+
+		for _, handler := range s.eventHandlers.getAll(eventName) {
+			_hasAckFunc := s.onEvent(handler, header, decode, sendAck)
+			if _hasAckFunc {
+				hasAckFunc = true
 			}
-			if header.ID != nil {
-				mu.Lock()
-				send := !hasAckFunc
-				if sent {
-					mu.Unlock()
-					return
-				}
-				sent = true
+		}
+		if header.ID != nil {
+			mu.Lock()
+			send := !hasAckFunc
+			if sent {
 				mu.Unlock()
-
-				// If there is no acknowledgement function
-				// and there is no response already sent,
-				// then send an empty acknowledgement.
-				if send {
-					s.debug.Log("Sending ack with ID", *header.ID)
-					s.sendAckPacket(*header.ID, nil)
-				}
+				return
 			}
-		}()
+			sent = true
+			mu.Unlock()
+
+			// If there is no acknowledgement function
+			// and there is no response already sent,
+			// then send an empty acknowledgement.
+			if send {
+				s.debug.Log("Sending ack with ID", *header.ID)
+				s.sendAckPacket(*header.ID, nil)
+			}
+		}
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
-		go s.onAck(header, decode)
+		s.onAck(header, decode)
 
 	case parser.PacketTypeConnectError:
 		s.onConnectError(header, decode)
@@ -454,7 +450,7 @@ func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Deco
 	s.debug.Log("Socket connected")
 
 	s.emitBuffered()
-	s.connectHandlers.forEach(func(handler *ClientSocketConnectFunc) { (*handler)() }, true)
+	s.connectHandlers.forEach(func(handler *ClientSocketConnectFunc) { (*handler)() }, false)
 	s.packetQueue.drainQueue(true)
 }
 
@@ -481,6 +477,8 @@ func (s *clientSocket) emitBuffered() {
 	}
 
 	for _, event := range s.receiveBuffer {
+		event := event
+
 		sendAck := func(ackID uint64, values []reflect.Value) {
 			mu.Lock()
 			sent, ok := ackIDs[ackID]
@@ -555,7 +553,7 @@ func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser
 		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed")))
 		return
 	}
-	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(fmt.Errorf("sio: %s", v.Message)) }, true)
+	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(fmt.Errorf("sio: %s", v.Message)) }, false)
 }
 
 func (s *clientSocket) onDisconnect() {

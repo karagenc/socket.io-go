@@ -284,23 +284,25 @@ func (s *clientSocket) onError(err error) {
 }
 
 func (s *clientSocket) onTransportClose(name string, err error) {
-	s.debug.Log("Transport", name, "closed. Error", err)
+	go func() { // <- To prevent s.TransportName() from blocking (locks transportMu).
+		s.debug.Log("Transport", name, "closed. Error", err)
 
-	select {
-	case <-s.closeChan:
-		return
-	default:
-	}
+		select {
+		case <-s.closeChan:
+			return
+		default:
+		}
 
-	if s.TransportName() != name {
-		return
-	}
+		if s.TransportName() != name {
+			return
+		}
 
-	if err == nil {
-		s.close(ReasonTransportClose, nil)
-	} else {
-		s.close(ReasonTransportError, err)
-	}
+		if err == nil {
+			s.close(ReasonTransportClose, nil)
+		} else {
+			s.close(ReasonTransportError, err)
+		}
+	}()
 }
 
 func (s *clientSocket) TransportName() string {

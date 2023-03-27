@@ -97,10 +97,12 @@ func (c *serverConn) onParserFinish(header *parser.PacketHeader, eventName strin
 	if header.Type == parser.PacketTypeConnect && !ok {
 		c.connect(header, decode)
 	} else if ok && header.Type != parser.PacketTypeConnect && header.Type != parser.PacketTypeConnectError {
-		err := socket.onPacket(header, eventName, decode)
-		if err != nil {
-			c.onFatalError(err)
-		}
+		go func() {
+			err := socket.onPacket(header, eventName, decode)
+			if err != nil {
+				c.onFatalError(err)
+			}
+		}()
 	} else {
 		c.debug.Log("Invalid state", "packet type", header.Type)
 		c.close()
