@@ -246,9 +246,7 @@ func (m *Manager) destroy(socket *clientSocket) {
 func (m *Manager) onClose(reason Reason, err error) {
 	m.debug.Log("Closed. Reason", reason)
 
-	m.parserMu.Lock()
-	defer m.parserMu.Unlock()
-	m.parser.Reset()
+	m.resetParser()
 	m.backoff.reset()
 
 	m.conn.onClose()
@@ -264,6 +262,12 @@ func (m *Manager) onClose(reason Reason, err error) {
 
 func (m *Manager) Close() {
 	m.conn.disconnect()
+}
+
+func (m *Manager) resetParser() {
+	m.parserMu.Lock()
+	defer m.parserMu.Unlock()
+	m.parser.Reset()
 }
 
 func truncateURL(url string) string {

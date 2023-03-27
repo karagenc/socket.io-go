@@ -72,19 +72,15 @@ func (c *clientConn) connect(again bool) (err error) {
 
 	_eio, err := eio.Dial(c.manager.url, &callbacks, &c.manager.eioConfig)
 	if err != nil {
-		c.manager.parserMu.Lock()
-		defer c.manager.parserMu.Unlock()
-		c.manager.parser.Reset()
+		c.manager.resetParser()
 		c.state = clientConnStateDisconnected
 		c.manager.errorHandlers.forEach(func(handler *ManagerErrorFunc) { (*handler)(err) }, true)
 		return err
 	}
+
 	c.eio = _eio
 	c.state = clientConnStateConnected
-
-	c.manager.parserMu.Lock()
-	defer c.manager.parserMu.Unlock()
-	c.manager.parser.Reset()
+	c.manager.resetParser()
 
 	go c.eioPacketQueue.pollAndSend(c.eio)
 	c.manager.openHandlers.forEach(func(handler *ManagerOpenFunc) { (*handler)() }, true)
