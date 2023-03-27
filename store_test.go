@@ -3,6 +3,7 @@ package sio
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -227,6 +228,7 @@ func mustCreateEventPacket(socket *serverSocket, eventName string, _v []any) (he
 
 func TestHandlerStore(t *testing.T) {
 	type testFn func()
+
 	t.Run("on and off", func(t *testing.T) {
 		store := newHandlerStore[*testFn]()
 		count := 0
@@ -243,6 +245,43 @@ func TestHandlerStore(t *testing.T) {
 		store.off(&f)
 		all = store.getAll()
 		require.Equal(t, 0, len(all))
+	})
+
+	t.Run("forEach", func(t *testing.T) {
+		store := newHandlerStore[*testFn]()
+		count := 0
+		var f testFn = func() {
+			count++
+		}
+		store.on(&f)
+		store.once(&f)
+
+		store.forEach(func(handler *testFn) {
+			(*handler)()
+		}, false)
+		store.offAll()
+
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+		count = 0
+		f = func() {
+			count++
+			wg.Done()
+		}
+		store.on(&f)
+		store.once(&f)
+
+		store.forEach(func(handler *testFn) {
+			(*handler)()
+		}, true)
+
+		wg.Wait()
+		require.Equal(t, 2, count)
+
+		store.offAll()
+		store.forEach(func(handler *testFn) {
+			t.Fatal("This function should not be run")
+		}, false)
 	})
 
 	t.Run("once", func(t *testing.T) {
@@ -280,7 +319,7 @@ func TestHandlerStore(t *testing.T) {
 		require.Equal(t, 0, len(all))
 	})
 
-	t.Run("sub events", func(t *testing.T) {
+	t.Run("subevents", func(t *testing.T) {
 		store := newHandlerStore[*testFn]()
 		var f testFn = func() {}
 
