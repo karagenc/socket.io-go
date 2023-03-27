@@ -57,9 +57,7 @@ func TestAuth(t *testing.T) {
 	require.Equal(t, s.Num, 500)
 
 	err = socket.setAuth("Donkey")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NotNil(t, err)
 
 	require.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
 		socket.SetAuth("Donkey")
