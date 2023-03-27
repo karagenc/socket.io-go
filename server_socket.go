@@ -3,8 +3,9 @@ package sio
 import (
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/tomruk/socket.io-go/adapter"

@@ -3,8 +3,9 @@ package sio
 import (
 	"fmt"
 	"reflect"
-	"sync"
 	"testing"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/parser"

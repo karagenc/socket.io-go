@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"

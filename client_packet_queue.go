@@ -2,7 +2,8 @@ package sio
 
 import (
 	"reflect"
-	"sync"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/tomruk/socket.io-go/parser"
 )

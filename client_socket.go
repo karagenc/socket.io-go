@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/fatih/structs"
 	"github.com/tomruk/socket.io-go/adapter"

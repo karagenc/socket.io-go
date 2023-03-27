@@ -2,8 +2,9 @@ package eio
 
 import (
 	"strconv"
-	"sync"
 	"testing"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/stretchr/testify/require"
 )

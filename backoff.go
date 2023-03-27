@@ -3,8 +3,9 @@ package sio
 import (
 	"math"
 	"math/rand"
-	"sync"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
 type backoff struct {

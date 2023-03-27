@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"nhooyr.io/websocket"
 

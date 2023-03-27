@@ -3,7 +3,8 @@ package eio
 import (
 	"fmt"
 	"os"
-	"sync"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
 type (

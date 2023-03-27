@@ -5,7 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"sync"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
 const (

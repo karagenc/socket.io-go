@@ -2,7 +2,8 @@ package transport
 
 import (
 	"net/http"
-	"sync"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
 // A concurrent HTTP request header.

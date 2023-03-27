@@ -2,9 +2,10 @@ package eio
 
 import (
 	"net/http"
-	"sync"
 	"testing"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"

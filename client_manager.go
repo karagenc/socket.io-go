@@ -1,8 +1,9 @@
 package sio
 
 import (
-	"sync"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
 	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"

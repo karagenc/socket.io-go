@@ -3,8 +3,9 @@ package sio
 import (
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
 type eventHandler struct {
