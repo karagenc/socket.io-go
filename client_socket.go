@@ -172,8 +172,8 @@ func (s *clientSocket) Active() bool {
 func (s *clientSocket) registerSubEvents() {
 	var (
 		open ManagerOpenFunc = func() {
-			s.stateMu.RLock()
-			defer s.stateMu.RUnlock()
+			s.stateMu.Lock()
+			defer s.stateMu.Unlock()
 			if s.state == clientSocketConnStateConnectPending {
 				return
 			}
@@ -239,7 +239,10 @@ func (s *clientSocket) Disconnect() {
 
 	s.destroy()
 
-	if s.connectedOrConnectPending() {
+	s.stateMu.RLock()
+	connected := s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending
+	s.stateMu.RUnlock()
+	if connected {
 		s.onClose(ReasonIOClientDisconnect)
 	}
 }
