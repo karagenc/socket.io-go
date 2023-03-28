@@ -290,16 +290,7 @@ func (s *clientSocket) onOpen() {
 }
 
 func (s *clientSocket) sendConnectPacket(authData any) {
-	header := parser.PacketHeader{
-		Type:      parser.PacketTypeConnect,
-		Namespace: s.namespace,
-	}
-
-	var (
-		buffers [][]byte
-		err     error
-	)
-
+	var v any
 	pid, ok := s.pid()
 	if ok {
 		m := make(map[string]any)
@@ -314,34 +305,18 @@ func (s *clientSocket) sendConnectPacket(authData any) {
 				m[k] = v
 			}
 		}
-
-		buffers, err = s.parser.Encode(&header, m)
-	} else {
-		if authData == nil {
-			buffers, err = s.parser.Encode(&header, nil)
-		} else {
-			buffers, err = s.parser.Encode(&header, &authData)
-		}
+		v = m
+	} else if authData != nil {
+		v = &authData
 	}
 
-	if err != nil {
-		s.onError(err)
-		return
-	} else if len(buffers) != 1 {
-		s.onError(wrapInternalError(fmt.Errorf("onEIOConnect: len(buffers) != 1")))
-		return
-	}
-
-	buf := buffers[0]
-
-	packet, err := eioparser.NewPacket(eioparser.PacketTypeMessage, false, buf)
-	if err != nil {
-		s.onError(wrapInternalError(err))
-		return
-	}
 	// This function is called from onOpen, and onOpen can be called via `Manager.openHandlers`.
-	// We need to use a goroutine because eioMu is locked inside `Manager.Connect`, which indirectly calls this method.
-	go s.manager.conn.packet(packet)
+	// We fire a seperate goroutine because eioMu is locked inside `Manager.Connect`, which indirectly calls this method.
+	if v == nil {
+		go s.sendControlPacket(parser.PacketTypeConnect)
+	} else {
+		go s.sendControlPacket(parser.PacketTypeConnect, v)
+	}
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -736,7 +711,7 @@ func (s *clientSocket) emit(
 		return
 	}
 
-	s.sendBuffers(volatile, header.ID, buffers...)
+	s.sendBuffers(volatile, false, header.ID, buffers...)
 }
 
 // 0 as the timeout argument means there is no timeout.
@@ -814,13 +789,21 @@ func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 		Namespace: s.namespace,
 	}
 
-	buffers, err := s.parser.Encode(&header, &v)
+	var (
+		buffers [][]byte
+		err     error
+	)
+
+	if v == nil {
+		buffers, err = s.parser.Encode(&header, nil)
+	} else {
+		buffers, err = s.parser.Encode(&header, &v)
+	}
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
 	}
-
-	s.sendBuffers(false, nil, buffers...)
+	s.sendBuffers(false, true, nil, buffers...)
 }
 
 func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
@@ -847,10 +830,10 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 		return
 	}
 
-	s.sendBuffers(false, header.ID, buffers...)
+	s.sendBuffers(false, false, header.ID, buffers...)
 }
 
-func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]byte) {
+func (s *clientSocket) sendBuffers(volatile, forceSend bool, ackID *uint64, buffers ...[]byte) {
 	if len(buffers) > 0 {
 		packets := make([]*eioparser.Packet, len(buffers))
 		buf := buffers[0]
@@ -874,7 +857,7 @@ func (s *clientSocket) sendBuffers(volatile bool, ackID *uint64, buffers ...[]by
 		s.stateMu.RLock()
 		sendImmediately := s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending
 		s.stateMu.RUnlock()
-		if sendImmediately {
+		if sendImmediately || forceSend {
 			s.manager.conn.packet(packets...)
 		} else if !volatile {
 			s.sendBufferMu.Lock()

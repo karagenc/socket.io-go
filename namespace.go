@@ -234,10 +234,7 @@ func (n *Namespace) doConnect(socket *serverSocket) error {
 	// fires before user-set events to prevent state order
 	// violations (such as a disconnection before the connection
 	// logic is complete)
-	err := socket.onConnect()
-	if err != nil {
-		return err
-	}
+	socket.onConnect()
 
 	go func() {
 		n.server.anyConnectionHandlers.forEach(func(handler *ServerAnyConnectionFunc) { (*handler)(n.name, socket) }, false)

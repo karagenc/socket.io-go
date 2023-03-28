@@ -344,22 +344,12 @@ func (s *serverSocket) onConnect() error {
 	// Socket ID is the default room a socket joins to.
 	s.Join(Room(s.ID()))
 
-	header := &parser.PacketHeader{
-		Type:      parser.PacketTypeConnect,
-		Namespace: s.nsp.Name(),
-	}
-
 	c := sidInfo{
 		SID: string(s.ID()),
 		PID: string(s.pid),
 	}
 
-	buffers, err := s.parser.Encode(header, &c)
-	if err != nil {
-		return wrapInternalError(err)
-	}
-
-	s.conn.sendBuffers(buffers...)
+	s.sendControlPacket(parser.PacketTypeConnect, &c)
 	s.connected = true
 	return nil
 }
@@ -509,12 +499,20 @@ func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 		Namespace: s.nsp.Name(),
 	}
 
-	buffers, err := s.parser.Encode(&header, &v)
+	var (
+		buffers [][]byte
+		err     error
+	)
+
+	if v == nil {
+		buffers, err = s.parser.Encode(&header, nil)
+	} else {
+		buffers, err = s.parser.Encode(&header, &v)
+	}
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
 	}
-
 	s.conn.sendBuffers(buffers...)
 }
 
