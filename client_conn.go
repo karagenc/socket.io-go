@@ -51,8 +51,9 @@ func (c *clientConn) connect(again bool) (err error) {
 	if !again {
 		c.stateMu.Lock()
 		defer c.stateMu.Unlock()
-		c.manager.skipReconnectMu.RLock()
-		defer c.manager.skipReconnectMu.RUnlock()
+
+		c.manager.skipReconnectMu.Lock()
+		defer c.manager.skipReconnectMu.Unlock()
 		c.manager.skipReconnect = false
 	}
 
@@ -78,8 +79,9 @@ func (c *clientConn) connect(again bool) (err error) {
 		return err
 	}
 
-	c.eio = _eio
 	c.state = clientConnStateConnected
+	c.eio = _eio
+	c.eioPacketQueue.reset()
 	c.manager.resetParser()
 
 	go c.eioPacketQueue.pollAndSend(c.eio)
@@ -151,7 +153,7 @@ func (c *clientConn) reconnect(again bool) {
 	}
 
 	c.debug.Log("Attempting to reconnect")
-	err := c.connect(again)
+	err := c.connect(true)
 	if err != nil {
 		c.debug.Log("Reconnect failed", err)
 		c.state = clientConnStateDisconnected
@@ -176,12 +178,6 @@ func (c *clientConn) packet(packets ...*eioparser.Packet) {
 	c.eioPacketQueue.add(packets...)
 }
 
-func (c *clientConn) onClose() {
-	c.eioMu.RLock()
-	defer c.eioMu.RUnlock()
-	c.eioPacketQueue.reset()
-}
-
 func (c *clientConn) disconnect() {
 	c.debug.Log("Disconnecting")
 
@@ -197,8 +193,9 @@ func (c *clientConn) disconnect() {
 
 	c.eioMu.RLock()
 	defer c.eioMu.RUnlock()
-	if c.eio != nil {
-		c.eio.Close()
+	eio := c.eio
+	if eio != nil {
+		go eio.Close()
 	}
 	c.eioPacketQueue.reset()
 }

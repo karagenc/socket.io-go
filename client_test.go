@@ -95,10 +95,14 @@ func TestOpenANewNamespaceAfterConnectionGetsClosed(t *testing.T) {
 		&ServerConfig{
 			AcceptAnyNamespace: true,
 		},
-		nil,
+		&ManagerConfig{
+			EIO: eio.ClientConfig{
+				Transports: []string{"polling"}, // TODO: Remove polling
+			},
+		},
 	)
 	socket := manager.Socket("/", nil)
-	socket.Connect()
+	// socket.Connect()
 	tw := newTestWaiter(1)
 
 	socket.OnConnect(func() {

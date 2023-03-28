@@ -210,7 +210,6 @@ func (m *Manager) onEIOPacket(packets ...*eioparser.Packet) {
 				go m.onClose(ReasonParseError, err)
 				return
 			}
-
 		case eioparser.PacketTypePing:
 			m.pingHandlers.forEach(func(handler *ManagerPingFunc) { (*handler)() }, true)
 		}
@@ -249,7 +248,6 @@ func (m *Manager) onClose(reason Reason, err error) {
 	m.resetParser()
 	m.backoff.reset()
 
-	m.conn.onClose()
 	m.closeHandlers.forEach(func(handler *ManagerCloseFunc) { (*handler)(reason, err) }, true)
 
 	m.skipReconnectMu.RLock()
