@@ -117,7 +117,11 @@ func (s *clientSocket) ID() SocketID {
 }
 
 func (s *clientSocket) setID(id SocketID) {
-	s.debug.Log("sid is set to", id)
+	if id == "" {
+		s.debug.Log("sid is cleared (set to empty string)")
+	} else {
+		s.debug.Log("sid is set to", id)
+	}
 	s.id.Store(id)
 }
 
