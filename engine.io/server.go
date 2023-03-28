@@ -135,7 +135,7 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 	} else {
 		s.debug = NewNoopDebugger()
 	}
-	s.debug = s.debug.WithContext("[eio] Server")
+	s.debug = s.debug.WithContext("[eio/server] Server")
 
 	if s.onError == nil {
 		s.onError = func(err error) {}

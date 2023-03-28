@@ -104,7 +104,7 @@ func newServerSocket(
 		}
 	}
 	nsp.debug.Log("New socket! ID", s.id)
-	s.debug = server.debug.WithContext("[sio] Server socket (nsp: `" + nsp.Name() + "`)")
+	s.debug = server.debug.WithContext("[sio/server] Socket (nsp: `" + nsp.Name() + "`)")
 	return s, nil
 }
 

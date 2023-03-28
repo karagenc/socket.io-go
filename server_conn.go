@@ -49,7 +49,7 @@ func newServerConn(
 		nsps:    newNspStore(),
 
 		parser: creator(),
-		debug:  server.debug.WithContext("[sio] serverConn with engine.io ID: " + _eio.ID()),
+		debug:  server.debug.WithContext("[sio/server] serverConn with engine.io ID: " + _eio.ID()),
 	}
 
 	callbacks := &eio.Callbacks{

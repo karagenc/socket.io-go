@@ -104,7 +104,7 @@ func newClientSocket(
 		connectErrorHandlers: newHandlerStore[*ClientSocketConnectErrorFunc](),
 		disconnectHandlers:   newHandlerStore[*ClientSocketDisconnectFunc](),
 	}
-	s.debug = manager.debug.WithContext("[sio] Client socket (nsp: `" + namespace + "`)")
+	s.debug = manager.debug.WithContext("[sio/client] Socket (nsp: `" + namespace + "`)")
 	s.packetQueue = newClientPacketQueue(s)
 	s.setRecovered(false)
 	s.SetAuth(config.Auth)
