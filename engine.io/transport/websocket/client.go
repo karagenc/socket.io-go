@@ -13,19 +13,16 @@ import (
 )
 
 type ClientTransport struct {
-	sid string
-
+	sid             string
 	protocolVersion int
 	url             *url.URL
 	requestHeader   *transport.RequestHeader
 
 	dialOptions *websocket.DialOptions
 	conn        *websocket.Conn
-	writeMu     sync.Mutex
 
 	callbacks *transport.Callbacks
-
-	once sync.Once
+	once      sync.Once
 }
 
 func NewClientTransport(
@@ -97,13 +94,12 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 
 func (t *ClientTransport) Run() {
 	for {
-		p, err := t.nextPacket()
+		packet, err := t.nextPacket()
 		if err != nil {
 			t.close(err)
 			return
 		}
-
-		t.callbacks.OnPacket(p)
+		t.callbacks.OnPacket(packet)
 	}
 }
 
@@ -116,10 +112,6 @@ func (t *ClientTransport) nextPacket() (*parser.Packet, error) {
 }
 
 func (t *ClientTransport) Send(packets ...*parser.Packet) {
-	// WriteMessage must not be called concurrently.
-	t.writeMu.Lock()
-	defer t.writeMu.Unlock()
-
 	for _, packet := range packets {
 		err := t.send(packet)
 		if err != nil {

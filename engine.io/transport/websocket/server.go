@@ -14,16 +14,13 @@ import (
 type ServerTransport struct {
 	readLimit      int64
 	supportsBinary bool
+	acceptOptions  *websocket.AcceptOptions
 
-	acceptOptions *websocket.AcceptOptions
-
-	conn    *websocket.Conn
-	ctx     context.Context
-	writeMu sync.Mutex
+	ctx  context.Context
+	conn *websocket.Conn
 
 	callbacks *transport.Callbacks
-
-	once sync.Once
+	once      sync.Once
 }
 
 func NewServerTransport(
@@ -50,10 +47,6 @@ func (t *ServerTransport) QueuedPackets() []*parser.Packet {
 }
 
 func (t *ServerTransport) Send(packets ...*parser.Packet) {
-	// WriteMessage must not be called concurrently.
-	t.writeMu.Lock()
-	defer t.writeMu.Unlock()
-
 	for _, packet := range packets {
 		err := t.send(packet)
 		if err != nil {
@@ -85,11 +78,9 @@ func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.Respo
 	if err != nil {
 		return
 	}
-
 	if t.readLimit != 0 {
 		t.conn.SetReadLimit(t.readLimit)
 	}
-
 	return t.writeHandshakePacket(handshakePacket)
 }
 
@@ -113,20 +104,21 @@ func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
 
 func (t *ServerTransport) PostHandshake() {
 	for {
-		mt, r, err := t.conn.Reader(t.ctx)
+		packet, err := t.nextPacket()
 		if err != nil {
 			t.close(err)
-			break
+			return
 		}
-
-		p, err := parser.Decode(r, mt == websocket.MessageBinary)
-		if err != nil {
-			t.close(err)
-			break
-		}
-
-		t.callbacks.OnPacket(p)
+		t.callbacks.OnPacket(packet)
 	}
+}
+
+func (t *ServerTransport) nextPacket() (*parser.Packet, error) {
+	mt, r, err := t.conn.Reader(t.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parser.Decode(r, mt == websocket.MessageBinary)
 }
 
 func (t *ServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {

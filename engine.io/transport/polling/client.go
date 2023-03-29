@@ -16,20 +16,17 @@ import (
 )
 
 type ClientTransport struct {
-	sid string
-
+	sid             string
 	protocolVersion int
 	url             *url.URL
-	requestHeader   *transport.RequestHeader
+	initialPacket   *parser.Packet
 
-	httpClient *http.Client
-
-	initialPacket *parser.Packet
+	requestHeader *transport.RequestHeader
+	httpClient    *http.Client
 
 	callbacks *transport.Callbacks
-
-	pollExit chan any
-	once     sync.Once
+	pollExit  chan any
+	once      sync.Once
 }
 
 func NewClientTransport(

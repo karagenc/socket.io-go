@@ -23,8 +23,7 @@ type ServerTransport struct {
 	pollTimeout time.Duration
 
 	callbacks *transport.Callbacks
-
-	once sync.Once
+	once      sync.Once
 }
 
 func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, pollTimeout time.Duration) *ServerTransport {
