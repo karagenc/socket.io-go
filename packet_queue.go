@@ -16,6 +16,7 @@ type packetQueue struct {
 	ready  chan struct{}
 	drain  chan struct{}
 	_reset chan struct{}
+	_close chan struct{}
 }
 
 func newPacketQueue() *packetQueue {
@@ -23,10 +24,11 @@ func newPacketQueue() *packetQueue {
 		ready:  make(chan struct{}, 1),
 		drain:  make(chan struct{}),
 		_reset: make(chan struct{}, 1),
+		_close: make(chan struct{}, 1),
 	}
 }
 
-func (pq *packetQueue) poll() (packets []*eioparser.Packet, ok bool) {
+func (pq *packetQueue) poll() (packets []*eioparser.Packet, ok, closed bool) {
 	packets = pq.get()
 	if len(packets) != 0 {
 		ok = true
@@ -34,10 +36,10 @@ func (pq *packetQueue) poll() (packets []*eioparser.Packet, ok bool) {
 	}
 
 	select {
-	// Reset takes precedence.
+	// _close takes precedence.
 	// Otherwise we would go with the already-invoked `pq.ready` channel.
-	case <-pq._reset:
-		return nil, false
+	case <-pq._close:
+		return nil, false, true
 	case <-pq.ready:
 		packets = pq.get()
 		if len(packets) != 0 {
@@ -86,6 +88,16 @@ func (pq *packetQueue) reset() {
 	}
 }
 
+func (pq *packetQueue) close() {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+	pq.packets = nil
+	select {
+	case pq._close <- struct{}{}:
+	default:
+	}
+}
+
 func (pq *packetQueue) waitForDrain(timeout time.Duration) (timedout bool) {
 	pq.mu.Lock()
 	alreadyDrained := len(pq.packets) == 0
@@ -105,7 +117,10 @@ func (pq *packetQueue) waitForDrain(timeout time.Duration) (timedout bool) {
 
 func (pq *packetQueue) pollAndSend(socket eio.Socket) {
 	for {
-		packets, ok := pq.poll()
+		packets, ok, closed := pq.poll()
+		if closed {
+			return
+		}
 		if !ok {
 			continue
 		}

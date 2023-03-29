@@ -38,7 +38,8 @@ func TestPacketQueue(t *testing.T) {
 			)
 		}()
 
-		packets, ok := pq.poll()
+		packets, ok, closed := pq.poll()
+		require.False(t, closed)
 		require.True(t, ok)
 		require.Equal(t, 2, len(packets))
 
@@ -48,19 +49,26 @@ func TestPacketQueue(t *testing.T) {
 			mustCreateEIOPacket(parser.PacketTypePing, false, nil),
 		)
 
-		packets, ok = pq.poll()
+		packets, ok, closed = pq.poll()
+		require.False(t, closed)
 		require.True(t, ok)
 		require.Equal(t, 2, len(packets))
 
-		// Do reset.
 		pq.reset()
-		packets, ok = pq.poll()
+		packets, ok, closed = pq.poll()
+		require.False(t, closed)
 		require.False(t, ok)
 		require.True(t, packets == nil)
 
 		// `alreadyDrained` should be true.
 		timedout := pq.waitForDrain(10000 * time.Second /* Forever */)
 		require.False(t, timedout)
+
+		pq.close()
+		packets, ok, closed = pq.poll()
+		require.True(t, closed)
+		require.False(t, ok)
+		require.True(t, packets == nil)
 	})
 
 	t.Run("waitForDrain", func(t *testing.T) {

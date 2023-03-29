@@ -230,6 +230,11 @@ func (c *serverConn) onClose(reason Reason, err error) {
 			socket.onClose(reason)
 		}
 
+		go func() {
+			c.eioPacketQueue.waitForDrain(2 * time.Minute)
+			c.eioPacketQueue.close()
+		}()
+
 		c.parserMu.Lock()
 		defer c.parserMu.Unlock()
 		c.parser.Reset()
