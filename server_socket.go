@@ -369,9 +369,6 @@ func (s *serverSocket) onClose(reason Reason) {
 		if !s.Connected() {
 			return
 		}
-		s.connectedMu.Lock()
-		s.connected = false
-		s.connectedMu.Unlock()
 
 		s.disconnectingHandlers.forEach(func(handler *ServerSocketDisconnectingFunc) { (*handler)(reason) }, true)
 
@@ -395,6 +392,10 @@ func (s *serverSocket) onClose(reason Reason) {
 
 		s.nsp.remove(s)
 		s.conn.remove(s)
+
+		s.connectedMu.Lock()
+		s.connected = false
+		s.connectedMu.Unlock()
 
 		s.disconnectHandlers.forEach(func(handler *ServerSocketDisconnectFunc) { (*handler)(reason) }, true)
 	})
