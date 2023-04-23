@@ -108,9 +108,6 @@ const (
 func NewManager(url string, config *ManagerConfig) *Manager {
 	if config == nil {
 		config = new(ManagerConfig)
-	} else {
-		// User can modify the config. We copy the config here in order to avoid problems.
-		config = &*config
 	}
 
 	io := &Manager{
@@ -181,7 +178,8 @@ func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSoc
 		config = new(ClientSocketConfig)
 	} else {
 		// User can modify the config. We copy the config here in order to avoid problems.
-		config = &*config
+		configCopy := *config
+		config = &configCopy
 	}
 
 	socket, ok := m.sockets.get(namespace)

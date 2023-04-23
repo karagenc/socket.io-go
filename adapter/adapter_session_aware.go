@@ -134,7 +134,8 @@ func (a *sessionAwareAdapter) RestoreSession(
 	}
 
 	// Return a copy to prevent race conditions.
-	session = &*&sessionWithTS.SessionToPersist
+	session = new(SessionToPersist)
+	*session = sessionWithTS.SessionToPersist
 	session.MissedPackets = missedPackets
 	return session, true
 }

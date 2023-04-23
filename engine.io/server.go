@@ -81,9 +81,6 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 
 	if config == nil {
 		config = new(ServerConfig)
-	} else {
-		// User can modify the config. We copy the config here in order to avoid problems.
-		config = &*config
 	}
 
 	s := &Server{
