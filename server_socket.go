@@ -494,7 +494,7 @@ func (s *serverSocket) Timeout(timeout time.Duration) Emitter {
 	}
 }
 
-func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
+func (s *serverSocket) sendControlPacket(typ parser.PacketType, v any) {
 	header := parser.PacketHeader{
 		Type:      typ,
 		Namespace: s.nsp.Name(),
@@ -505,11 +505,7 @@ func (s *serverSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 		err     error
 	)
 
-	if v == nil {
-		buffers, err = s.parser.Encode(&header, nil)
-	} else {
-		buffers, err = s.parser.Encode(&header, &v)
-	}
+	buffers, err = s.parser.Encode(&header, v)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
@@ -552,7 +548,7 @@ func (s *serverSocket) Disconnect(close bool) {
 		s.conn.disconnectAll()
 		s.conn.close()
 	} else {
-		s.sendControlPacket(parser.PacketTypeDisconnect)
+		s.sendControlPacket(parser.PacketTypeDisconnect, nil)
 		s.onClose(ReasonServerNamespaceDisconnect)
 	}
 }

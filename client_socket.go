@@ -241,7 +241,7 @@ func (s *clientSocket) Connect() {
 func (s *clientSocket) Disconnect() {
 	if s.connectedOrConnectPending() {
 		s.debug.Log("Performing disconnect", s.namespace)
-		s.sendControlPacket(parser.PacketTypeDisconnect)
+		s.sendControlPacket(parser.PacketTypeDisconnect, nil)
 	}
 
 	s.destroy()
@@ -318,11 +318,7 @@ func (s *clientSocket) sendConnectPacket(authData any) {
 
 	// This function is called from onOpen, and onOpen can be called via `Manager.openHandlers`.
 	// We fire a seperate goroutine because eioMu is locked inside `Manager.Connect`, which indirectly calls this method.
-	if v == nil {
-		go s.sendControlPacket(parser.PacketTypeConnect)
-	} else {
-		go s.sendControlPacket(parser.PacketTypeConnect, v)
-	}
+	go s.sendControlPacket(parser.PacketTypeConnect, v)
 }
 
 func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, decode parser.Decode) {
@@ -789,7 +785,7 @@ func (s *clientSocket) Volatile() Emitter {
 	}
 }
 
-func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
+func (s *clientSocket) sendControlPacket(typ parser.PacketType, v any) {
 	header := parser.PacketHeader{
 		Type:      typ,
 		Namespace: s.namespace,
@@ -800,11 +796,7 @@ func (s *clientSocket) sendControlPacket(typ parser.PacketType, v ...any) {
 		err     error
 	)
 
-	if v == nil {
-		buffers, err = s.parser.Encode(&header, nil)
-	} else {
-		buffers, err = s.parser.Encode(&header, &v)
-	}
+	buffers, err = s.parser.Encode(&header, v)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return

@@ -78,8 +78,10 @@ type (
 		randomizationFactor  float32
 
 		sockets *clientSocketStore
-		backoff *backoff
+		// For testing purposes
+		onNewSocket func(socket *clientSocket)
 
+		backoff         *backoff
 		skipReconnect   bool
 		skipReconnectMu sync.RWMutex
 
@@ -119,7 +121,8 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
-		sockets: newClientSocketStore(),
+		sockets:     newClientSocketStore(),
+		onNewSocket: func(socket *clientSocket) {}, // Noop by default.
 
 		openHandlers:             newHandlerStore[*ManagerOpenFunc](),
 		pingHandlers:             newHandlerStore[*ManagerPingFunc](),
@@ -168,6 +171,12 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 }
 
 func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSocket {
+	socket := m.socket(namespace, config)
+	m.onNewSocket(socket)
+	return socket
+}
+
+func (m *Manager) socket(namespace string, config *ClientSocketConfig) *clientSocket {
 	if namespace == "" {
 		namespace = "/"
 	} else if len(namespace) > 0 && namespace[0] != '/' {
