@@ -57,6 +57,13 @@ type (
 		eioConfig eio.ClientConfig
 		debug     Debugger
 
+		state   clientConnectionState
+		stateMu sync.RWMutex
+
+		eio            eio.ClientSocket
+		eioPacketQueue *packetQueue
+		eioMu          sync.RWMutex
+
 		// This mutex is used for protecting parser from concurrent calls.
 		// Due to the modular and concurrent nature of Engine.IO,
 		// we should use a mutex to ensure that the Engine.IO doesn't access
@@ -72,7 +79,6 @@ type (
 
 		sockets *clientSocketStore
 		backoff *backoff
-		conn    *clientConn
 
 		skipReconnect   bool
 		skipReconnectMu sync.RWMutex
@@ -111,6 +117,8 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		url:       url,
 		eioConfig: config.EIO,
 
+		eioPacketQueue: newPacketQueue(),
+
 		noReconnection:       config.NoReconnection,
 		reconnectionAttempts: config.ReconnectionAttempts,
 
@@ -131,7 +139,6 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 	} else {
 		io.debug = newNoopDebugger()
 	}
-
 	io.debug = io.debug.WithContext("[sio/client] Manager with URL: " + truncateURL(url))
 
 	if config.ReconnectionDelay != nil {
@@ -160,20 +167,7 @@ func NewManager(url string, config *ManagerConfig) *Manager {
 		parserCreator = jsonparser.NewCreator(0, json)
 	}
 	io.parser = parserCreator()
-	io.conn = newClientConn(io)
 	return io
-}
-
-func (m *Manager) Open() {
-	go m.open()
-}
-
-func (m *Manager) open() {
-	m.debug.Log("Opening")
-	err := m.conn.connect(false)
-	if err != nil {
-		m.conn.maybeReconnectOnOpen()
-	}
 }
 
 func (m *Manager) Socket(namespace string, config *ClientSocketConfig) ClientSocket {
@@ -228,8 +222,39 @@ func (m *Manager) onParserFinish(header *parser.PacketHeader, eventName string, 
 	go socket.onPacket(header, eventName, decode)
 }
 
+func (m *Manager) packet(packets ...*eioparser.Packet) {
+	m.eioMu.RLock()
+	defer m.eioMu.RUnlock()
+	m.eioPacketQueue.add(packets...)
+}
+
 func (m *Manager) onError(err error) {
 	m.errorHandlers.forEach(func(handler *ManagerErrorFunc) { (*handler)(err) }, true)
+}
+
+func (m *Manager) Open() {
+	go m.open()
+}
+
+func (m *Manager) open() {
+	m.debug.Log("Opening")
+	err := m.connect(false)
+	if err != nil {
+		m.maybeReconnectOnOpen()
+	}
+}
+
+func (m *Manager) maybeReconnectOnOpen() {
+	reconnect := m.backoff.attempts() == 0 && !m.noReconnection
+	if reconnect {
+		m.reconnect(false)
+	}
+}
+
+func (m *Manager) onReconnect() {
+	attempts := m.backoff.attempts()
+	m.backoff.reset()
+	m.reconnectHandlers.forEach(func(handler *ManagerReconnectFunc) { (*handler)(attempts) }, true)
 }
 
 func (m *Manager) destroy(socket *clientSocket) {
@@ -248,18 +273,22 @@ func (m *Manager) onClose(reason Reason, err error) {
 	m.resetParser()
 	m.backoff.reset()
 
+	m.stateMu.Lock()
+	m.state = clientConnStateDisconnected
+	m.stateMu.Unlock()
+
 	m.closeHandlers.forEach(func(handler *ManagerCloseFunc) { (*handler)(reason, err) }, true)
 
 	m.skipReconnectMu.RLock()
 	skipReconnect := m.skipReconnect
 	m.skipReconnectMu.RUnlock()
 	if !m.noReconnection && !skipReconnect {
-		go m.conn.reconnect(false)
+		go m.reconnect(false)
 	}
 }
 
 func (m *Manager) Close() {
-	m.conn.disconnect()
+	m.disconnect()
 }
 
 func (m *Manager) resetParser() {

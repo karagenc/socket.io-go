@@ -78,9 +78,11 @@ type (
 
 type clientSocketConnectionState int
 
+// clientSocketConnStateConnectPending, as its name suggests, is set when
+// CONNECT packet is sent, and we're waiting for server's response.
+
 const (
 	clientSocketConnStateConnected clientSocketConnectionState = iota
-	// CONNECT packet was sent. Waiting for server's response.
 	clientSocketConnStateConnectPending
 	clientSocketConnStateDisconnected
 )
@@ -158,13 +160,13 @@ func (s *clientSocket) setRecovered(recovered bool) {
 func (s *clientSocket) Connected() bool {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
-	return s.manager.conn.connected() && s.state == clientSocketConnStateConnected
+	return s.manager.connected() && s.state == clientSocketConnStateConnected
 }
 
 func (s *clientSocket) connectedOrConnectPending() bool {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
-	return s.manager.conn.connected() && (s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending)
+	return s.manager.connected() && (s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending)
 }
 
 // Whether the socket will try to reconnect when its Client (manager) connects or reconnects.
@@ -222,9 +224,9 @@ func (s *clientSocket) Connect() {
 
 	s.registerSubEvents()
 
-	s.manager.conn.stateMu.RLock()
-	managerConnState := s.manager.conn.state
-	s.manager.conn.stateMu.RUnlock()
+	s.manager.stateMu.RLock()
+	managerConnState := s.manager.state
+	s.manager.stateMu.RUnlock()
 	if managerConnState != clientConnStateReconnecting {
 		go s.manager.open()
 	}
@@ -503,7 +505,7 @@ func (s *clientSocket) emitBuffered() {
 		for i := range packets {
 			packets[i] = s.sendBuffer[i].packet
 		}
-		s.manager.conn.packet(packets...)
+		s.manager.packet(packets...)
 		s.sendBuffer = nil
 	}
 }
@@ -862,7 +864,7 @@ func (s *clientSocket) sendBuffers(volatile, forceSend bool, ackID *uint64, buff
 		sendImmediately := s.state == clientSocketConnStateConnected || s.state == clientSocketConnStateConnectPending
 		s.stateMu.RUnlock()
 		if sendImmediately || forceSend {
-			s.manager.conn.packet(packets...)
+			s.manager.packet(packets...)
 		} else if !volatile {
 			s.sendBufferMu.Lock()
 			buffers := make([]sendBufferItem, len(packets))
