@@ -25,10 +25,10 @@ func (m *Manager) connected() bool {
 	return m.state == clientConnStateConnected
 }
 
-func (m *Manager) connect(again bool) (err error) {
-	// again = Is this the first time we're doing reconnect?
+func (m *Manager) connect(recursed bool) (err error) {
+	// recursed = Is this the first time we're running the connect method?
 	// In other words: are we recursing?
-	if !again {
+	if !recursed {
 		m.stateMu.Lock()
 		defer m.stateMu.Unlock()
 
@@ -69,12 +69,12 @@ func (m *Manager) connect(again bool) (err error) {
 	return
 }
 
-func (m *Manager) reconnect(again bool) {
+func (m *Manager) reconnect(recursed bool) {
 	m.debug.Log("`reconnect` called")
 
-	// again = Is this the first time we're doing reconnect?
+	// recursed = Is this the first time we're running the reconnect method?
 	// In other words: are we recursing?
-	if !again {
+	if !recursed {
 		m.stateMu.Lock()
 		defer m.stateMu.Unlock()
 

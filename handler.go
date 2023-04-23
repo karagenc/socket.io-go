@@ -116,7 +116,7 @@ func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) 
 		h.mu.Unlock()
 
 		defer func() {
-			recover()
+			_ = recover()
 		}()
 
 		timeoutFunc()
