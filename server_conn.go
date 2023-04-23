@@ -230,11 +230,7 @@ func (c *serverConn) onClose(reason Reason, err error) {
 			socket.onClose(reason)
 		}
 
-		go func() {
-			c.eioPacketQueue.waitForDrain(2 * time.Minute)
-			c.eioPacketQueue.close()
-		}()
-
+		c.closePacketQueue()
 		c.parserMu.Lock()
 		defer c.parserMu.Unlock()
 		c.parser.Reset()
@@ -256,9 +252,16 @@ func (c *serverConn) disconnectAll() {
 	}
 }
 
+func (c *serverConn) closePacketQueue() {
+	go func() {
+		c.eioPacketQueue.waitForDrain(2 * time.Minute)
+		c.eioPacketQueue.close()
+	}()
+}
+
 func (c *serverConn) close() {
 	c.debug.Log("Closing engine.io")
 	c.eio.Close()
-	c.eioPacketQueue.reset()
+	c.closePacketQueue()
 	c.onClose(ReasonForcedServerClose, nil)
 }

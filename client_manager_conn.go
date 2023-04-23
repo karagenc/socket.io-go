@@ -61,10 +61,11 @@ func (m *Manager) connect(recursed bool) (err error) {
 
 	m.state = clientConnStateConnected
 	m.eio = _eio
-	m.eioPacketQueue.reset()
 	m.resetParser()
+	m.closePacketQueue(m.eioPacketQueue)
 
-	go m.eioPacketQueue.pollAndSend(m.eio)
+	m.eioPacketQueue = newPacketQueue()
+	go m.eioPacketQueue.pollAndSend(_eio)
 	m.openHandlers.forEach(func(handler *ManagerOpenFunc) { (*handler)() }, true)
 	return
 }
@@ -157,5 +158,5 @@ func (m *Manager) disconnect() {
 	if eio != nil {
 		go eio.Close()
 	}
-	m.eioPacketQueue.reset()
+	m.closePacketQueue(m.eioPacketQueue)
 }

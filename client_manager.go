@@ -255,6 +255,13 @@ func (m *Manager) onReconnect() {
 	m.reconnectHandlers.forEach(func(handler *ManagerReconnectFunc) { (*handler)(attempts) }, true)
 }
 
+func (m *Manager) closePacketQueue(pq *packetQueue) {
+	go func() {
+		pq.waitForDrain(2 * time.Minute)
+		pq.close()
+	}()
+}
+
 func (m *Manager) destroy(socket *clientSocket) {
 	for _, socket := range m.sockets.getAll() {
 		if socket.Active() {
