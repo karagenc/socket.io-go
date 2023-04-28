@@ -88,7 +88,7 @@ func TestConnectToANamespaceAfterConnectionEstablished(t *testing.T) {
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
-func TestOpenANewNamespaceAfterConnectionGetsClosed(t *testing.T) {
+func TestConnectToANewNamespaceAfterConnectionGetsClosed(t *testing.T) {
 	_, _, manager := newTestServerAndClient(
 		t,
 		&ServerConfig{
@@ -143,5 +143,28 @@ func TestManagerOpenWithoutSocket(t *testing.T) {
 	})
 	manager.Open()
 
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
+}
+
+func TestReconnectByDefault(t *testing.T) {
+	server, _, manager := newTestServerAndClient(
+		t,
+		nil,
+		nil,
+	)
+	tw := newTestWaiter(1)
+	socket := manager.Socket("/", nil)
+
+	server.OnConnection(func(socket ServerSocket) {
+		s := socket.(*serverSocket)
+		// Abruptly close the connection.
+		s.conn.eio.Close()
+	})
+	manager.OnReconnect(func(attempt uint32) {
+		socket.Disconnect()
+		tw.Done()
+	})
+
+	socket.Connect()
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
