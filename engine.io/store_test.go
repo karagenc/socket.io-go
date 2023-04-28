@@ -42,7 +42,7 @@ func TestSocketStore(t *testing.T) {
 		socket2, ok := store.get(sid)
 
 		require.NotNil(t, socket2)
-		require.True(t, socket1 != socket2)
+		require.True(t, socket1 == socket2)
 		require.True(t, ok)
 
 		require.Equal(t, sid, socket2.ID())
