@@ -143,8 +143,8 @@ func (m *Manager) disconnect() {
 	m.debug.Log("Disconnecting")
 
 	m.stateMu.Lock()
-	defer m.stateMu.Unlock()
 	m.state = clientConnStateDisconnected
+	m.stateMu.Unlock()
 
 	m.skipReconnectMu.Lock()
 	m.skipReconnect = true

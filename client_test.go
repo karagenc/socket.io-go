@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	eio "github.com/tomruk/socket.io-go/engine.io"
 )
 
 func TestClientAck(t *testing.T) {
@@ -95,14 +94,9 @@ func TestOpenANewNamespaceAfterConnectionGetsClosed(t *testing.T) {
 		&ServerConfig{
 			AcceptAnyNamespace: true,
 		},
-		&ManagerConfig{
-			EIO: eio.ClientConfig{
-				Transports: []string{"polling"}, // TODO: Remove polling
-			},
-		},
+		nil,
 	)
 	socket := manager.Socket("/", nil)
-	// socket.Connect()
 	tw := newTestWaiter(1)
 
 	socket.OnConnect(func() {
@@ -121,8 +115,7 @@ func TestOpenANewNamespaceAfterConnectionGetsClosed(t *testing.T) {
 	})
 	socket.Connect()
 
-	//tw.WaitTimeout(t, defaultTestWaitTimeout)
-	tw.Wait()
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
 
 func TestManagerOpenWithoutSocket(t *testing.T) {
@@ -132,9 +125,7 @@ func TestManagerOpenWithoutSocket(t *testing.T) {
 			AcceptAnyNamespace: true,
 			ConnectTimeout:     1000 * time.Millisecond,
 		},
-		&ManagerConfig{
-			EIO: eio.ClientConfig{Transports: []string{"polling"}},
-		},
+		nil,
 	)
 	tw := newTestWaiter(2)
 
