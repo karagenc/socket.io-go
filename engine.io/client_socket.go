@@ -285,7 +285,11 @@ func (s *clientSocket) onError(err error) {
 
 func (s *clientSocket) onTransportClose(name string, err error) {
 	go func() { // <- To prevent s.TransportName() from blocking (locks transportMu).
-		s.debug.Log("Transport", name, "closed. Error", err)
+		if err == nil {
+			s.debug.Log("Transport", name, "closed")
+		} else {
+			s.debug.Log("Transport", name, "closed. Error", err)
+		}
 
 		select {
 		case <-s.closeChan:
