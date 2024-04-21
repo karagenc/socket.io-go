@@ -89,24 +89,24 @@ func (c *serverConn) onEIOPacket(packets ...*eioparser.Packet) {
 }
 
 func (c *serverConn) onParserFinish(header *parser.PacketHeader, eventName string, decode parser.Decode) {
-	if header.Namespace == "" {
-		header.Namespace = "/"
-	}
-	socket, ok := c.sockets.getByNsp(header.Namespace)
+	go func() {
+		if header.Namespace == "" {
+			header.Namespace = "/"
+		}
+		socket, ok := c.sockets.getByNsp(header.Namespace)
 
-	if header.Type == parser.PacketTypeConnect && !ok {
-		c.connect(header, decode)
-	} else if ok && header.Type != parser.PacketTypeConnect && header.Type != parser.PacketTypeConnectError {
-		go func() {
+		if header.Type == parser.PacketTypeConnect && !ok {
+			c.connect(header, decode)
+		} else if ok && header.Type != parser.PacketTypeConnect && header.Type != parser.PacketTypeConnectError {
 			err := socket.onPacket(header, eventName, decode)
 			if err != nil {
 				c.onFatalError(err)
 			}
-		}()
-	} else {
-		c.debug.Log("Invalid state", "packet type", header.Type)
-		c.close()
-	}
+		} else {
+			c.debug.Log("Invalid state", "packet type", header.Type)
+			c.close()
+		}
+	}()
 }
 
 func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) {
