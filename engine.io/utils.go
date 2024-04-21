@@ -1,10 +1,12 @@
 package eio
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
@@ -39,6 +41,52 @@ func (w *TestWaiter) Wait() {
 }
 
 func (w *TestWaiter) WaitTimeout(t *testing.T, timeout time.Duration) (timedout bool) {
+	c := make(chan struct{})
+
+	go func() {
+		defer close(c)
+		w.wg.Wait()
+	}()
+
+	select {
+	case <-c:
+		return false
+	case <-time.After(timeout):
+		t.Error("timeout exceeded")
+		return true
+	}
+}
+
+type TestWaiterString struct {
+	wg      *sync.WaitGroup
+	strings mapset.Set[string]
+}
+
+func NewTestWaiterString() *TestWaiterString {
+	wg := new(sync.WaitGroup)
+	return &TestWaiterString{
+		wg: wg,
+	}
+}
+
+func (w *TestWaiterString) Add(s string) {
+	w.strings.Add(s)
+	w.wg.Add(1)
+}
+
+func (w *TestWaiterString) Done(s string) {
+	if !w.strings.Contains(s) {
+		panic(fmt.Errorf("TestWaiterString: Done was already called on '%s'", s))
+	}
+	w.strings.Remove(s)
+	w.wg.Done()
+}
+
+func (w *TestWaiterString) Wait() {
+	w.wg.Wait()
+}
+
+func (w *TestWaiterString) WaitTimeout(t *testing.T, timeout time.Duration) (timedout bool) {
 	c := make(chan struct{})
 
 	go func() {

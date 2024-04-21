@@ -12,7 +12,10 @@ import (
 
 const defaultTestWaitTimeout = eio.DefaultTestWaitTimeout
 
-var newTestWaiter = eio.NewTestWaiter
+var (
+	newTestWaiter       = eio.NewTestWaiter
+	newTestWaiterString = eio.NewTestWaiterString
+)
 
 func TestServerAck(t *testing.T) {
 	server, _, manager := newTestServerAndClient(t, nil, nil)
