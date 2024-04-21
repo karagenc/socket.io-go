@@ -382,7 +382,7 @@ func (s *clientSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	}
 }
 
-func (s *clientSocket) onConnect(header *parser.PacketHeader, decode parser.Decode) {
+func (s *clientSocket) onConnect(_ *parser.PacketHeader, decode parser.Decode) {
 	connectError := func(err error) {
 		err = fmt.Errorf("sio: invalid CONNECT packet: %w: it seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)", err)
 		s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(err) }, true)
@@ -511,7 +511,7 @@ type connectError struct {
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
-func (s *clientSocket) onConnectError(header *parser.PacketHeader, decode parser.Decode) {
+func (s *clientSocket) onConnectError(_ *parser.PacketHeader, decode parser.Decode) {
 	s.destroy()
 
 	var v *connectError

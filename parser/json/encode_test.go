@@ -232,7 +232,7 @@ type encodeTest struct {
 	Or       [][]byte
 }
 
-func mustCreatePacketHeader(t *testing.T, packetType parser.PacketType, namespace string, ackID uint64) *parser.PacketHeader {
+func mustCreatePacketHeader(_ *testing.T, packetType parser.PacketType, namespace string, ackID uint64) *parser.PacketHeader {
 	ackIDPtr := &ackID
 	if ackID == 0 {
 		ackIDPtr = nil

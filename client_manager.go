@@ -271,7 +271,7 @@ func (m *Manager) closePacketQueue(pq *packetQueue) {
 	}()
 }
 
-func (m *Manager) destroy(socket *clientSocket) {
+func (m *Manager) destroy(_ *clientSocket) {
 	for _, socket := range m.sockets.getAll() {
 		if socket.Active() {
 			m.debug.Log("Socket (nsp: `" + socket.namespace + "`) is still active, skipping close")

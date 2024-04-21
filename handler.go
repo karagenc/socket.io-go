@@ -158,34 +158,6 @@ func (f *ackHandler) call(args ...reflect.Value) (err error) {
 	return
 }
 
-func (f *ackHandler) callWithError(e error, args ...reflect.Value) (err error) {
-	if !f.hasError {
-		panic(fmt.Errorf("sio: hasError is false. this shouldn't have happened"))
-	}
-
-	f.mu.Lock()
-	if f.timedOut {
-		f.mu.Unlock()
-		return nil
-	}
-	f.called = true
-	f.mu.Unlock()
-
-	defer func() {
-		if r := recover(); r != nil {
-			var ok bool
-			err, ok = r.(error)
-			if !ok {
-				err = fmt.Errorf("sio: ack handler error: %v", r)
-			}
-		}
-	}()
-
-	args = append([]reflect.Value{reflect.ValueOf(e)}, args...)
-	f.rv.Call(args)
-	return
-}
-
 func dismantleAckFunc(rt reflect.Type) (in []reflect.Type, variadic bool) {
 	in = make([]reflect.Type, rt.NumIn())
 	for i := range in {

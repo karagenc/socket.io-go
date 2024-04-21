@@ -57,7 +57,7 @@ func (pq *clientPacketQueue) addToQueue(header *parser.PacketHeader, v []any) {
 
 	replacementAck := func(args []reflect.Value) (results []reflect.Value) {
 		errV := args[0]
-		hasError := errV.IsNil() == false
+		hasError := !errV.IsNil()
 
 		if hasError {
 			packet.mu.Lock()

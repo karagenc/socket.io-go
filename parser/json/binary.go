@@ -9,10 +9,7 @@ import (
 	"github.com/tomruk/socket.io-go/parser/json/serializer"
 )
 
-var (
-	errInvalidPlaceholder = fmt.Errorf("parser/json: invalid placeholder")
-	errBinaryCannotBeAPtr = fmt.Errorf("parser/json: sio.Binary cannot be a pointer")
-)
+var errBinaryCannotBeAPtr = fmt.Errorf("parser/json: sio.Binary cannot be a pointer")
 
 type (
 	Binary []byte
@@ -135,7 +132,7 @@ func (p *Parser) deconstructBinaryValue(
 ) (buf []byte, err error) {
 	if rv.CanInterface() {
 		sb, ok := rv.Interface().(socketIOBinary)
-		if ok && sb.SocketIOBinary() == true {
+		if ok && sb.SocketIOBinary() {
 			buf = rv.Bytes()
 
 			phold := placeholder{
@@ -371,7 +368,7 @@ func (r *reconstructor) reconstructBinaryValue(
 ) error {
 	if rv.CanInterface() {
 		sb, ok := rv.Interface().(socketIOBinary)
-		if ok && sb.SocketIOBinary() == true {
+		if ok && sb.SocketIOBinary() {
 			pBuf := rv.Bytes()
 
 			var p placeholder
@@ -471,7 +468,7 @@ func (r *reconstructor) reconstructMap(rv reflect.Value) error {
 						num = num.Elem()
 					}
 
-					if pholder.Kind() == reflect.Bool && pholder.Bool() == true && num.Kind() == reflect.Float64 {
+					if pholder.Kind() == reflect.Bool && pholder.Bool() && num.Kind() == reflect.Float64 {
 						n := int(num.Float())
 						n++
 
@@ -495,7 +492,7 @@ func (r *reconstructor) reconstructMap(rv reflect.Value) error {
 						num = num.Elem()
 					}
 
-					if pholder.Kind() == reflect.Bool && pholder.Bool() == true && num.Kind() == reflect.Float64 {
+					if pholder.Kind() == reflect.Bool && pholder.Bool() && num.Kind() == reflect.Float64 {
 						n := int(num.Float())
 						n++
 
@@ -579,7 +576,7 @@ func hasBinary(values ...reflect.Value) bool {
 			case reflect.Uint8:
 				if rv.CanInterface() {
 					sb, ok := rv.Interface().(socketIOBinary)
-					if ok && sb.SocketIOBinary() == true {
+					if ok && sb.SocketIOBinary() {
 						return true
 					}
 				}

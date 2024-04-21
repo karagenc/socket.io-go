@@ -375,7 +375,7 @@ func (e *handlerStore[T]) forEach(f func(handler T), concurrent bool) {
 
 func (e *eventHandlerStore) on(eventName string, handler *eventHandler) {
 	e.mu.Lock()
-	handlers, _ := e.events[eventName]
+	handlers := e.events[eventName]
 	handlers = append(handlers, handler)
 	e.events[eventName] = handlers
 	e.mu.Unlock()
@@ -383,7 +383,7 @@ func (e *eventHandlerStore) on(eventName string, handler *eventHandler) {
 
 func (e *eventHandlerStore) once(eventName string, handler *eventHandler) {
 	e.mu.Lock()
-	handlers, _ := e.eventsOnce[eventName]
+	handlers := e.eventsOnce[eventName]
 	handlers = append(handlers, handler)
 	e.eventsOnce[eventName] = handlers
 	e.mu.Unlock()
@@ -457,8 +457,8 @@ func (e *eventHandlerStore) getAll(eventName string) (handlers []*eventHandler) 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	h, _ := e.events[eventName]
-	hOnce, _ := e.eventsOnce[eventName]
+	h := e.events[eventName]
+	hOnce := e.eventsOnce[eventName]
 
 	delete(e.eventsOnce, eventName)
 

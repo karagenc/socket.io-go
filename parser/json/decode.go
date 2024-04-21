@@ -13,8 +13,6 @@ import (
 var (
 	errInvalidPacketSize          = fmt.Errorf("parser/json: invalid packet size")
 	errMalformedPacket            = fmt.Errorf("parser/json: malformed packet")
-	errPacketContainsBinaryData   = fmt.Errorf("parser/json: packet contains a binary data but callback function doesn't have any binary argument")
-	errCallbackContainsBinaryData = fmt.Errorf("parser/json: callback function contains a binary argument but packet doesn't have any binary data")
 	errInvalidPlaceholderNumValue = fmt.Errorf("parser/json: invalid placeholder num value")
 	errInvalidNumberOfBuffers     = fmt.Errorf("parser/json: invalid number of buffers")
 	errInvalidNumberOfValues      = fmt.Errorf("parser/json: invalid number of values")
@@ -41,7 +39,7 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 			return errMaxAttachmentsExceeded
 		}
 
-		ok := header.IsBinary() == false || header.Attachments == 0
+		ok := !header.IsBinary() || header.Attachments == 0
 		if ok {
 			r := p.r
 			p.r = nil

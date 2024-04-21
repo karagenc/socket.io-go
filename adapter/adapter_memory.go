@@ -18,8 +18,7 @@ type inMemoryAdapter struct {
 
 	sockets SocketStore
 
-	parser   parser.Parser
-	parserMu sync.Mutex
+	parser parser.Parser
 }
 
 func NewInMemoryAdapterCreator() Creator {
