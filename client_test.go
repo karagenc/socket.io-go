@@ -168,3 +168,29 @@ func TestReconnectByDefault(t *testing.T) {
 	socket.Connect()
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
 }
+
+func TestReconnectManually(t *testing.T) {
+	_, _, manager := newTestServerAndClient(
+		t,
+		&ServerConfig{
+			AcceptAnyNamespace: true,
+		},
+		nil,
+	)
+	tw := newTestWaiter(1)
+	socket := manager.Socket("/", nil)
+
+	socket.OnceConnect(func() {
+		socket.Disconnect()
+	})
+	socket.OnceDisconnect(func(reason Reason) {
+		socket.OnceConnect(func() {
+			socket.Disconnect()
+			tw.Done()
+		})
+		socket.Connect()
+	})
+
+	socket.Connect()
+	tw.WaitTimeout(t, defaultTestWaitTimeout)
+}
