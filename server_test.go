@@ -17,29 +17,100 @@ var (
 	newTestWaiterString = eio.NewTestWaiterString
 )
 
-func TestServerAck(t *testing.T) {
-	server, _, manager := newTestServerAndClient(t, nil, nil)
-	socket := manager.Socket("/", nil)
-	socket.Connect()
-	tw := newTestWaiter(5)
+func TestServer(t *testing.T) {
+	t.Run("should fire a CONNECT event", func(t *testing.T) {
+		server, _, manager := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("/", nil)
+		tw := newTestWaiter(1)
 
-	socket.OnEvent("ack", func(message string, ack func(reply string)) {
-		t.Logf("event %s", message)
-		assert.Equal(t, "hello", message)
-		ack("hi")
+		server.OnConnection(func(socket ServerSocket) {
+			tw.Done()
+		})
+		socket.Connect()
+		tw.WaitTimeout(t, defaultTestWaitTimeout)
 	})
 
-	server.OnConnection(func(socket ServerSocket) {
-		for i := 0; i < 5; i++ {
-			t.Log("Emitting to client")
-			socket.Emit("ack", "hello", func(reply string) {
-				defer tw.Done()
-				t.Log("ack")
-				assert.Equal(t, "hi", reply)
-			})
-		}
+	t.Run(`should be able to equivalently start with "" or "/" on server`, func(t *testing.T) {
+		server, _, manager := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("/", nil)
+		tw := newTestWaiterString()
+		tw.Add("/abc")
+		tw.Add("")
+
+		server.Of("/abc").OnConnection(func(socket ServerSocket) {
+			tw.Done("/abc")
+		})
+		server.Of("").OnConnection(func(socket ServerSocket) {
+			tw.Done("")
+		})
+
+		manager.Socket("/abc", nil).Connect()
+		socket.Connect()
+		tw.WaitTimeout(t, defaultTestWaitTimeout)
 	})
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+
+	t.Run(`should be equivalent for "" and "/" on client`, func(t *testing.T) {
+		server, _, manager := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("", nil)
+		tw := newTestWaiter(1)
+
+		server.Of("/").OnConnection(func(socket ServerSocket) {
+			tw.Done()
+		})
+
+		socket.Connect()
+		tw.WaitTimeout(t, defaultTestWaitTimeout)
+	})
+
+	t.Run("should work with `of` and many sockets", func(t *testing.T) {
+		server, _, manager := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("/", nil)
+		tw := newTestWaiterString()
+		tw.Add("/chat")
+		tw.Add("/news")
+		tw.Add("/")
+
+		server.Of("/chat").OnConnection(func(socket ServerSocket) {
+			tw.Done("/chat")
+		})
+		server.Of("/news").OnConnection(func(socket ServerSocket) {
+			tw.Done("/news")
+		})
+		server.OnConnection(func(socket ServerSocket) {
+			tw.Done("/")
+		})
+
+		manager.Socket("/chat", nil).Connect()
+		manager.Socket("/news", nil).Connect()
+		socket.Connect()
+
+		tw.WaitTimeout(t, defaultTestWaitTimeout)
+	})
+
+	t.Run("should receive ack", func(t *testing.T) {
+		server, _, manager := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("/", nil)
+		socket.Connect()
+		tw := newTestWaiter(5)
+
+		socket.OnEvent("ack", func(message string, ack func(reply string)) {
+			t.Logf("event %s", message)
+			assert.Equal(t, "hello", message)
+			ack("hi")
+		})
+
+		server.OnConnection(func(socket ServerSocket) {
+			for i := 0; i < 5; i++ {
+				t.Log("Emitting to client")
+				socket.Emit("ack", "hello", func(reply string) {
+					defer tw.Done()
+					t.Log("ack")
+					assert.Equal(t, "hi", reply)
+				})
+			}
+		})
+		tw.WaitTimeout(t, defaultTestWaitTimeout)
+	})
 }
 
 func newTestServerAndClient(
