@@ -41,17 +41,14 @@ func NewSessionAwareAdapterCreator(maxDisconnectionDuration time.Duration) Creat
 			inMemoryAdapter,
 			maxDisconnectionDuration,
 			cleanerDuration,
-			socketStore,
-			parserCreator,
 		)
 	}
 }
 
-func newSessionAwareAdapter(inMemoryAdapter *inMemoryAdapter,
+func newSessionAwareAdapter(
+	inMemoryAdapter *inMemoryAdapter,
 	maxDisconnectionDuration,
 	cleanerDuration time.Duration,
-	socketStore SocketStore,
-	parserCreator parser.Creator,
 ) *sessionAwareAdapter {
 	a := &sessionAwareAdapter{
 		inMemoryAdapter:       inMemoryAdapter,

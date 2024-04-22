@@ -312,7 +312,5 @@ func newTestSessionAwareAdapter(maxDisconnectionDuration, cleanerDuration time.D
 		inMemoryAdapter,
 		maxDisconnectionDuration,
 		cleanerDuration,
-		socketStore,
-		parserCreator,
 	)
 }
