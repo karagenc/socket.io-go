@@ -611,7 +611,7 @@ func TestServer(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		require.Equal(t, http.StatusTeapot, resp.StatusCode, "server should have been closed")
+		require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "server should have been closed")
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 	})

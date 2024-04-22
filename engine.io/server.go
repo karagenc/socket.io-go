@@ -168,7 +168,7 @@ func (s *Server) HTTPWriteTimeout() time.Duration {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.IsClosed() {
 		s.debug.Log("Connection received after server was closed")
-		w.WriteHeader(http.StatusTeapot)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
