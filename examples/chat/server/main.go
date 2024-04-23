@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	sio "github.com/tomruk/socket.io-go"
@@ -23,12 +24,8 @@ func main() {
 		},
 	})
 
-	io.OnConnection(func(socket sio.ServerSocket) {
-		fmt.Printf("New socket: %s\n", socket.ID())
-		socket.OnEvent("echo", func(message string) {
-			fmt.Printf("Message: %s\n", message)
-		})
-	})
+	api := newAPI()
+	api.setup(io.Of("/"))
 
 	err := io.Run()
 	if err != nil {
@@ -38,9 +35,22 @@ func main() {
 	fs := http.FileServer(http.Dir("public"))
 	router := http.NewServeMux()
 
-	// Make sure to have a slash at the end of the URL.
-	// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
-	router.Handle("/socket.io/", io)
+	if allowOrigin == "" {
+		// Make sure to have a slash at the end of the URL.
+		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
+		router.Handle("/socket.io/", io)
+	} else {
+		if !strings.HasPrefix(allowOrigin, "http://") {
+			allowOrigin = "http://" + allowOrigin
+		}
+
+		fmt.Printf("ALLOW_ORIGIN is set to: %s\n", allowOrigin)
+		h := corsMiddleware(io, allowOrigin)
+
+		// Make sure to have a slash at the end of the URL.
+		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
+		router.Handle("/socket.io/", h)
+	}
 
 	router.Handle("/", fs)
 

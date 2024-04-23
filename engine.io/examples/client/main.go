@@ -74,8 +74,8 @@ func userInput(socket eio.ClientSocket) {
 			fmt.Printf("User input error: %v\n", err)
 			break
 		}
-		text = strings.TrimRight(text, "\r\n")
 
+		text = strings.TrimRight(text, "\r\n")
 		if text == "exit" {
 			break
 		}
@@ -85,7 +85,6 @@ func userInput(socket eio.ClientSocket) {
 			fmt.Printf("Packet creation error (this shouldn't have happened): %v\n", err)
 			break
 		}
-
 		socket.Send(packet)
 	}
 }

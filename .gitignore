@@ -3,12 +3,9 @@
 *.out
 __debug_bin
 
-/engine.io/_examples/server/server
-/engine.io/_examples/client/client
-
-/_examples/server/basic/basic
-/_examples/server/full/full
-/_examples/client/basic/basic
-/_examples/client/full/full
+/examples/chat/server/server
+/examples/chat/client/client
+/engine.io/examples/server/server
+/engine.io/examples/client/client
 
 *.env

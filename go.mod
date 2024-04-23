@@ -9,9 +9,12 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/fatih/structs v1.1.0
 	github.com/goccy/go-json v0.10.0
+	github.com/gookit/color v1.5.4
 	github.com/sasha-s/go-deadlock v0.3.1
-	github.com/stretchr/testify v1.8.2
+	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.8.4
 	github.com/tomruk/yeast v0.0.0-20230225201012-b18b0b9bd07a
+	golang.org/x/term v0.19.0
 	nhooyr.io/websocket v1.8.11
 )
 
@@ -22,6 +25,8 @@ require (
 	github.com/petermattis/goid v0.0.0-20240327183114-c42a807a84ba // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
