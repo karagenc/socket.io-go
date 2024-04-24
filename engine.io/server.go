@@ -301,8 +301,10 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 	}
 
 	c := transport.NewCallbacks()
+	q := r.URL.Query()
+	supportsBinary := q.Get("b64") == ""
 
-	t := _websocket.NewServerTransport(c, s.maxBufferSize, true, s.wsAcceptOptions)
+	t := _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
 	done := make(chan struct{})
 	once := new(sync.Once)
 
