@@ -34,13 +34,13 @@ func main() {
 	}
 
 	socket.OnConnect(func() {
-		fmt.Fprintf(term, "Connected. SID: %s\n", socket.ID())
+		fmt.Fprintln(term, "Connected")
 	})
 	manager.OnReconnect(func(attempt uint32) {
-		fmt.Fprintf(term, "Reconnected. Number of attempts: %d\n", attempt)
+		fmt.Fprintf(term, "Reconnected. Number of attempts so far: %d\n", attempt)
 	})
 	socket.OnConnectError(func(err error) {
-		fmt.Fprintf(term, "Connect error: %v\n", err)
+		fmt.Fprintf(term, "Error: %v\n", err)
 	})
 
 	socket.OnEvent("login", func(data struct {

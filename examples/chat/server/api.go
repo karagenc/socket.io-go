@@ -16,15 +16,11 @@ type api struct {
 }
 
 func newAPI() *api {
-	return &api{
-		usernames: make(map[sio.ServerSocket]string),
-	}
+	return &api{usernames: make(map[sio.ServerSocket]string)}
 }
 
 func (a *api) setup(root *sio.Namespace) {
 	root.OnConnection(func(socket sio.ServerSocket) {
-		fmt.Printf("Socket with SID %s is connected\n", socket.ID())
-
 		socket.OnEvent("new message", func(data string) {
 			socket.Broadcast().Emit("new message", struct {
 				Username string `json:"username"`

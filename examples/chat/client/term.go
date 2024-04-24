@@ -49,7 +49,7 @@ func initTerm(socket sio.ClientSocket) (*term.Terminal, func(code int), error) {
 	}()
 
 	t := &typing{socket: socket, typing: make(chan struct{}, 1)}
-	go t.loop()
+	go t.notifier()
 	stdin := io.TeeReader(os.Stdin, t)
 	screen := struct {
 		io.Reader
@@ -67,9 +67,11 @@ type typing struct {
 	typing chan struct{}
 }
 
+// Called when user writes to stdin
 func (t *typing) Write(p []byte) (n int, _ error) {
 	n = len(p)
 	if n > 0 {
+		// If the pressed key is enter, don't notify.
 		if len(p) == 1 && p[0] == 0x0d {
 			return
 		}
@@ -78,7 +80,9 @@ func (t *typing) Write(p []byte) (n int, _ error) {
 	return
 }
 
-func (t *typing) loop() {
+// Notifies when typing occurs.
+// Also notifies when typing stops.
+func (t *typing) notifier() {
 	var (
 		stopInterval = 400 * time.Millisecond
 		last         time.Time

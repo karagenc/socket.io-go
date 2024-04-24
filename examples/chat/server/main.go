@@ -8,21 +8,12 @@ import (
 	"time"
 
 	sio "github.com/tomruk/socket.io-go"
-	eio "github.com/tomruk/socket.io-go/engine.io"
 )
 
 const addr = "127.0.0.1:3000"
 
-func logEIOServerError(err error) {
-	log.Printf("Server error: %v\n", err)
-}
-
 func main() {
-	io := sio.NewServer(&sio.ServerConfig{
-		EIO: eio.ServerConfig{
-			OnError: logEIOServerError,
-		},
-	})
+	io := sio.NewServer(nil)
 
 	api := newAPI()
 	api.setup(io.Of("/"))
@@ -51,10 +42,7 @@ func main() {
 		// Otherwise instead of matching with this handler, requests might match with a file that has an socket.io prefix (such as socket.io.min.js).
 		router.Handle("/socket.io/", h)
 	}
-
 	router.Handle("/", fs)
-
-	fmt.Printf("Listening on: %s\n", addr)
 
 	server := &http.Server{
 		Addr:    addr,
@@ -70,6 +58,7 @@ func main() {
 		WriteTimeout: io.HTTPWriteTimeout(),
 	}
 
+	fmt.Printf("Listening on: %s\n", addr)
 	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatalln(err)
