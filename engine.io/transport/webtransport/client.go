@@ -99,7 +99,6 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 		if err != nil {
 			return nil, err
 		}
-
 		t.sid = hr.SID
 	}
 	return

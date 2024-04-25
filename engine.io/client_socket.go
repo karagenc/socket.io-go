@@ -123,21 +123,13 @@ func (s *clientSocket) connect(transports []string) (err error) {
 	return
 }
 
-func (s *clientSocket) ID() string {
-	return s.sid
-}
+func (s *clientSocket) ID() string { return s.sid }
 
-func (s *clientSocket) Upgrades() []string {
-	return s.upgrades
-}
+func (s *clientSocket) Upgrades() []string { return s.upgrades }
 
-func (s *clientSocket) PingInterval() time.Duration {
-	return s.pingInterval
-}
+func (s *clientSocket) PingInterval() time.Duration { return s.pingInterval }
 
-func (s *clientSocket) PingTimeout() time.Duration {
-	return s.pingTimeout
-}
+func (s *clientSocket) PingTimeout() time.Duration { return s.pingTimeout }
 
 func (s *clientSocket) handleTimeout() {
 	for {

@@ -83,9 +83,7 @@ func (s *serverSocket) setCallbacks(callbacks *Callbacks) {
 	s.callbacks.Store(&c)
 }
 
-func (s *serverSocket) ID() string {
-	return s.id
-}
+func (s *serverSocket) ID() string { return s.id }
 
 func (s *serverSocket) Transport() ServerTransport {
 	s.transportMu.RLock()
@@ -99,17 +97,11 @@ func (s *serverSocket) TransportName() string {
 	return s.transport.Name()
 }
 
-func (s *serverSocket) Upgrades() []string {
-	return s.upgrades
-}
+func (s *serverSocket) Upgrades() []string { return s.upgrades }
 
-func (s *serverSocket) PingInterval() time.Duration {
-	return s.pingInterval
-}
+func (s *serverSocket) PingInterval() time.Duration { return s.pingInterval }
 
-func (s *serverSocket) PingTimeout() time.Duration {
-	return s.pingTimeout
-}
+func (s *serverSocket) PingTimeout() time.Duration { return s.pingTimeout }
 
 func (s *serverSocket) upgradeTo(t ServerTransport, c *transport.Callbacks) {
 	s.debug.Log("UpgradeTo", t.Name())

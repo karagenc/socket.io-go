@@ -34,7 +34,6 @@ switch serializerType {
     case fast.SerializerTypeGoJSON:
         fmt.Println("go-json is choosen")
 }
-
 ```
 
 ## Customization
