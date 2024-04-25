@@ -10,7 +10,6 @@ var ErrLimitReached = fmt.Errorf("webtransport: maximum read limit (set via `Max
 type limitedReader struct {
 	r     io.Reader
 	limit int64
-	read  int64
 }
 
 func newLimitedReader(r io.Reader, limit int64) *limitedReader {
@@ -19,8 +18,7 @@ func newLimitedReader(r io.Reader, limit int64) *limitedReader {
 
 func (l *limitedReader) Read(p []byte) (n int, err error) {
 	n, err = l.r.Read(p)
-	l.read += int64(n)
-	if l.read > l.limit {
+	if int64(n) > l.limit {
 		err = ErrLimitReached
 	}
 	return
