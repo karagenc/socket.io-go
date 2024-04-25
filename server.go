@@ -20,9 +20,12 @@ type BroadcastOperator = adapter.BroadcastOperator
 
 type (
 	ServerConfig struct {
-		ParserCreator  parser.Creator
+		// For custom parsers
+		ParserCreator parser.Creator
+		// For custom adapters
 		AdapterCreator adapter.Creator
 
+		// Engine.IO configuration
 		EIO eio.ServerConfig
 
 		// Duration to wait before a client without namespace is closed.

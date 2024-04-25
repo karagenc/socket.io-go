@@ -45,12 +45,12 @@ func (p *Parser) Encode(header *parser.PacketHeader, v any) ([][]byte, error) {
 
 	if header.Type == parser.PacketTypeEvent || header.Type == parser.PacketTypeAck {
 		if hasBinary(rv) {
-			if header.Type == parser.PacketTypeEvent {
+			switch header.Type {
+			case parser.PacketTypeEvent:
 				header.Type = parser.PacketTypeBinaryEvent
-			} else if header.Type == parser.PacketTypeAck {
+			case parser.PacketTypeAck:
 				header.Type = parser.PacketTypeBinaryAck
 			}
-
 			return p.encodeBinary(header, v)
 		}
 	}

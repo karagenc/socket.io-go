@@ -175,7 +175,6 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	default:
 		return wrapInternalError(fmt.Errorf("invalid packet type: %d", header.Type))
 	}
-
 	return nil
 }
 

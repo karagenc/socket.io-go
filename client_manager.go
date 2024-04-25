@@ -14,11 +14,7 @@ import (
 
 type (
 	ManagerConfig struct {
-		// A creator function for the Socket.IO parser.
-		// This function is used for creating a parser.Parser object.
-		// You can use a custom parser by changing this variable.
-		//
-		// By default this function is nil and default JSON parser is used.
+		// For custom parsers
 		ParserCreator parser.Creator
 
 		// Configuration for the Engine.IO.

@@ -54,7 +54,6 @@ func NewPacket(packetType PacketType, isBinary bool, data []byte) (*Packet, erro
 	if packetType != PacketTypeMessage && isBinary {
 		return nil, errInvalidPacketType
 	}
-
 	return &Packet{
 		IsBinary: isBinary,
 		Type:     packetType,
@@ -78,7 +77,7 @@ func (p *Packet) EncodedLen(supportsBinary bool) int {
 }
 
 // Note: Writer should either implement io.ByteWriter
-// or it should not have a problem with writing 1 byte at a time.
+// or should not have a problem with writing 1 byte at a time.
 func (p *Packet) Encode(w io.Writer, supportsBinary bool) error {
 	bw, ok := w.(io.ByteWriter)
 	if !ok {

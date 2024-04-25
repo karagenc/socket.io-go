@@ -71,10 +71,9 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		const fakeTransportName = "UFO"
 		q := req.URL.Query()
 		q.Add("EIO", strconv.Itoa(ProtocolVersion))
-		q.Add("transport", fakeTransportName) // There's no such transport
+		q.Add("transport", "labalubadabaluba") // There's no such transport
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusBadRequest, rec.Code)

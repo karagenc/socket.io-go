@@ -22,7 +22,6 @@ func newBackoff(min time.Duration, max time.Duration, jitter float32) *backoff {
 	if jitter <= 0 || jitter > 1 {
 		jitter = 0
 	}
-
 	return &backoff{
 		min:    min,
 		max:    max,
@@ -55,11 +54,9 @@ func (b *backoff) duration() time.Duration {
 			ms = ms + int64(deviation)
 		}
 	}
-
 	if ms <= 0 {
 		return b.max
 	}
-
 	return time.Duration(math.Min(float64(ms), float64(b.max)))
 }
 

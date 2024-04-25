@@ -106,12 +106,10 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 	if err != nil {
 		return nil, err
 	}
-
 	err = socket.connect(transports)
 	if err != nil {
 		return nil, err
 	}
-
 	return socket, nil
 }
 
@@ -131,7 +129,6 @@ func parseURL(rawURL string) (*url.URL, error) {
 	case "ws":
 		url.Scheme = "http"
 	}
-
 	return url, nil
 }
 
