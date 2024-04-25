@@ -158,21 +158,56 @@ func (s *clientSocket) handleTimeout() {
 }
 
 func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
-	if s.TransportName() == "websocket" {
-		s.debug.Log("maybeUpgrade", "current transport is websocket. already upgraded")
+	if s.TransportName() == "webtransport" {
+		s.debug.Log("maybeUpgrade", "current transport is webtransport. already upgraded")
 		return
-	} else if !findTransport(upgrades, "websocket") {
-		s.debug.Log("maybeUpgrade", "couldn't find 'websocket' in handshake received from server")
+	} else if s.TransportName() == "websocket" && !findTransport(upgrades, "webtransport") {
+		s.debug.Log("maybeUpgrade", "current transport is websocket, and there are no further upgrades. already upgraded")
 		return
-	} else if !findTransport(transports, "websocket") {
-		s.debug.Log("maybeUpgrade", "couldn't find 'websocket' in `Transports` configuration option")
+	} else if !findTransport(upgrades, "websocket") && !findTransport(upgrades, "webtransport") {
+		s.debug.Log("maybeUpgrade", "couldn't find 'websocket' and 'webtransport' in handshake received from server")
+		return
+	} else if !findTransport(transports, "websocket") && !findTransport(transports, "webtransport") {
+		s.debug.Log("maybeUpgrade", "couldn't find 'websocket' and 'webtransport' in `Transports` configuration option")
 		return
 	}
 
-	s.debug.Log("maybeUpgrade", "upgrading")
+	// Prioritize webtransport
+	if findTransport(transports, "webtransport") && findTransport(transports, "websocket") {
+		for i, upgrade := range upgrades {
+			if upgrade == "webtransport" {
+				upgrades = append(upgrades[:i], upgrades[i+1:]...)
+			}
+		}
+		upgrades = append([]string{"webtransport"}, upgrades...)
+	}
 
-	c := transport.NewCallbacks()
-	t := websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
+	for _, upgrade := range upgrades {
+		if !findTransport(transports, upgrade) {
+			s.debug.Log("skip", upgrade)
+			continue
+		}
+		var (
+			t ClientTransport
+			c = transport.NewCallbacks()
+		)
+		switch upgrade {
+		case "websocket":
+			s.debug.Log("maybeUpgrade", "upgrading from", s.TransportName(), "to websocket")
+			t = websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
+		case "webtransport":
+			s.debug.Log("maybeUpgrade", "upgrading from", s.TransportName(), "to webtransport")
+			t = webtransport.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.webTransportDialer)
+		default:
+			s.debug.Log("skip", upgrade)
+		}
+		if s.tryUpgradeTo(t, c) {
+			return
+		}
+	}
+}
+
+func (s *clientSocket) tryUpgradeTo(t ClientTransport, c *transport.Callbacks) (ok bool) {
 	done := make(chan struct{})
 	once := new(sync.Once)
 
@@ -189,7 +224,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 			}
 
 			once.Do(func() { close(done) })
-			s.upgradeTo(t, c)
+			s.finishUpgradeTo(t, c)
 		default:
 			t.Close()
 			s.onError(wrapInternalError(fmt.Errorf("upgrade failed: invalid packet received: packet type: %d", packet.Type)))
@@ -208,17 +243,6 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		s.onError(fmt.Errorf("eio: upgrade failed: %w", err))
 		return
 	}
-
-	go func() {
-		select {
-		case <-done:
-			s.debug.Log("maybeUpgrade", "channel `done` is triggered")
-		case <-time.After(s.upgradeTimeout):
-			t.Close()
-			s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
-		}
-	}()
-
 	go t.Run()
 
 	ping, err := parser.NewPacket(parser.PacketTypePing, false, []byte("probe"))
@@ -227,10 +251,20 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 		s.onError(wrapInternalError(fmt.Errorf("upgrade failed: %w", err)))
 		return
 	}
-	t.Send(ping)
+	go t.Send(ping)
+
+	select {
+	case <-done:
+		s.debug.Log("maybeUpgrade", "channel `done` is triggered")
+		return true
+	case <-time.After(s.upgradeTimeout):
+		t.Close()
+		s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
+		return false
+	}
 }
 
-func (s *clientSocket) upgradeTo(t ClientTransport, c *transport.Callbacks) {
+func (s *clientSocket) finishUpgradeTo(t ClientTransport, c *transport.Callbacks) {
 	p, err := parser.NewPacket(parser.PacketTypeUpgrade, false, nil)
 	if err != nil {
 		s.onError(fmt.Errorf("upgrade failed: %w", err))

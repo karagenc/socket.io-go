@@ -77,7 +77,7 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 	if len(config.Transports) > 0 {
 		transports = config.Transports
 	} else {
-		transports = []string{"polling", "websocket"}
+		transports = []string{"polling", "webtransport", "websocket"}
 	}
 
 	if config.UpgradeTimeout != 0 {

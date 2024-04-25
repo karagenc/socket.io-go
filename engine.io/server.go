@@ -208,7 +208,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		n := r.URL.Query().Get("transport")
 
 		if t.Name() != n {
-			s.maybeUpgrade(w, r, socket, n)
+			s.maybeUpgrade(w, r, socket, n, nil, nil)
 			return
 		}
 
@@ -298,6 +298,7 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 	sid, err := t.Handshake(nil, w, r)
 	if err != nil {
 		s.debug.Log("Handshake error", err)
+		t.Close()
 		return
 	}
 
@@ -306,11 +307,13 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			s.onError(err)
+			t.Close()
 			return
 		}
 
 		socket := s.newSocket(w, sid, nil, c, t)
 		if socket == nil {
+			t.Close()
 			return
 		}
 
@@ -318,6 +321,7 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			s.onError(wrapInternalError(fmt.Errorf("newHandshakePacket failed: %w", err)))
+			t.Close()
 			return
 		}
 		t.PostHandshake(handshakePacket)
@@ -325,6 +329,7 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 		socket, ok := s.store.get(sid)
 		if !ok {
 			writeServerError(w, ErrorUnknownSID)
+			t.Close()
 			return
 		}
 
@@ -332,7 +337,7 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 			s.debug.Log("already upgraded to webtransport")
 			t.Close()
 		} else {
-			s.maybeUpgrade(w, r, socket, "webtransport")
+			s.maybeUpgrade(w, r, socket, "webtransport", t, c)
 		}
 	}
 }
@@ -367,26 +372,45 @@ func (s *Server) newHandshakePacket(sid string, upgrades []string) (*parser.Pack
 	return parser.NewPacket(parser.PacketTypeOpen, false, data)
 }
 
-func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *serverSocket, upgradeTo string) {
-	if upgradeTo != "websocket" {
+func (s *Server) maybeUpgrade(
+	w http.ResponseWriter, r *http.Request,
+	socket *serverSocket,
+	upgradeTo string,
+	t ServerTransport,
+	c *transport.Callbacks,
+) {
+	var (
+		q              = r.URL.Query()
+		supportsBinary = q.Get("b64") == ""
+	)
+
+	if c == nil {
+		c = transport.NewCallbacks()
+	}
+
+	switch upgradeTo {
+	case "websocket":
+		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
+		_, err := t.Handshake(nil, w, r)
+		if err != nil {
+			s.debug.Log("Handshake error", err)
+			t.Close()
+			return
+		}
+	case "webtransport":
+		if t == nil {
+			s.debug.Log("t == nil. This shouldn't have happened")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	default:
 		s.debug.Log("Invalid upgradeTo", upgradeTo)
 		writeServerError(w, ErrorBadRequest)
 		return
 	}
 
-	c := transport.NewCallbacks()
-	q := r.URL.Query()
-	supportsBinary := q.Get("b64") == ""
-
-	t := _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
 	done := make(chan struct{})
 	once := new(sync.Once)
-
-	_, err := t.Handshake(nil, w, r)
-	if err != nil {
-		s.debug.Log("Handshake error", err)
-		return
-	}
 
 	go func() {
 		select {
@@ -427,8 +451,8 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 	}
 
 	c.Set(func(packets ...*parser.Packet) {
-		for _, p := range packets {
-			onPacket(p)
+		for _, packet := range packets {
+			onPacket(packet)
 		}
 	}, nil)
 
