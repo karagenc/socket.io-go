@@ -34,15 +34,12 @@ func NewClientTransport(
 	dialOptions *websocket.DialOptions,
 ) *ClientTransport {
 	return &ClientTransport{
-		sid: sid,
-
+		sid:             sid,
 		protocolVersion: protocolVersion,
 		url:             &url,
 		requestHeader:   requestHeader,
-
-		callbacks: callbacks,
-
-		dialOptions: dialOptions,
+		callbacks:       callbacks,
+		dialOptions:     dialOptions,
 	}
 }
 
@@ -52,11 +49,9 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 	q := t.url.Query()
 	q.Set("transport", "websocket")
 	q.Set("EIO", strconv.Itoa(t.protocolVersion))
-
 	if t.sid != "" {
 		q.Set("sid", t.sid)
 	}
-
 	t.url.RawQuery = q.Encode()
 
 	switch t.url.Scheme {
@@ -64,6 +59,10 @@ func (t *ClientTransport) Handshake() (hr *parser.HandshakeResponse, err error) 
 		t.url.Scheme = "wss"
 	case "http":
 		t.url.Scheme = "ws"
+	}
+
+	if t.requestHeader != nil {
+		t.dialOptions.HTTPHeader = t.requestHeader.Header()
 	}
 
 	t.conn, _, err = websocket.Dial(context.Background(), t.url.String(), t.dialOptions)
