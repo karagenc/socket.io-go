@@ -165,7 +165,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	}
 
 	// Prioritize webtransport
-	if findTransport(transports, "webtransport") && findTransport(transports, "websocket") {
+	if findTransport(upgrades, "webtransport") && findTransport(upgrades, "websocket") {
 		for i, upgrade := range upgrades {
 			if upgrade == "webtransport" {
 				upgrades = append(upgrades[:i], upgrades[i+1:]...)
