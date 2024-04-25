@@ -94,6 +94,8 @@ func (t *ServerTransport) Handshake(_ *parser.Packet, w http.ResponseWriter, r *
 
 func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
 	if packet != nil {
+		t.sendMu.Lock()
+		defer t.sendMu.Unlock()
 		return send(t.stream, packet)
 	}
 	return nil
