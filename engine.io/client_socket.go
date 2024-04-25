@@ -165,25 +165,25 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	}
 
 	// Prioritize webtransport
-	if findTransport(upgrades, "webtransport") && findTransport(upgrades, "websocket") {
-		for i, upgrade := range upgrades {
-			if upgrade == "webtransport" {
-				upgrades = append(upgrades[:i], upgrades[i+1:]...)
+	if findTransport(transports, "webtransport") && findTransport(transports, "websocket") {
+		for i, transport := range transports {
+			if transport == "webtransport" {
+				transports = append(transports[:i], transports[i+1:]...)
 			}
 		}
-		upgrades = append([]string{"webtransport"}, upgrades...)
+		transports = append([]string{"webtransport"}, transports...)
 	}
 
-	for _, upgrade := range upgrades {
-		if !findTransport(transports, upgrade) {
-			s.debug.Log("skip", upgrade)
+	for _, upgradeTo := range transports {
+		if !findTransport(upgrades, upgradeTo) {
+			s.debug.Log("skip", upgradeTo)
 			continue
 		}
 		var (
 			t ClientTransport
 			c = transport.NewCallbacks()
 		)
-		switch upgrade {
+		switch upgradeTo {
 		case "websocket":
 			s.debug.Log("maybeUpgrade", "upgrading from", s.TransportName(), "to websocket")
 			t = websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
@@ -191,7 +191,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 			s.debug.Log("maybeUpgrade", "upgrading from", s.TransportName(), "to webtransport")
 			t = webtransport.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.webTransportDialer)
 		default:
-			s.debug.Log("skip", upgrade)
+			s.debug.Log("skip", upgradeTo)
 		}
 		if s.tryUpgradeTo(t, c) {
 			return
