@@ -32,10 +32,8 @@ func NewServerTransport(
 	return &ServerTransport{
 		readLimit:      int64(maxBufferSize),
 		supportsBinary: supportsBinary,
-
-		callbacks: callbacks,
-
-		acceptOptions: acceptOptions,
+		callbacks:      callbacks,
+		acceptOptions:  acceptOptions,
 	}
 }
 
@@ -72,7 +70,7 @@ func (t *ServerTransport) send(packet *parser.Packet) error {
 	return packet.Encode(w, true)
 }
 
-func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) (err error) {
+func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) (sid string, err error) {
 	t.ctx = r.Context()
 	t.conn, err = websocket.Accept(w, r, t.acceptOptions)
 	if err != nil {
@@ -81,7 +79,8 @@ func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.Respo
 	if t.readLimit != 0 {
 		t.conn.SetReadLimit(t.readLimit)
 	}
-	return t.writeHandshakePacket(handshakePacket)
+	// sid is only for webtransport
+	return "", t.writeHandshakePacket(handshakePacket)
 }
 
 func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
@@ -102,7 +101,7 @@ func (t *ServerTransport) writeHandshakePacket(packet *parser.Packet) error {
 	return nil
 }
 
-func (t *ServerTransport) PostHandshake() {
+func (t *ServerTransport) PostHandshake(_ *parser.Packet) {
 	for {
 		packet, err := t.nextPacket()
 		if err != nil {
@@ -131,13 +130,6 @@ func (t *ServerTransport) Discard() {
 			t.conn.Close(websocket.StatusNormalClosure, "")
 		}
 	})
-}
-
-var expectedCloseCodes = []websocket.StatusCode{
-	websocket.StatusNormalClosure,
-	websocket.StatusGoingAway,
-	websocket.StatusNoStatusRcvd,
-	websocket.StatusAbnormalClosure,
 }
 
 func (t *ServerTransport) close(err error) {

@@ -7,12 +7,14 @@ import (
 	"strconv"
 	"time"
 
+	_webtransport "github.com/quic-go/webtransport-go"
 	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
+	"github.com/tomruk/socket.io-go/engine.io/transport/webtransport"
 
 	"nhooyr.io/websocket"
 )
@@ -35,9 +37,12 @@ type (
 		UpgradeTimeout time.Duration
 
 		// MaxBufferSize is used for preventing DOS.
-		// This is the equivalent of maxHTTPBufferSize.
+		// This is the equivalent of `maxHTTPBufferSize` in original Engine.IO.
 		MaxBufferSize        int
 		DisableMaxBufferSize bool
+
+		// For accepting WebTransport connections
+		WebTransportServer *_webtransport.Server
 
 		// Custom WebSocket options to use.
 		WebSocketAcceptOptions *websocket.AcceptOptions
@@ -60,17 +65,17 @@ type (
 		maxBufferSize        int
 		disableMaxBufferSize bool
 
+		webTransportServer *_webtransport.Server
+
 		wsAcceptOptions *websocket.AcceptOptions
 
 		onSocket NewSocketCallback
 		onError  ErrorCallback
-
-		store *socketStore
+		store    *socketStore
 
 		closed    chan struct{}
 		closeOnce sync.Once
-
-		debug Debugger
+		debug     Debugger
 	}
 )
 
@@ -92,6 +97,8 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 
 		maxBufferSize:        config.MaxBufferSize,
 		disableMaxBufferSize: config.DisableMaxBufferSize,
+
+		webTransportServer: config.WebTransportServer,
 
 		wsAcceptOptions: config.WebSocketAcceptOptions,
 
@@ -174,15 +181,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 
-	version, err := strconv.Atoi(q.Get("EIO"))
-	if err != nil {
-		writeServerError(w, ErrorUnsupportedProtocolVersion)
-		return
-	}
-
-	if version != ProtocolVersion {
-		writeServerError(w, ErrorUnsupportedProtocolVersion)
-		return
+	// Skip protocol version check for WebTransport
+	if r.ProtoMajor != 3 {
+		version, err := strconv.Atoi(q.Get("EIO"))
+		if err != nil {
+			writeServerError(w, ErrorUnsupportedProtocolVersion)
+			return
+		}
+		if version != ProtocolVersion {
+			writeServerError(w, ErrorUnsupportedProtocolVersion)
+			return
+		}
 	}
 
 	sid := q.Get("sid")
@@ -208,8 +217,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	q := r.URL.Query()
+	n := q.Get("transport")
+	supportsBinary := q.Get("b64") == ""
+
+	if r.Method != "GET" && r.ProtoMajor != 3 {
 		writeServerError(w, ErrorBadHandshakeMethod)
+		return
+	} else if r.Method == "CONNECT" && r.ProtoMajor == 3 && n == "" {
+		s.onWebTransport(w, r)
 		return
 	}
 
@@ -219,10 +235,6 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q := r.URL.Query()
-	n := q.Get("transport")
-	supportsBinary := q.Get("b64") == ""
-
 	sid, err := s.generateSID()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -230,33 +242,24 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newHandshakePacket := func(upgrades []string) (*parser.Packet, error) {
-		data, err := json.Marshal(&parser.HandshakeResponse{
-			SID:          sid,
-			Upgrades:     upgrades,
-			PingInterval: int64(s.pingInterval / time.Millisecond),
-			PingTimeout:  int64(s.pingTimeout / time.Millisecond),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		return parser.NewPacket(parser.PacketTypeOpen, false, data)
-	}
-
 	var (
 		t        ServerTransport
 		upgrades []string
+		c        = transport.NewCallbacks()
 	)
-
-	c := transport.NewCallbacks()
 
 	switch n {
 	case "polling":
 		t = polling.NewServerTransport(c, s.maxBufferSize, s.PollTimeout())
 		upgrades = []string{"websocket"}
+		if s.webTransportServer != nil {
+			upgrades = append(upgrades, "webtransport")
+		}
 	case "websocket":
 		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
+		if s.webTransportServer != nil {
+			upgrades = []string{"webtransport"}
+		}
 	default:
 		writeServerError(w, ErrorUnknownTransport)
 		return
@@ -264,33 +267,104 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 
 	s.debug.Log("Transport is set to", n)
 
-	handshakePacket, err := newHandshakePacket(upgrades)
+	handshakePacket, err := s.newHandshakePacket(sid, upgrades)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		s.onError(wrapInternalError(fmt.Errorf("newHandshakePacket failed: %w", err)))
 		return
 	}
-
-	err = t.Handshake(handshakePacket, w, r)
+	_, err = t.Handshake(handshakePacket, w, r)
 	if err != nil {
 		s.debug.Log("Handshake error", err)
 		return
 	}
 
+	socket := s.newSocket(w, sid, upgrades, c, t)
+	if socket == nil {
+		return
+	}
+
+	t.PostHandshake(nil)
+}
+
+func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
+	if s.webTransportServer == nil {
+		writeServerError(w, ErrorUnknownTransport)
+		return
+	}
+	c := transport.NewCallbacks()
+	t := webtransport.NewServerTransport(c, s.maxBufferSize, s.webTransportServer)
+
+	sid, err := t.Handshake(nil, w, r)
+	if err != nil {
+		s.debug.Log("Handshake error", err)
+		return
+	}
+
+	if sid == "" {
+		sid, err = s.generateSID()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			s.onError(err)
+			return
+		}
+
+		socket := s.newSocket(w, sid, nil, c, t)
+		if socket == nil {
+			return
+		}
+
+		handshakePacket, err := s.newHandshakePacket(sid, nil)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			s.onError(wrapInternalError(fmt.Errorf("newHandshakePacket failed: %w", err)))
+			return
+		}
+		t.PostHandshake(handshakePacket)
+	} else {
+		socket, ok := s.store.get(sid)
+		if !ok {
+			writeServerError(w, ErrorUnknownSID)
+			return
+		}
+
+		if socket.Transport().Name() == "webtransport" {
+			s.debug.Log("already upgraded to webtransport")
+			t.Close()
+		} else {
+			s.maybeUpgrade(w, r, socket, "webtransport")
+		}
+	}
+}
+
+func (s *Server) newSocket(w http.ResponseWriter, sid string, upgrades []string, c *transport.Callbacks, t ServerTransport) *serverSocket {
 	socket := newServerSocket(sid, upgrades, t, c, s.pingInterval, s.pingTimeout, s.debug, s.store.delete)
 
 	callbacks := s.onSocket(socket)
 	socket.setCallbacks(callbacks)
 
-	ok = s.store.set(sid, socket)
+	ok := s.store.set(sid, socket)
 	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
-		s.onError(wrapInternalError(fmt.Errorf("sid's overlap")))
+		err := fmt.Errorf("sid's overlap")
+		s.onError(wrapInternalError(err))
 		socket.close(ReasonTransportError, err)
-		return
+		return nil
 	}
+	return socket
+}
 
-	t.PostHandshake()
+func (s *Server) newHandshakePacket(sid string, upgrades []string) (*parser.Packet, error) {
+	data, err := json.Marshal(&parser.HandshakeResponse{
+		SID:          sid,
+		Upgrades:     upgrades,
+		PingInterval: int64(s.pingInterval / time.Millisecond),
+		PingTimeout:  int64(s.pingTimeout / time.Millisecond),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return parser.NewPacket(parser.PacketTypeOpen, false, data)
 }
 
 func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *serverSocket, upgradeTo string) {
@@ -308,7 +382,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 	done := make(chan struct{})
 	once := new(sync.Once)
 
-	err := t.Handshake(nil, w, r)
+	_, err := t.Handshake(nil, w, r)
 	if err != nil {
 		s.debug.Log("Handshake error", err)
 		return
@@ -358,7 +432,7 @@ func (s *Server) maybeUpgrade(w http.ResponseWriter, r *http.Request, socket *se
 		}
 	}, nil)
 
-	t.PostHandshake()
+	t.PostHandshake(nil)
 }
 
 func (s *Server) IsClosed() bool {

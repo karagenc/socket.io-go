@@ -13,11 +13,15 @@ type (
 
 		// handshakePacket can be nil. Do a nil check.
 		// onPacket callback must not be called in this method.
-		Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error
+		//
+		// Handshake packet will either be sent via `Handshake` or `PostHandshake` but not both.
+		Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) (sid string, err error)
 
 		// This method is for handling an open connection (such as websocket.Conn) without closing the handshake request.
 		// Currently this is only used by the websocket transport.
-		PostHandshake()
+		//
+		// Handshake packet will either be sent via `Handshake` or `PostHandshake` but not both.
+		PostHandshake(handshakePacket *parser.Packet)
 
 		// If the transport supports handling HTTP requests (after the handshake is completely done) make use of this method.
 		// Otherwise, just reply with 400 (Bad request).

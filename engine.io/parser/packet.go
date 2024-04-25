@@ -119,6 +119,15 @@ func Decode(r io.Reader, binaryFrame bool) (*Packet, error) {
 	return decode(buf, binaryFrame)
 }
 
+func DecodeWithLen(r io.Reader, binaryFrame bool, len int) (*Packet, error) {
+	buf := make([]byte, len)
+	_, err := io.ReadFull(r, buf)
+	if err != nil {
+		return nil, err
+	}
+	return decode(buf, binaryFrame)
+}
+
 func decode(data []byte, binaryFrame bool) (*Packet, error) {
 	packet := new(Packet)
 

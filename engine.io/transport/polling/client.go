@@ -40,11 +40,9 @@ func NewClientTransport(
 		protocolVersion: protocolVersion,
 		url:             &url,
 		requestHeader:   requestHeader,
-
-		httpClient: httpClient,
-
-		callbacks: callbacks,
-		pollExit:  make(chan any),
+		httpClient:      httpClient,
+		callbacks:       callbacks,
+		pollExit:        make(chan any),
 	}
 }
 

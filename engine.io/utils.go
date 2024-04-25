@@ -125,13 +125,9 @@ func (s *TestSocket) PingTimeout() time.Duration  { return defaultPingTimeout }
 // Name of the current transport
 func (s *TestSocket) TransportName() string { return "polling" }
 
-func (s *TestSocket) Send(packets ...*parser.Packet) {
-	s.SendFunc(packets...)
-}
+func (s *TestSocket) Send(packets ...*parser.Packet) { s.SendFunc(packets...) }
 
-func (s *TestSocket) Close() {
-	s.Closed = true
-}
+func (s *TestSocket) Close() { s.Closed = true }
 
 type testServerTransport struct {
 	callbacks *transport.Callbacks
@@ -140,24 +136,22 @@ type testServerTransport struct {
 var _ ServerTransport = newTestServerTransport()
 
 func newTestServerTransport() *testServerTransport {
-	return &testServerTransport{
-		callbacks: transport.NewCallbacks(),
-	}
+	return &testServerTransport{callbacks: transport.NewCallbacks()}
 }
 
-func (t *testServerTransport) Name() string {
-	return "fake"
+func (t *testServerTransport) Name() string { return "fake" }
+
+func (t *testServerTransport) Handshake(
+	_ *parser.Packet,
+	w http.ResponseWriter,
+	r *http.Request,
+) (string, error) {
+	return "", nil
 }
 
-func (t *testServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
+func (t *testServerTransport) Callbacks() *transport.Callbacks { return t.callbacks }
 
-func (t *testServerTransport) Callbacks() *transport.Callbacks {
-	return t.callbacks
-}
-
-func (t *testServerTransport) PostHandshake() {}
+func (t *testServerTransport) PostHandshake(handshakePacket *parser.Packet) {}
 
 func (t *testServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
 

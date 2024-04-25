@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/quic-go/webtransport-go"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
 	"nhooyr.io/websocket"
 )
@@ -24,7 +25,7 @@ type ClientConfig struct {
 
 	// This is a special data type to concurrently
 	// store the additional HTTP request headers to use.
-	// Values can be retrieved and changed any time with Get, Set, Del methods.
+	// Values can be retrieved and changed at any time with Get, Set, Del methods.
 	// Create this with transport.NewRequestHeader function.
 	RequestHeader *transport.RequestHeader
 
@@ -34,7 +35,10 @@ type ClientConfig struct {
 	// If not, it is the user's responsibility to set a proper timeout so when polling takes too long, we don't fail.
 	HTTPTransport http.RoundTripper
 
-	// Custom WebSocket dialer to use.
+	// Custom WebTransport dialer to use
+	WebTransportDialer *webtransport.Dialer
+
+	// Custom WebSocket dialer to use
 	WebSocketDialOptions *websocket.DialOptions
 
 	// For debugging purposes. Leave it nil if it is of no use.
@@ -82,6 +86,12 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 
 	if socket.upgradeDone == nil {
 		socket.upgradeDone = func(transportName string) {}
+	}
+
+	if config.WebTransportDialer != nil {
+		socket.webTransportDialer = config.WebTransportDialer
+	} else {
+		socket.webTransportDialer = &webtransport.Dialer{}
 	}
 
 	if config.WebSocketDialOptions != nil {

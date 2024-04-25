@@ -8,12 +8,14 @@ import (
 
 	"github.com/tomruk/socket.io-go/internal/sync"
 
-	"nhooyr.io/websocket"
+	_webtransport "github.com/quic-go/webtransport-go"
+	_websocket "nhooyr.io/websocket"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
-	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
+	"github.com/tomruk/socket.io-go/engine.io/transport/websocket"
+	"github.com/tomruk/socket.io-go/engine.io/transport/webtransport"
 )
 
 type clientSocket struct {
@@ -31,8 +33,11 @@ type clientSocket struct {
 	// HTTP headers to use on transports.
 	requestHeader *transport.RequestHeader
 
-	// WebSocket dialer to use on transports.
-	wsDialOptions *websocket.DialOptions
+	// WebTransport dialer to use on transports
+	webTransportDialer *_webtransport.Dialer
+
+	// WebSocket dialer to use on transports
+	wsDialOptions *_websocket.DialOptions
 
 	// These are set after the handshake.
 	sid          string
@@ -60,15 +65,6 @@ func (s *clientSocket) connect(transports []string) (err error) {
 		c := transport.NewCallbacks()
 
 		switch name {
-		case "websocket":
-			s.transport = _websocket.NewClientTransport(
-				c,
-				"",
-				ProtocolVersion,
-				*s.url,
-				s.requestHeader,
-				s.wsDialOptions,
-			)
 		case "polling":
 			s.transport = polling.NewClientTransport(
 				c,
@@ -76,6 +72,24 @@ func (s *clientSocket) connect(transports []string) (err error) {
 				*s.url,
 				s.requestHeader,
 				s.httpClient,
+			)
+		case "websocket":
+			s.transport = websocket.NewClientTransport(
+				c,
+				"",
+				ProtocolVersion,
+				*s.url,
+				s.requestHeader,
+				s.wsDialOptions,
+			)
+		case "webtransport":
+			s.transport = webtransport.NewClientTransport(
+				c,
+				"",
+				ProtocolVersion,
+				*s.url,
+				s.requestHeader,
+				s.webTransportDialer,
 			)
 		default:
 			err = fmt.Errorf("eio: invalid transport name: %s", name)
@@ -158,7 +172,7 @@ func (s *clientSocket) maybeUpgrade(transports []string, upgrades []string) {
 	s.debug.Log("maybeUpgrade", "upgrading")
 
 	c := transport.NewCallbacks()
-	t := _websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
+	t := websocket.NewClientTransport(c, s.sid, ProtocolVersion, *s.url, s.requestHeader, s.wsDialOptions)
 	done := make(chan struct{})
 	once := new(sync.Once)
 

@@ -29,11 +29,9 @@ type ServerTransport struct {
 func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, pollTimeout time.Duration) *ServerTransport {
 	return &ServerTransport{
 		maxHTTPBufferSize: int64(maxBufferSize),
-
-		pq:          newPollQueue(),
-		pollTimeout: pollTimeout,
-
-		callbacks: callbacks,
+		pq:                newPollQueue(),
+		pollTimeout:       pollTimeout,
+		callbacks:         callbacks,
 	}
 }
 
@@ -47,15 +45,16 @@ func (t *ServerTransport) QueuedPackets() []*parser.Packet {
 	return t.pq.get()
 }
 
-func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) error {
+func (t *ServerTransport) Handshake(handshakePacket *parser.Packet, w http.ResponseWriter, r *http.Request) (sid string, err error) {
 	if handshakePacket != nil {
 		t.Send(handshakePacket)
 	}
 	t.ServeHTTP(w, r)
-	return nil
+	// sid is only for webtransport
+	return "", nil
 }
 
-func (t *ServerTransport) PostHandshake() {
+func (t *ServerTransport) PostHandshake(_ *parser.Packet) {
 	// Only for websocket. Do nothing.
 }
 
