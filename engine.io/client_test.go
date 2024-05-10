@@ -3,6 +3,7 @@ package eio
 import (
 	"bytes"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -10,8 +11,14 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
-func testDial(t *testing.T, rawURL string, callbacks *Callbacks, config *ClientConfig) *clientSocket {
-	s, err := Dial(rawURL, callbacks, config)
+	if config == nil {
+		config = new(ClientConfig)
+	}
+	enablePrintDebugger := os.Getenv("DEBUGGER_PRINT") == "yes"
+	if enablePrintDebugger {
+		config.Debugger = NewPrintDebugger()
+	}
+	s, err := dial(rawURL, callbacks, config, options.testWaitUpgrade)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +117,7 @@ func testSendReceive(t *testing.T, transports []string) {
 		return callbacks
 	}
 
-	io := NewServer(onSocket, nil)
+	io := newTestServer(onSocket, nil)
 	err := io.Run()
 	if err != nil {
 		t.Fatal(err)
@@ -163,7 +170,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := NewServer(onSocket, nil)
+		io := newTestServer(onSocket, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -184,7 +191,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := NewServer(onSocket, nil)
+		io := newTestServer(onSocket, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -206,7 +213,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := NewServer(onSocket, nil)
+		io := newTestServer(onSocket, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -227,7 +234,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := NewServer(onSocket, nil)
+		io := newTestServer(onSocket, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -257,7 +264,7 @@ func TestClient(t *testing.T) {
 			require.Equal(t, pingTimeout, socket.PingTimeout())
 			return nil
 		}
-		io := NewServer(onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout})
+		io := newTestServer(onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout})
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -274,7 +281,7 @@ func TestClient(t *testing.T) {
 	t.Run("should upgrade", func(t *testing.T) {
 		tw := NewTestWaiter(1)
 
-		io := NewServer(nil, nil)
+		io := newTestServer(nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)

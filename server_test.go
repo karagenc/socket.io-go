@@ -122,7 +122,7 @@ func newTestServerAndClient(
 	httpServer *httptest.Server,
 	manager *Manager,
 ) {
-	enablePrintDebugger := os.Getenv("SIO_DEBUGGER_PRINT") == "yes"
+	enablePrintDebugger := os.Getenv("DEBUGGER_PRINT") == "yes"
 
 	if serverConfig == nil {
 		serverConfig = new(ServerConfig)

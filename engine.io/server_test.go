@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -31,7 +32,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail with invalid Engine.IO version", func(t *testing.T) {
-		io := NewServer(nil, nil)
+		io := newTestServer(nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -59,7 +60,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail with unknown transport name", func(t *testing.T) {
-		io := NewServer(nil, nil)
+		io := newTestServer(nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -88,7 +89,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail with unknown SID", func(t *testing.T) {
-		io := NewServer(nil, nil)
+		io := newTestServer(nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -118,7 +119,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail when request is made with an invalid method", func(t *testing.T) {
-		io := NewServer(nil, nil)
+		io := newTestServer(nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -152,7 +153,7 @@ func TestServer(t *testing.T) {
 			return false
 		}
 
-		io := NewServer(nil, &ServerConfig{
+		io := newTestServer(nil, &ServerConfig{
 			Authenticator: authenticator,
 		})
 		err := io.Run()
@@ -189,7 +190,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := NewServer(onSocket, &ServerConfig{
+		io := newTestServer(onSocket, &ServerConfig{
 			MaxBufferSize: 5,
 		})
 		err := io.Run()
@@ -240,7 +241,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := NewServer(onSocket, &ServerConfig{
+		io := newTestServer(onSocket, &ServerConfig{
 			MaxBufferSize:        5,
 			DisableMaxBufferSize: true,
 		})
@@ -282,7 +283,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := NewServer(onSocket, &ServerConfig{
+		io := newTestServer(onSocket, &ServerConfig{
 			MaxBufferSize:        5,
 			DisableMaxBufferSize: true,
 		})
@@ -339,7 +340,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := NewServer(onSocket, &ServerConfig{
+		io := newTestServer(onSocket, &ServerConfig{
 			PingInterval: pingInterval,
 			PingTimeout:  pingTimeout,
 		})
@@ -545,7 +546,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := NewServer(onSocket, nil)
+		io := newTestServer(onSocket, nil)
 
 		err := io.Run()
 		if err != nil {
@@ -614,4 +615,15 @@ func TestServer(t *testing.T) {
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 	})
+}
+
+func newTestServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
+	if config == nil {
+		config = new(ServerConfig)
+	}
+	enablePrintDebugger := os.Getenv("DEBUGGER_PRINT") == "yes"
+	if enablePrintDebugger {
+		config.Debugger = NewPrintDebugger()
+	}
+	return NewServer(onSocket, config)
 }

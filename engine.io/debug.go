@@ -2,9 +2,11 @@ package eio
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/xiegeo/coloredgoroutine"
 )
 
 type (
@@ -17,6 +19,7 @@ type (
 	noopDebugger struct{}
 
 	printDebugger struct {
+		stdout         io.Writer
 		context        string
 		dynamicContext func() string
 	}
@@ -33,7 +36,7 @@ func (d noopDebugger) WithContext(context string) Debugger { return d }
 func (d noopDebugger) WithDynamicContext(context string, _ func() string) Debugger { return d }
 
 func NewPrintDebugger() Debugger {
-	return new(printDebugger)
+	return &printDebugger{stdout: coloredgoroutine.Colors(os.Stdout)}
 }
 
 var printMu sync.Mutex
@@ -49,32 +52,32 @@ func (d *printDebugger) Log(main string, _v ...any) {
 	}
 
 	if len(d.context) != 0 {
-		fmt.Print(d.context)
+		fmt.Fprint(d.stdout, d.context)
 		if len(dynamicContext) != 0 || len(main) != 0 || len(_v) != 0 {
-			fmt.Print(": ")
+			fmt.Fprint(d.stdout, ": ")
 		}
 	}
 	if len(dynamicContext) != 0 {
-		fmt.Print(dynamicContext)
+		fmt.Fprint(d.stdout, dynamicContext)
 		if len(main) != 0 || len(_v) != 0 {
-			fmt.Print(": ")
+			fmt.Fprint(d.stdout, ": ")
 		}
 	}
 	if len(main) != 0 {
-		fmt.Print(main)
+		fmt.Fprint(d.stdout, main)
 		if len(_v) != 0 {
-			fmt.Print(": ")
+			fmt.Fprint(d.stdout, ": ")
 		}
 	}
 
 	for i, v := range _v {
 		if i != 0 {
-			fmt.Print(": ")
+			fmt.Fprint(d.stdout, ": ")
 		}
-		fmt.Print(v)
+		fmt.Fprint(d.stdout, v)
 	}
 
-	fmt.Print("\n")
+	fmt.Fprint(d.stdout, "\n")
 	os.Stdout.Sync()
 }
 
