@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
 	})
 
-	t.Run("should connect to a new namespace after connection gets closed", func(t *testing.T) {
+	t.Run("should be able to connect to a new namespace after connection gets closed", func(t *testing.T) {
 		_, _, manager := newTestServerAndClient(
 			t,
 			&ServerConfig{
@@ -72,6 +73,7 @@ func TestClient(t *testing.T) {
 		)
 		socket := manager.Socket("/", nil)
 		tw := newTestWaiter(1)
+		done := sync.OnceFunc(func() { tw.Done() })
 
 		socket.OnConnect(func() {
 			t.Log("/ connected")
@@ -82,7 +84,7 @@ func TestClient(t *testing.T) {
 			asdf := manager.Socket("/asdf", nil)
 			asdf.OnConnect(func() {
 				t.Log("/asdf connected")
-				tw.Done()
+				done()
 			})
 			t.Log("/asdf is connecting")
 			asdf.Connect()
