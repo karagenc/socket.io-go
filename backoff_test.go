@@ -40,7 +40,7 @@ func testBackoffDuration(t *testing.T, b *backoff) {
 	var last time.Duration
 	for i := 0; i < 1000; i++ {
 		d := b.duration()
-		t.Logf("Duration: %s", d)
+		//t.Logf("Duration: %s", d)
 		if d < last {
 			t.Fatalf("d should be higher than the last value: d: %d, last: %d", d.Milliseconds(), last.Milliseconds())
 		}
