@@ -73,13 +73,18 @@ type (
 		onError  ErrorCallback
 		store    *socketStore
 
-		closed    chan struct{}
-		closeOnce sync.Once
-		debug     Debugger
+		closed          chan struct{}
+		closeOnce       sync.Once
+		debug           Debugger
+		testWaitUpgrade bool
 	}
 )
 
 func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
+	return newServer(onSocket, config, false)
+}
+
+func newServer(onSocket NewSocketCallback, config *ServerConfig, testWaitUpgrade bool) *Server {
 	if onSocket == nil {
 		onSocket = func(socket ServerSocket) *Callbacks { return nil }
 	}
@@ -107,7 +112,8 @@ func NewServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 
 		store: newSocketStore(),
 
-		closed: make(chan struct{}),
+		closed:          make(chan struct{}),
+		testWaitUpgrade: testWaitUpgrade,
 	}
 
 	if s.authenticator == nil {
@@ -418,11 +424,13 @@ func (s *Server) maybeUpgrade(
 		}
 	}
 
-	c.Set(func(packets ...*parser.Packet) {
-		for _, packet := range packets {
-			onPacket(packet)
-		}
-	}, nil)
+	if !s.testWaitUpgrade {
+		c.Set(func(packets ...*parser.Packet) {
+			for _, packet := range packets {
+				onPacket(packet)
+			}
+		}, nil)
+	}
 
 	switch upgradeTo {
 	case "websocket":
@@ -432,6 +440,9 @@ func (s *Server) maybeUpgrade(
 			s.debug.Log("Handshake error", err)
 			t.Close()
 			return
+		}
+		if s.testWaitUpgrade {
+			time.Sleep(1001 * time.Millisecond)
 		}
 	case "webtransport":
 		if t == nil {
@@ -443,6 +454,14 @@ func (s *Server) maybeUpgrade(
 		s.debug.Log("Invalid upgradeTo", upgradeTo)
 		writeServerError(w, ErrorBadRequest)
 		return
+	}
+
+	if s.testWaitUpgrade {
+		c.Set(func(packets ...*parser.Packet) {
+			for _, packet := range packets {
+				onPacket(packet)
+			}
+		}, nil)
 	}
 
 	go func() {

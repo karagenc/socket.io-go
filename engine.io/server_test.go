@@ -39,7 +39,7 @@ func TestServer(t *testing.T) {
 
 		io := newTestServer(onSocket, &ServerConfig{
 			UpgradeTimeout: 1 * time.Second,
-		})
+		}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -61,22 +61,19 @@ func TestServer(t *testing.T) {
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 	})
 
-	t.Run("map key of `serverErrors` should be incremental and should be equal to error code", func(t *testing.T) {
-		i := 0
+	t.Run("map key of `serverErrors` should be equal to error code", func(t *testing.T) {
 		for j, e1 := range serverErrors {
-			require.Equal(t, i, j)
 			e2, ok := serverErrors[j]
 			if !ok {
 				t.Fatal("serverErrors[j] should be set")
 			}
 			require.Equal(t, e1, e2)
 			require.Equal(t, j, e1.Code)
-			i++
 		}
 	})
 
 	t.Run("should fail with invalid Engine.IO version", func(t *testing.T) {
-		io := newTestServer(nil, nil)
+		io := newTestServer(nil, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -104,7 +101,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail with unknown transport name", func(t *testing.T) {
-		io := newTestServer(nil, nil)
+		io := newTestServer(nil, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -133,7 +130,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail with unknown SID", func(t *testing.T) {
-		io := newTestServer(nil, nil)
+		io := newTestServer(nil, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -163,7 +160,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail when request is made with an invalid method", func(t *testing.T) {
-		io := newTestServer(nil, nil)
+		io := newTestServer(nil, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -199,7 +196,7 @@ func TestServer(t *testing.T) {
 
 		io := newTestServer(nil, &ServerConfig{
 			Authenticator: authenticator,
-		})
+		}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -236,7 +233,7 @@ func TestServer(t *testing.T) {
 
 		io := newTestServer(onSocket, &ServerConfig{
 			MaxBufferSize: 5,
-		})
+		}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -288,7 +285,7 @@ func TestServer(t *testing.T) {
 		io := newTestServer(onSocket, &ServerConfig{
 			MaxBufferSize:        5,
 			DisableMaxBufferSize: true,
-		})
+		}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -330,7 +327,7 @@ func TestServer(t *testing.T) {
 		io := newTestServer(onSocket, &ServerConfig{
 			MaxBufferSize:        5,
 			DisableMaxBufferSize: true,
-		})
+		}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -387,7 +384,7 @@ func TestServer(t *testing.T) {
 		io := newTestServer(onSocket, &ServerConfig{
 			PingInterval: pingInterval,
 			PingTimeout:  pingTimeout,
-		})
+		}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -590,7 +587,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, nil)
+		io := newTestServer(onSocket, nil, nil)
 
 		err := io.Run()
 		if err != nil {
@@ -661,13 +658,20 @@ func TestServer(t *testing.T) {
 	})
 }
 
-func newTestServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
+type testServerOptions struct {
+	testWaitUpgrade bool
+}
+
+func newTestServer(onSocket NewSocketCallback, config *ServerConfig, options *testServerOptions) *Server {
 	if config == nil {
 		config = new(ServerConfig)
+	}
+	if options == nil {
+		options = new(testServerOptions)
 	}
 	enablePrintDebugger := os.Getenv("EIO_DEBUGGER_PRINT") == "1"
 	if enablePrintDebugger {
 		config.Debugger = NewPrintDebugger()
 	}
-	return NewServer(onSocket, config)
+	return newServer(onSocket, config, options.testWaitUpgrade)
 }

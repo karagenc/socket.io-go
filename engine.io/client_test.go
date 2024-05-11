@@ -125,7 +125,7 @@ func testSendReceive(t *testing.T, transports []string) {
 		return callbacks
 	}
 
-	io := newTestServer(onSocket, nil)
+	io := newTestServer(onSocket, nil, nil)
 	err := io.Run()
 	if err != nil {
 		t.Fatal(err)
@@ -171,14 +171,14 @@ func TestCommon(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	t.Run("should emit error if `upgradeTimeout` is set and is exceeded", func(t *testing.T) {
-		tw := NewTestWaiter(2) // Wait for the server, client, and onPacket.
+	t.Run("should emit error if `UpgradeTimeout` is set and is exceeded", func(t *testing.T) {
+		tw := NewTestWaiter(2)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
 				OnPacket: func(packets ...*parser.Packet) {
 					defer tw.Done()
-					// Receive packet as normal while upgrading
+					// Receive packet as normal while upgrading.
 					require.Equal(t, 1, len(packets))
 					packet := packets[0]
 					require.Equal(t, packet.Type, parser.PacketTypeMessage)
@@ -187,7 +187,9 @@ func TestClient(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, nil)
+		io := newTestServer(onSocket, nil, &testServerOptions{
+			testWaitUpgrade: true,
+		})
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -200,15 +202,12 @@ func TestClient(t *testing.T) {
 				require.True(t, errors.Is(err, errUpgradeTimeoutExceeded))
 			},
 		}
-
 		socket := testDial(t, s.URL, callbacks, &ClientConfig{
 			UpgradeDone: func(transportName string) {
 				t.Fatalf("transport upgraded to: %s", transportName)
 			},
-			UpgradeTimeout: 1 * time.Second,
-		}, &testDialOptions{
-			testWaitUpgrade: true,
-		})
+			UpgradeTimeout: 10 * time.Millisecond,
+		}, nil)
 		require.Equal(t, "polling", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
@@ -224,7 +223,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil)
+		io := newTestServer(onSocket, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -245,7 +244,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil)
+		io := newTestServer(onSocket, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -267,7 +266,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil)
+		io := newTestServer(onSocket, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -288,7 +287,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil)
+		io := newTestServer(onSocket, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -318,7 +317,7 @@ func TestClient(t *testing.T) {
 			require.Equal(t, pingTimeout, socket.PingTimeout())
 			return nil
 		}
-		io := newTestServer(onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout})
+		io := newTestServer(onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout}, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
@@ -335,7 +334,7 @@ func TestClient(t *testing.T) {
 	t.Run("should upgrade", func(t *testing.T) {
 		tw := NewTestWaiter(1)
 
-		io := newTestServer(nil, nil)
+		io := newTestServer(nil, nil, nil)
 		err := io.Run()
 		if err != nil {
 			t.Fatal(err)
