@@ -1,4 +1,4 @@
-//go:build deadlock
+//go:build sio_deadlock
 
 package sync
 

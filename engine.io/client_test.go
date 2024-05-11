@@ -14,8 +14,7 @@ import (
 	if config == nil {
 		config = new(ClientConfig)
 	}
-	enablePrintDebugger := os.Getenv("DEBUGGER_PRINT") == "yes"
-	if enablePrintDebugger {
+	if os.Getenv("EIO_DEBUGGER_PRINT") == "1" {
 		config.Debugger = NewPrintDebugger()
 	}
 	s, err := dial(rawURL, callbacks, config, options.testWaitUpgrade)

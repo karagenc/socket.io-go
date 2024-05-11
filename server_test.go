@@ -122,13 +122,16 @@ func newTestServerAndClient(
 	httpServer *httptest.Server,
 	manager *Manager,
 ) {
-	enablePrintDebugger := os.Getenv("DEBUGGER_PRINT") == "yes"
+	enablePrintDebugger := os.Getenv("SIO_DEBUGGER_PRINT") == "1"
+	enablePrintDebuggerEIO := os.Getenv("EIO_DEBUGGER_PRINT") == "1"
 
 	if serverConfig == nil {
 		serverConfig = new(ServerConfig)
 	}
 	if enablePrintDebugger {
 		serverConfig.Debugger = NewPrintDebugger()
+	}
+	if enablePrintDebuggerEIO {
 		serverConfig.EIO.Debugger = NewPrintDebugger()
 	}
 	serverConfig.EIO.WebSocketAcceptOptions = &websocket.AcceptOptions{
@@ -140,6 +143,8 @@ func newTestServerAndClient(
 	}
 	if enablePrintDebugger {
 		managerConfig.Debugger = NewPrintDebugger()
+	}
+	if enablePrintDebuggerEIO {
 		managerConfig.EIO.Debugger = NewPrintDebugger()
 	}
 	managerConfig.EIO.WebSocketDialOptions = &websocket.DialOptions{

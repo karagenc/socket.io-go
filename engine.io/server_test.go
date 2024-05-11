@@ -621,7 +621,7 @@ func newTestServer(onSocket NewSocketCallback, config *ServerConfig) *Server {
 	if config == nil {
 		config = new(ServerConfig)
 	}
-	enablePrintDebugger := os.Getenv("DEBUGGER_PRINT") == "yes"
+	enablePrintDebugger := os.Getenv("EIO_DEBUGGER_PRINT") == "1"
 	if enablePrintDebugger {
 		config.Debugger = NewPrintDebugger()
 	}
