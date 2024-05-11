@@ -46,6 +46,10 @@ type ClientConfig struct {
 }
 
 func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSocket, error) {
+	return dial(rawURL, callbacks, config, false)
+}
+
+func dial(rawURL string, callbacks *Callbacks, config *ClientConfig, testWaitUpgrade bool) (ClientSocket, error) {
 	if callbacks == nil {
 		callbacks = new(Callbacks)
 	}
@@ -65,6 +69,8 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 
 		pingChan:  make(chan struct{}, 1),
 		closeChan: make(chan struct{}),
+
+		testWaitUpgrade: testWaitUpgrade,
 	}
 
 	if config.RequestHeader != nil {
@@ -96,6 +102,8 @@ func Dial(rawURL string, callbacks *Callbacks, config *ClientConfig) (ClientSock
 
 	if config.WebSocketDialOptions != nil {
 		socket.wsDialOptions = config.WebSocketDialOptions
+	} else {
+		socket.wsDialOptions = &websocket.DialOptions{}
 	}
 
 	if config.Debugger != nil {

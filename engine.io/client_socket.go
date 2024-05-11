@@ -18,6 +18,8 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/transport/webtransport"
 )
 
+var errUpgradeTimeoutExceeded = fmt.Errorf("upgradeTimeout exceeded")
+
 type clientSocket struct {
 	transport   ClientTransport
 	transportMu sync.RWMutex
@@ -52,7 +54,8 @@ type clientSocket struct {
 	closeChan chan struct{}
 	closeOnce sync.Once
 
-	debug Debugger
+	testWaitUpgrade bool
+	debug           Debugger
 }
 
 func (s *clientSocket) connect(transports []string) (err error) {
@@ -235,6 +238,9 @@ func (s *clientSocket) tryUpgradeTo(t ClientTransport, c *transport.Callbacks) (
 		s.onError(fmt.Errorf("eio: upgrade failed: %w", err))
 		return
 	}
+	if s.testWaitUpgrade {
+		time.Sleep(1001 * time.Millisecond)
+	}
 	go t.Run()
 
 	ping, err := parser.NewPacket(parser.PacketTypePing, false, []byte("probe"))
@@ -251,7 +257,7 @@ func (s *clientSocket) tryUpgradeTo(t ClientTransport, c *transport.Callbacks) (
 		return true
 	case <-time.After(s.upgradeTimeout):
 		t.Close()
-		s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
+		s.onError(fmt.Errorf("eio: upgrade failed: %w", errUpgradeTimeoutExceeded))
 		return false
 	}
 }

@@ -2,6 +2,7 @@ package eio
 
 import (
 	"bytes"
+	"errors"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -11,6 +12,14 @@ import (
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
+type testDialOptions struct {
+	testWaitUpgrade bool
+}
+
+func testDial(t *testing.T, rawURL string, callbacks *Callbacks, config *ClientConfig, options *testDialOptions) *clientSocket {
+	if options == nil {
+		options = new(testDialOptions)
+	}
 	if config == nil {
 		config = new(ClientConfig)
 	}
@@ -141,7 +150,7 @@ func testSendReceive(t *testing.T, transports []string) {
 		},
 	}
 
-	socket := testDial(t, s.URL, callbacks, &ClientConfig{Transports: transports})
+	socket := testDial(t, s.URL, callbacks, &ClientConfig{Transports: transports}, nil)
 	send(socket)
 
 	tw.WaitTimeout(t, DefaultTestWaitTimeout)
@@ -162,6 +171,52 @@ func TestCommon(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
+	t.Run("should emit error if `upgradeTimeout` is set and is exceeded", func(t *testing.T) {
+		tw := NewTestWaiter(2) // Wait for the server, client, and onPacket.
+
+		onSocket := func(socket ServerSocket) *Callbacks {
+			return &Callbacks{
+				OnPacket: func(packets ...*parser.Packet) {
+					defer tw.Done()
+					// Receive packet as normal while upgrading
+					require.Equal(t, 1, len(packets))
+					packet := packets[0]
+					require.Equal(t, packet.Type, parser.PacketTypeMessage)
+					require.Equal(t, packet.Data, []byte("123456"))
+				},
+			}
+		}
+
+		io := newTestServer(onSocket, nil)
+		err := io.Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := httptest.NewServer(io)
+
+		callbacks := &Callbacks{
+			OnError: func(err error) {
+				defer tw.Done()
+				require.True(t, errors.Is(err, errUpgradeTimeoutExceeded))
+			},
+		}
+
+		socket := testDial(t, s.URL, callbacks, &ClientConfig{
+			UpgradeDone: func(transportName string) {
+				t.Fatalf("transport upgraded to: %s", transportName)
+			},
+			UpgradeTimeout: 1 * time.Second,
+		}, &testDialOptions{
+			testWaitUpgrade: true,
+		})
+		require.Equal(t, "polling", socket.TransportName())
+
+		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
+		socket.Send(packet)
+
+		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+	})
+
 	t.Run("`Close` should not block", func(t *testing.T) {
 		tw := NewTestWaiter(1)
 
@@ -176,7 +231,7 @@ func TestClient(t *testing.T) {
 		}
 		s := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"websocket"}})
+		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"websocket"}}, nil)
 		// This test is to check if the socket.Close is blocking.
 		socket.Close()
 
@@ -197,7 +252,7 @@ func TestClient(t *testing.T) {
 		}
 		s := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"websocket"}})
+		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"websocket"}}, nil)
 		socket.transportMu.Lock()
 		socket.transport.Discard()
 		socket.transportMu.Unlock()
@@ -219,7 +274,7 @@ func TestClient(t *testing.T) {
 		}
 		s := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"polling"}})
+		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"polling"}}, nil)
 		// This test is to check if the socket.Close is blocking.
 		socket.Close()
 
@@ -240,7 +295,7 @@ func TestClient(t *testing.T) {
 		}
 		s := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"polling"}})
+		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: []string{"polling"}}, nil)
 		// This test is to check if the socket.transport.Discard is blocking.
 		socket.transportMu.Lock()
 		socket.transport.Discard()
@@ -270,7 +325,7 @@ func TestClient(t *testing.T) {
 		}
 		s := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, nil)
+		socket := testDial(t, s.URL, nil, nil, nil)
 		require.Equal(t, pingInterval, socket.PingInterval())
 		require.Equal(t, pingTimeout, socket.PingTimeout())
 
@@ -296,7 +351,7 @@ func TestClient(t *testing.T) {
 			}
 		}
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone})
+		socket := testDial(t, s.URL, nil, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone}, nil)
 		upgrades := socket.Upgrades()
 		require.Equal(t, 1, len(upgrades))
 		require.Equal(t, "websocket", upgrades[0])

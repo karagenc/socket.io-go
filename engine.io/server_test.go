@@ -211,7 +211,7 @@ func TestServer(t *testing.T) {
 
 		socket := testDial(t, s.URL, callbacks, &ClientConfig{
 			Transports: []string{"polling"},
-		})
+		}, nil)
 
 		require.Equal(t, "polling", socket.TransportName())
 
@@ -253,7 +253,7 @@ func TestServer(t *testing.T) {
 		s := httptest.NewServer(io)
 		socket := testDial(t, s.URL, nil, &ClientConfig{
 			Transports: []string{"polling"},
-		})
+		}, nil)
 		require.Equal(t, "polling", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
@@ -295,7 +295,7 @@ func TestServer(t *testing.T) {
 
 		socket := testDial(t, s.URL, nil, &ClientConfig{
 			Transports: []string{"websocket"},
-		})
+		}, nil)
 		require.Equal(t, "websocket", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
@@ -586,7 +586,7 @@ func TestServer(t *testing.T) {
 				utw.Done()
 			}
 
-			testDial(t, s.URL, callbacks, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone})
+			testDial(t, s.URL, callbacks, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone}, nil)
 		}
 
 		// Wait for upgrades to finish.
