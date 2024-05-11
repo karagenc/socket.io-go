@@ -65,7 +65,8 @@ type TestWaiterString struct {
 func NewTestWaiterString() *TestWaiterString {
 	wg := new(sync.WaitGroup)
 	return &TestWaiterString{
-		wg: wg,
+		wg:      wg,
+		strings: mapset.NewSet[string](),
 	}
 }
 
