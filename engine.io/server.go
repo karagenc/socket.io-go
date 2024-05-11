@@ -33,7 +33,7 @@ type (
 		// After sending PING, client should send PONG before this timeout exceeds.
 		PingTimeout time.Duration
 
-		// Timeout to wait before upgrading a client transport.
+		// Timeout to wait while a client transport is being upgraded.
 		UpgradeTimeout time.Duration
 
 		// MaxBufferSize is used for preventing DOS.
@@ -388,40 +388,8 @@ func (s *Server) maybeUpgrade(
 		c = transport.NewCallbacks()
 	}
 
-	switch upgradeTo {
-	case "websocket":
-		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
-		_, err := t.Handshake(nil, w, r)
-		if err != nil {
-			s.debug.Log("Handshake error", err)
-			t.Close()
-			return
-		}
-	case "webtransport":
-		if t == nil {
-			s.debug.Log("t == nil. This shouldn't have happened")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	default:
-		s.debug.Log("Invalid upgradeTo", upgradeTo)
-		writeServerError(w, ErrorBadRequest)
-		return
-	}
-
 	done := make(chan struct{})
 	once := new(sync.Once)
-
-	go func() {
-		select {
-		case <-done:
-			s.debug.Log("`done` triggered")
-			return
-		case <-time.After(s.upgradeTimeout):
-			t.Close()
-			s.onError(fmt.Errorf("eio: upgrade failed: upgradeTimeout exceeded"))
-		}
-	}()
 
 	onPacket := func(packet *parser.Packet) {
 		s.debug.Log("Packet received", packet)
@@ -455,6 +423,37 @@ func (s *Server) maybeUpgrade(
 			onPacket(packet)
 		}
 	}, nil)
+
+	switch upgradeTo {
+	case "websocket":
+		t = _websocket.NewServerTransport(c, s.maxBufferSize, supportsBinary, s.wsAcceptOptions)
+		_, err := t.Handshake(nil, w, r)
+		if err != nil {
+			s.debug.Log("Handshake error", err)
+			t.Close()
+			return
+		}
+	case "webtransport":
+		if t == nil {
+			s.debug.Log("t == nil. This shouldn't have happened")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	default:
+		s.debug.Log("Invalid upgradeTo", upgradeTo)
+		writeServerError(w, ErrorBadRequest)
+		return
+	}
+
+	go func() {
+		select {
+		case <-done:
+			s.debug.Log("`done` triggered")
+		case <-time.After(s.upgradeTimeout):
+			t.Close()
+			socket.onError(fmt.Errorf("eio: upgrade failed: %w", errUpgradeTimeoutExceeded))
+		}
+	}()
 
 	t.PostHandshake(nil)
 }

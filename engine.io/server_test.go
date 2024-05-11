@@ -17,6 +17,50 @@ import (
 )
 
 func TestServer(t *testing.T) {
+	t.Run("should emit error if `UpgradeTimeout` is set and is exceeded", func(t *testing.T) {
+		tw := NewTestWaiter(2)
+
+		onSocket := func(socket ServerSocket) *Callbacks {
+			return &Callbacks{
+				OnError: func(err error) {
+					defer tw.Done()
+					require.Error(t, err)
+				},
+				OnPacket: func(packets ...*parser.Packet) {
+					defer tw.Done()
+					// Receive packet as normal while upgrading.
+					require.Equal(t, 1, len(packets))
+					packet := packets[0]
+					require.Equal(t, packet.Type, parser.PacketTypeMessage)
+					require.Equal(t, packet.Data, []byte("123456"))
+				},
+			}
+		}
+
+		io := newTestServer(onSocket, &ServerConfig{
+			UpgradeTimeout: 1 * time.Second,
+		})
+		err := io.Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := httptest.NewServer(io)
+
+		socket := testDial(t, s.URL, nil, &ClientConfig{
+			UpgradeDone: func(transportName string) {
+				t.Fatalf("transport upgraded to: %s", transportName)
+			},
+		}, &testDialOptions{
+			testWaitUpgrade: true,
+		})
+		require.Equal(t, "polling", socket.TransportName())
+
+		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
+		socket.Send(packet)
+
+		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+	})
+
 	t.Run("map key of `serverErrors` should be incremental and should be equal to error code", func(t *testing.T) {
 		i := 0
 		for j, e1 := range serverErrors {
