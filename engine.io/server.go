@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"time"
 
-	_webtransport "github.com/quic-go/webtransport-go"
+	"github.com/quic-go/webtransport-go"
 	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"github.com/tomruk/socket.io-go/engine.io/transport"
 	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
 	_websocket "github.com/tomruk/socket.io-go/engine.io/transport/websocket"
-	"github.com/tomruk/socket.io-go/engine.io/transport/webtransport"
+	_webtransport "github.com/tomruk/socket.io-go/engine.io/transport/webtransport"
 
 	"nhooyr.io/websocket"
 )
@@ -42,7 +42,7 @@ type (
 		DisableMaxBufferSize bool
 
 		// For accepting WebTransport connections
-		WebTransportServer *_webtransport.Server
+		WebTransportServer *webtransport.Server
 
 		// Custom WebSocket options to use.
 		WebSocketAcceptOptions *websocket.AcceptOptions
@@ -65,7 +65,7 @@ type (
 		maxBufferSize        int
 		disableMaxBufferSize bool
 
-		webTransportServer *_webtransport.Server
+		webTransportServer *webtransport.Server
 
 		wsAcceptOptions *websocket.AcceptOptions
 
@@ -299,7 +299,7 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := transport.NewCallbacks()
-	t := webtransport.NewServerTransport(c, s.maxBufferSize, s.webTransportServer)
+	t := _webtransport.NewServerTransport(c, s.maxBufferSize, s.webTransportServer)
 
 	sid, err := t.Handshake(nil, w, r)
 	if err != nil {
