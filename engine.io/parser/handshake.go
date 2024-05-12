@@ -13,6 +13,7 @@ type HandshakeResponse struct {
 	Upgrades     []string `json:"upgrades"`
 	PingInterval int64    `json:"pingInterval"`
 	PingTimeout  int64    `json:"pingTimeout"`
+	MaxPayload   int64    `json:"maxPayload"`
 }
 
 func (hr *HandshakeResponse) GetPingInterval() time.Duration {

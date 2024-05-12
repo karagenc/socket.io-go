@@ -371,6 +371,7 @@ func (s *Server) newHandshakePacket(sid string, upgrades []string) (*parser.Pack
 		Upgrades:     upgrades,
 		PingInterval: int64(s.pingInterval / time.Millisecond),
 		PingTimeout:  int64(s.pingTimeout / time.Millisecond),
+		MaxPayload:   int64(s.maxBufferSize),
 	})
 	if err != nil {
 		return nil, err

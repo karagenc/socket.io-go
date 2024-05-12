@@ -11,9 +11,10 @@ import (
 
 func TestHandshakeResponse(t *testing.T) {
 	const (
-		testSID                = "123456789"
-		testPingInterval int64 = 5  // Seconds
-		testPingTimeout  int64 = 10 // Seconds
+		testSID                 = "123456789"
+		testPingInterval  int64 = 5  // Seconds
+		testPingTimeout   int64 = 10 // Seconds
+		testMaxBufferSize int64 = 12
 	)
 	var testUpgrades = []string{"u1", "u2", "u3"}
 
@@ -22,6 +23,7 @@ func TestHandshakeResponse(t *testing.T) {
 		Upgrades:     testUpgrades,
 		PingInterval: testPingInterval,
 		PingTimeout:  testPingTimeout,
+		MaxPayload:   testMaxBufferSize,
 	}
 
 	data, err := json.Marshal(hr)
@@ -43,6 +45,7 @@ func TestHandshakeResponse(t *testing.T) {
 
 	require.Equal(t, testPingInterval, hr.PingInterval)
 	require.Equal(t, testPingTimeout, hr.PingTimeout)
+	require.Equal(t, testMaxBufferSize, hr.MaxPayload)
 
 	for i, u := range hr.Upgrades {
 		require.Equal(t, testUpgrades[i], u)
