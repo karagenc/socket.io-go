@@ -144,7 +144,7 @@ var (
 func (t *ServerTransport) handleDataRequest(w http.ResponseWriter, r *http.Request) {
 	if t.maxHTTPBufferSize > 0 && r.ContentLength > t.maxHTTPBufferSize {
 		defer t.close(fmt.Errorf("polling: maxHTTPBufferSize (MaxBufferSize) exceeded"))
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		r.Close = true
 		r.Body.Close()
 		return
