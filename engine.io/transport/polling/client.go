@@ -154,7 +154,7 @@ func (t *ClientTransport) poll() ([]*parser.Packet, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("polling: non-200 HTTP response received")
+		return nil, fmt.Errorf("polling: non-200 HTTP response received. response code: %d", resp.StatusCode)
 	}
 
 	r, err := compressedReader(resp)
@@ -189,7 +189,7 @@ func (t *ClientTransport) Send(packets ...*parser.Packet) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		t.close(fmt.Errorf("polling: non-200 HTTP response received"))
+		t.close(fmt.Errorf("polling: non-200 HTTP response received. response code: %d", resp.StatusCode))
 		return
 	}
 
