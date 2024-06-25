@@ -25,12 +25,10 @@ func (s *socketStore) get(sid string) (socket *serverSocket, ok bool) {
 func (s *socketStore) set(sid string, socket *serverSocket) (ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	_, exists := s.sockets[sid]
 	if exists {
 		return false
 	}
-
 	s.sockets[sid] = socket
 	return true
 }

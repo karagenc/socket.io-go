@@ -13,9 +13,7 @@ func (e InternalError) Error() string {
 	return "eio: internal error: " + e.err.Error()
 }
 
-func (e InternalError) Unwrap() error {
-	return e.err
-}
+func (e InternalError) Unwrap() error { return e.err }
 
 func wrapInternalError(err error) *InternalError {
 	return &InternalError{err: err}

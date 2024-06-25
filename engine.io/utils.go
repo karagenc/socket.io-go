@@ -28,17 +28,11 @@ func NewTestWaiter(delta int) *TestWaiter {
 	}
 }
 
-func (w *TestWaiter) Add(delta int) {
-	w.wg.Add(delta)
-}
+func (w *TestWaiter) Add(delta int) { w.wg.Add(delta) }
 
-func (w *TestWaiter) Done() {
-	w.wg.Done()
-}
+func (w *TestWaiter) Done() { w.wg.Done() }
 
-func (w *TestWaiter) Wait() {
-	w.wg.Wait()
-}
+func (w *TestWaiter) Wait() { w.wg.Wait() }
 
 func (w *TestWaiter) WaitTimeout(t *testing.T, timeout time.Duration) (timedout bool) {
 	c := make(chan struct{})
@@ -83,9 +77,7 @@ func (w *TestWaiterString) Done(s string) {
 	w.wg.Done()
 }
 
-func (w *TestWaiterString) Wait() {
-	w.wg.Wait()
-}
+func (w *TestWaiterString) Wait() { w.wg.Wait() }
 
 func (w *TestWaiterString) WaitTimeout(t *testing.T, timeout time.Duration) (timedout bool) {
 	c := make(chan struct{})

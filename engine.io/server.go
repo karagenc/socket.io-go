@@ -253,7 +253,6 @@ func (s *Server) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		upgrades []string
 		c        = transport.NewCallbacks()
 	)
-
 	switch n {
 	case "polling":
 		t = polling.NewServerTransport(c, s.maxBufferSize, s.PollTimeout())
@@ -298,8 +297,11 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, ErrorUnknownTransport)
 		return
 	}
-	c := transport.NewCallbacks()
-	t := _webtransport.NewServerTransport(c, s.maxBufferSize, s.webTransportServer)
+
+	var (
+		c = transport.NewCallbacks()
+		t = _webtransport.NewServerTransport(c, s.maxBufferSize, s.webTransportServer)
+	)
 
 	sid, err := t.Handshake(nil, w, r)
 	if err != nil {
@@ -307,7 +309,6 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 		t.Close()
 		return
 	}
-
 	if sid == "" {
 		sid, err = s.generateSID()
 		if err != nil {
@@ -348,7 +349,13 @@ func (s *Server) onWebTransport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) newSocket(w http.ResponseWriter, sid string, upgrades []string, c *transport.Callbacks, t ServerTransport) *serverSocket {
+func (s *Server) newSocket(
+	w http.ResponseWriter,
+	sid string,
+	upgrades []string,
+	c *transport.Callbacks,
+	t ServerTransport,
+) *serverSocket {
 	socket := newServerSocket(sid, upgrades, t, c, s.pingInterval, s.pingTimeout, s.debug, s.store.delete)
 
 	callbacks := s.onSocket(socket)

@@ -65,7 +65,6 @@ func (s *clientSocket) connect(transports []string) (err error) {
 
 	for _, name := range transports {
 		transports = transports[1:]
-
 		c := transport.NewCallbacks()
 
 		switch name {
@@ -100,7 +99,6 @@ func (s *clientSocket) connect(transports []string) (err error) {
 			return
 		}
 		s.debug.Log("Transport is set to", name)
-
 		c.Set(s.onPacket, s.onTransportClose)
 
 		var hr *parser.HandshakeResponse
@@ -109,7 +107,6 @@ func (s *clientSocket) connect(transports []string) (err error) {
 			s.debug.Log("Handshake failed", err)
 			continue
 		}
-
 		s.sid = hr.SID
 		s.upgrades = hr.Upgrades
 		s.pingInterval = hr.GetPingInterval()
@@ -117,6 +114,7 @@ func (s *clientSocket) connect(transports []string) (err error) {
 		s.debug.Log("pingInterval", s.pingInterval)
 		s.debug.Log("pingTimeout", s.pingTimeout)
 		s.maxPayload = hr.MaxPayload
+
 		go s.transport.Run()
 		break
 	}
@@ -298,7 +296,6 @@ func findTransport(transports []string, name string) bool {
 
 func (s *clientSocket) onPacket(packets ...*parser.Packet) {
 	s.callbacks.OnPacket(packets...)
-
 	for _, packet := range packets {
 		s.handlePacket(packet)
 	}
@@ -423,6 +420,4 @@ func (s *clientSocket) close(reason Reason, err error) {
 	})
 }
 
-func (s *clientSocket) Close() {
-	s.close(ReasonForcedClose, nil)
-}
+func (s *clientSocket) Close() { s.close(ReasonForcedClose, nil) }

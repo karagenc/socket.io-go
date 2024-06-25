@@ -36,12 +36,10 @@ func GenerateBase64ID(size int) (string, error) {
 	seqOffset := size - 4
 
 	binary.BigEndian.PutUint32(b[seqOffset:], seq)
-
 	_, err := rand.Read(b[:seqOffset+1])
 	if err != nil {
 		return "", err
 	}
-
 	encoded := base64.URLEncoding.EncodeToString(b)
 	return encoded, nil
 }
@@ -52,11 +50,9 @@ func (s *Server) generateSID() (sid string, err error) {
 		if err != nil {
 			return "", err
 		}
-
 		if !s.store.exists(sid) {
 			return
 		}
-
 		if i == Base64IDMaxTry {
 			return "", ErrBase64IDMaxTryReached
 		}

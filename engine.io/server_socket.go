@@ -63,7 +63,6 @@ func newServerSocket(
 	s.setCallbacks(nil)
 	callbacks.Set(s.onPacket, s.onTransportClose)
 	go s.pingPong(pingInterval, pingTimeout)
-
 	return s
 }
 
@@ -158,7 +157,6 @@ func (s *serverSocket) pingPong(pingInterval time.Duration, pingTimeout time.Dur
 
 func (s *serverSocket) onPacket(packets ...*parser.Packet) {
 	s.getCallbacks().OnPacket(packets...)
-
 	for _, packet := range packets {
 		s.handlePacket(packet)
 	}
@@ -240,6 +238,4 @@ func (s *serverSocket) close(reason Reason, err error) {
 	})
 }
 
-func (s *serverSocket) Close() {
-	s.close(ReasonForcedClose, nil)
-}
+func (s *serverSocket) Close() { s.close(ReasonForcedClose, nil) }

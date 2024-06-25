@@ -6,12 +6,12 @@ import (
 
 const payloadDelimiter byte = 30
 
-// packets must not be nil.
+// `packets` must not be nil.
 func EncodedPayloadsLen(packets ...*Packet) int {
 	l := 0
 	for i, packet := range packets {
 		l += packet.EncodedLen(false)
-
+		// Seperator
 		if i != len(packets)-1 {
 			l += 1
 		}
@@ -42,7 +42,6 @@ func EncodePayloads(w io.Writer, packets ...*Packet) error {
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -66,7 +65,6 @@ func splitByte(buf []byte, delim byte) [][]byte {
 	} else if last <= len(buf) {
 		buffers = append(buffers, buf[last:])
 	}
-
 	return buffers
 }
 
@@ -86,6 +84,5 @@ func DecodePayloads(r io.Reader) ([]*Packet, error) {
 		}
 		packets = append(packets, packet)
 	}
-
 	return packets, nil
 }
