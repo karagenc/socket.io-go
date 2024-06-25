@@ -26,9 +26,9 @@ type ServerTransport struct {
 	once      sync.Once
 }
 
-func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int, pollTimeout time.Duration) *ServerTransport {
+func NewServerTransport(callbacks *transport.Callbacks, maxBufferSize int64, pollTimeout time.Duration) *ServerTransport {
 	return &ServerTransport{
-		maxHTTPBufferSize: int64(maxBufferSize),
+		maxHTTPBufferSize: maxBufferSize,
 		pq:                newPollQueue(),
 		pollTimeout:       pollTimeout,
 		callbacks:         callbacks,

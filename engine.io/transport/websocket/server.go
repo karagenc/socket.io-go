@@ -25,12 +25,12 @@ type ServerTransport struct {
 
 func NewServerTransport(
 	callbacks *transport.Callbacks,
-	maxBufferSize int,
+	maxBufferSize int64,
 	supportsBinary bool,
 	acceptOptions *websocket.AcceptOptions,
 ) *ServerTransport {
 	return &ServerTransport{
-		readLimit:      int64(maxBufferSize),
+		readLimit:      maxBufferSize,
 		supportsBinary: supportsBinary,
 		callbacks:      callbacks,
 		acceptOptions:  acceptOptions,

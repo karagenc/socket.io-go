@@ -36,9 +36,9 @@ type (
 		// Timeout to wait while a client transport is being upgraded.
 		UpgradeTimeout time.Duration
 
-		// MaxBufferSize is used for preventing DOS.
+		// MaxBufferSize is used for preventing denial of service (DOS).
 		// This is the equivalent of `maxHTTPBufferSize` in original Engine.IO.
-		MaxBufferSize        int
+		MaxBufferSize        int64
 		DisableMaxBufferSize bool
 
 		// For accepting WebTransport connections
@@ -62,7 +62,7 @@ type (
 		pingTimeout    time.Duration
 		upgradeTimeout time.Duration
 
-		maxBufferSize        int
+		maxBufferSize        int64
 		disableMaxBufferSize bool
 
 		webTransportServer *webtransport.Server

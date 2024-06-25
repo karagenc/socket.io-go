@@ -46,6 +46,7 @@ type clientSocket struct {
 	upgrades     []string
 	pingInterval time.Duration
 	pingTimeout  time.Duration
+	maxPayload   int64
 
 	callbacks Callbacks
 
@@ -115,6 +116,7 @@ func (s *clientSocket) connect(transports []string) (err error) {
 		s.pingTimeout = hr.GetPingTimeout()
 		s.debug.Log("pingInterval", s.pingInterval)
 		s.debug.Log("pingTimeout", s.pingTimeout)
+		s.maxPayload = hr.MaxPayload
 		go s.transport.Run()
 		break
 	}
@@ -364,7 +366,43 @@ func (s *clientSocket) TransportName() string {
 func (s *clientSocket) Send(packets ...*parser.Packet) {
 	s.transportMu.RLock()
 	defer s.transportMu.RUnlock()
-	s.transport.Send(packets...)
+	s.writeWritablePackets(packets...)
+}
+
+// Equivalent of `getWritablePackets` in original Socket.IO.
+func (s *clientSocket) writeWritablePackets(packets ...*parser.Packet) {
+	shouldCheckPayloadSize := s.maxPayload > 0 && s.transport.Name() == "polling" && len(packets) > 1
+	if shouldCheckPayloadSize {
+		// In original engine.io client, this variable is set to 1
+		// to have first packet type.
+		// But we omit it, since packet.EncodedLen(false) includes packet type.
+		payloadSize := 0
+		total := len(packets)
+		// Range based for loop overflows the array.
+		// The check, `i < len(packets)`, needs to be made every time.
+		for i, count := 0, 0; i < len(packets); i, count = i+1, count+1 {
+			packet := packets[i]
+			if len(packet.Data) > 0 {
+				// Since we're dealing with the polling transport, supportsBinary argument is false.
+				payloadSize += packet.EncodedLen(false)
+			}
+			if i > 0 && int64(payloadSize) > s.maxPayload {
+				s.debug.Log("send", count, "out of", total)
+				if len(packets) > 0 {
+					s.transport.Send(packets[:i]...)
+				}
+				packets = packets[i:]
+				i = 0
+				payloadSize = 0
+				continue
+			}
+			payloadSize += 1 // Separator
+		}
+		s.debug.Log("payload size is", payloadSize, "maxPayload", s.maxPayload)
+	}
+	if len(packets) > 0 {
+		s.transport.Send(packets...)
+	}
 }
 
 func (s *clientSocket) close(reason Reason, err error) {

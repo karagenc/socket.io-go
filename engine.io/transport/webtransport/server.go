@@ -29,11 +29,11 @@ type ServerTransport struct {
 
 func NewServerTransport(
 	callbacks *transport.Callbacks,
-	maxBufferSize int,
+	maxBufferSize int64,
 	server *webtransport.Server,
 ) *ServerTransport {
 	return &ServerTransport{
-		readLimit: int64(maxBufferSize),
+		readLimit: maxBufferSize,
 		server:    server,
 		callbacks: callbacks,
 	}

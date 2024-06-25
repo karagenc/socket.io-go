@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
@@ -354,6 +355,49 @@ func TestClient(t *testing.T) {
 		upgrades := socket.Upgrades()
 		require.Equal(t, 1, len(upgrades))
 		require.Equal(t, "websocket", upgrades[0])
+
+		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+	})
+
+	t.Run("should merge packets", func(t *testing.T) {
+		tw := NewTestWaiter(2)
+
+		var (
+			checkIndex  = 0
+			testPackets = []*parser.Packet{
+				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("12345678")),
+				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("87654321")),
+			}
+		)
+
+		io := newTestServer(func(socket ServerSocket) *Callbacks {
+			return &Callbacks{
+				OnPacket: func(packets ...*parser.Packet) {
+					for _, packet := range packets {
+						if packet.Type != parser.PacketTypeMessage {
+							continue
+						}
+						defer tw.Done()
+						testPacket := testPackets[checkIndex]
+						assert.Equal(t, testPacket.IsBinary, packet.IsBinary)
+						assert.Equal(t, testPacket.Data, packet.Data)
+						checkIndex++
+					}
+				},
+			}
+		}, &ServerConfig{
+			MaxBufferSize: 9,
+		}, nil)
+		err := io.Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := httptest.NewServer(io)
+
+		socket := testDial(t, s.URL, nil, &ClientConfig{
+			Transports: []string{"polling"},
+		}, nil)
+		socket.Send(testPackets...)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 	})
