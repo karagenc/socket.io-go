@@ -14,3 +14,5 @@ type (
 	Cond      = sync.Cond
 	Pool      = sync.Pool
 )
+
+var OnceFunc = sync.OnceFunc

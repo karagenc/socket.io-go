@@ -1,9 +1,10 @@
 package sio
 
 import (
-	"sync"
 	"testing"
 	"time"
+
+	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

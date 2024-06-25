@@ -2,7 +2,11 @@
 
 package sync
 
-import "github.com/sasha-s/go-deadlock"
+import (
+	"sync"
+
+	"github.com/sasha-s/go-deadlock"
+)
 
 type (
 	Mutex     = deadlock.Mutex
@@ -14,3 +18,5 @@ type (
 	Cond      = deadlock.Cond
 	Pool      = deadlock.Pool
 )
+
+var OnceFunc = sync.OnceFunc
