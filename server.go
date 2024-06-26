@@ -140,7 +140,7 @@ func (s *Server) onEIOSocket(eioSocket eio.ServerSocket) *eio.Callbacks {
 }
 
 func (s *Server) Of(namespace string) *Namespace {
-	if len(namespace) != 0 && namespace[0] != '/' {
+	if len(namespace) == 0 || (len(namespace) != 0 && namespace[0] != '/') {
 		namespace = "/" + namespace
 	}
 	n, created := s.namespaces.getOrCreate(namespace, s, s.adapterCreator, s.parserCreator)
