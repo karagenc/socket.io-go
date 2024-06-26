@@ -89,6 +89,7 @@ func main() {
 		// Otherwise poll requests may fail.
 		WriteTimeout: io.HTTPWriteTimeout(),
 	}
+	wtServer.H3.Handler = io
 
 	fmt.Printf("Listening on: %s\n", addr)
 	if useTLS {
