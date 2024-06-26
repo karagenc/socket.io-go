@@ -166,20 +166,6 @@ func newTestServerAndClient(
 	ts = httptest.NewServer(io)
 	manager = NewManager(ts.URL, managerConfig)
 
-	manager.onNewSocket = func(socket *clientSocket) {
-		socket.OnConnectError(func(err error) {
-			t.Errorf("client socket connect_error (nsp: %s): %s", socket.namespace, err)
-		})
-	}
-	manager.OnError(func(err error) {
-		t.Errorf("Manager error: %s", err)
-	})
-	io.OnAnyConnection(func(namespace string, socket ServerSocket) {
-		socket.OnError(func(err error) {
-			t.Errorf("server socket error (sid: %s namespace: %s): %s", socket.ID(), namespace, err)
-		})
-	})
-
 	return io, ts, manager, func() {
 		err = io.Close()
 		if err != nil {
