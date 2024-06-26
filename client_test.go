@@ -102,9 +102,13 @@ func TestClient(t *testing.T) {
 				AcceptAnyNamespace: true,
 				ConnectTimeout:     1000 * time.Millisecond,
 			},
-			nil,
+			&ManagerConfig{
+				NoReconnection: true,
+			},
 		)
-		tw := newTestWaiter(2)
+		tw := newTestWaiterString()
+		tw.Add("OnOpen")
+		tw.Add("OnClose")
 
 		server.OnAnyConnection(func(namespace string, socket ServerSocket) {
 			t.Fatalf("Connection to `%s` was received. This shouldn't have happened", namespace)
@@ -112,11 +116,11 @@ func TestClient(t *testing.T) {
 
 		manager.OnOpen(func() {
 			t.Log("Manager connection is established")
-			tw.Done()
+			tw.Done("OnOpen")
 		})
 		manager.OnClose(func(reason Reason, err error) {
 			assert.Equal(t, Reason("transport close"), reason)
-			tw.Done()
+			tw.Done("OnClose")
 		})
 		manager.Open()
 
