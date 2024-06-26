@@ -7,7 +7,6 @@ import (
 	"github.com/tomruk/socket.io-go/internal/sync"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestClient(t *testing.T) {
@@ -28,13 +27,13 @@ func TestClient(t *testing.T) {
 		}
 
 		s, ok := socket.Auth().(*S)
-		require.True(t, ok)
-		require.Equal(t, s.Num, 500)
+		assert.True(t, ok)
+		assert.Equal(t, s.Num, 500)
 
 		err = socket.setAuth("Donkey")
-		require.NotNil(t, err)
+		assert.NotNil(t, err)
 
-		require.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
+		assert.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
 			socket.SetAuth("Donkey")
 		})
 

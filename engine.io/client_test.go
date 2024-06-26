@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
@@ -178,10 +177,10 @@ func TestClient(t *testing.T) {
 				OnPacket: func(packets ...*parser.Packet) {
 					defer tw.Done()
 					// Receive packet as normal while upgrading.
-					require.Equal(t, 1, len(packets))
+					assert.Equal(t, 1, len(packets))
 					packet := packets[0]
-					require.Equal(t, packet.Type, parser.PacketTypeMessage)
-					require.Equal(t, packet.Data, []byte("123456"))
+					assert.Equal(t, packet.Type, parser.PacketTypeMessage)
+					assert.Equal(t, packet.Data, []byte("123456"))
 				},
 			}
 		}
@@ -193,8 +192,8 @@ func TestClient(t *testing.T) {
 
 		callbacks := &Callbacks{
 			OnError: func(err error) {
-				defer tw.Done()
-				require.True(t, errors.Is(err, errUpgradeTimeoutExceeded))
+				assert.True(t, errors.Is(err, errUpgradeTimeoutExceeded))
+				tw.Done()
 			},
 		}
 		socket := testDial(t, ts.URL, callbacks, &ClientConfig{
@@ -203,10 +202,9 @@ func TestClient(t *testing.T) {
 			},
 			UpgradeTimeout: 10 * time.Millisecond,
 		}, nil)
-		require.Equal(t, "polling", socket.TransportName())
+		assert.Equal(t, "polling", socket.TransportName())
 
-		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
-		socket.Send(packet)
+		socket.Send(mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456")))
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 		close()
@@ -301,17 +299,17 @@ func TestClient(t *testing.T) {
 		)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
-			defer tw.Done()
-			require.Equal(t, pingInterval, socket.PingInterval())
-			require.Equal(t, pingTimeout, socket.PingTimeout())
+			assert.Equal(t, pingInterval, socket.PingInterval())
+			assert.Equal(t, pingTimeout, socket.PingTimeout())
+			tw.Done()
 			return nil
 		}
 		io, close := newTestServer(t, onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout}, nil)
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, nil, nil)
-		require.Equal(t, pingInterval, socket.PingInterval())
-		require.Equal(t, pingTimeout, socket.PingTimeout())
+		assert.Equal(t, pingInterval, socket.PingInterval())
+		assert.Equal(t, pingTimeout, socket.PingTimeout())
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 		close()
@@ -335,8 +333,8 @@ func TestClient(t *testing.T) {
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone}, nil)
 		upgrades := socket.Upgrades()
-		require.Equal(t, 1, len(upgrades))
-		require.Equal(t, "websocket", upgrades[0])
+		assert.Equal(t, 1, len(upgrades))
+		assert.Equal(t, "websocket", upgrades[0])
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 		close()

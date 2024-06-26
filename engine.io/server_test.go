@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
@@ -23,16 +24,16 @@ func TestServer(t *testing.T) {
 		onSocket := func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
 				OnError: func(err error) {
-					defer tw.Done()
-					require.Error(t, err)
+					assert.Error(t, err)
+					tw.Done()
 				},
 				OnPacket: func(packets ...*parser.Packet) {
-					defer tw.Done()
 					// Receive packet as normal while upgrading.
-					require.Equal(t, 1, len(packets))
+					assert.Equal(t, 1, len(packets))
 					packet := packets[0]
-					require.Equal(t, packet.Type, parser.PacketTypeMessage)
-					require.Equal(t, packet.Data, []byte("123456"))
+					assert.Equal(t, packet.Type, parser.PacketTypeMessage)
+					assert.Equal(t, packet.Data, []byte("123456"))
+					tw.Done()
 				},
 			}
 		}
@@ -49,7 +50,7 @@ func TestServer(t *testing.T) {
 		}, &testDialOptions{
 			testWaitUpgrade: true,
 		})
-		require.Equal(t, "polling", socket.TransportName())
+		assert.Equal(t, "polling", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 		socket.Send(packet)
@@ -82,15 +83,15 @@ func TestServer(t *testing.T) {
 		q.Add("EIO", "523523") // Random value
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 		e := new(ServerError)
 		err = json.Unmarshal(rec.Body.Bytes(), e)
 		if err != nil {
 			t.Fatal(err)
 		}
-		require.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Code, e.Code)
-		require.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Message, e.Message)
+		assert.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Code, e.Code)
+		assert.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Message, e.Message)
 		close()
 	})
 
@@ -108,15 +109,15 @@ func TestServer(t *testing.T) {
 		q.Add("transport", "labalubadabaluba") // There's no such transport
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 		e := new(ServerError)
 		err = json.Unmarshal(rec.Body.Bytes(), e)
 		if err != nil {
 			t.Fatal(err)
 		}
-		require.Equal(t, serverErrors[ErrorUnknownTransport].Code, e.Code)
-		require.Equal(t, serverErrors[ErrorUnknownTransport].Message, e.Message)
+		assert.Equal(t, serverErrors[ErrorUnknownTransport].Code, e.Code)
+		assert.Equal(t, serverErrors[ErrorUnknownTransport].Message, e.Message)
 		close()
 	})
 
@@ -134,7 +135,7 @@ func TestServer(t *testing.T) {
 		q.Add("sid", "dsaaskmsdkfakfasfjmsaklfam") // Random SID
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 		e := new(ServerError)
 		err = json.Unmarshal(rec.Body.Bytes(), e)
@@ -142,8 +143,8 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		require.Equal(t, serverErrors[ErrorUnknownSID].Code, e.Code)
-		require.Equal(t, serverErrors[ErrorUnknownSID].Message, e.Message)
+		assert.Equal(t, serverErrors[ErrorUnknownSID].Code, e.Code)
+		assert.Equal(t, serverErrors[ErrorUnknownSID].Message, e.Message)
 		close()
 	})
 
@@ -160,15 +161,15 @@ func TestServer(t *testing.T) {
 		q.Add("transport", "polling")
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 		e := new(ServerError)
 		err = json.Unmarshal(rec.Body.Bytes(), e)
 		if err != nil {
 			t.Fatal(err)
 		}
-		require.Equal(t, serverErrors[ErrorBadHandshakeMethod].Code, e.Code)
-		require.Equal(t, serverErrors[ErrorBadHandshakeMethod].Message, e.Message)
+		assert.Equal(t, serverErrors[ErrorBadHandshakeMethod].Code, e.Code)
+		assert.Equal(t, serverErrors[ErrorBadHandshakeMethod].Message, e.Message)
 		close()
 	})
 
@@ -193,7 +194,7 @@ func TestServer(t *testing.T) {
 		q.Add("transport", "polling")
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
 		close()
 	})
 
@@ -230,7 +231,7 @@ func TestServer(t *testing.T) {
 			Transports: []string{"polling"},
 		}, nil)
 
-		require.Equal(t, "polling", socket.TransportName())
+		assert.Equal(t, "polling", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 		socket.Send(packet)
@@ -268,7 +269,7 @@ func TestServer(t *testing.T) {
 		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			Transports: []string{"polling"},
 		}, nil)
-		require.Equal(t, "polling", socket.TransportName())
+		assert.Equal(t, "polling", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 		socket.Send(packet)
@@ -307,7 +308,7 @@ func TestServer(t *testing.T) {
 		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			Transports: []string{"websocket"},
 		}, nil)
-		require.Equal(t, "websocket", socket.TransportName())
+		assert.Equal(t, "websocket", socket.TransportName())
 
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 		socket.Send(packet)
@@ -412,8 +413,8 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		require.Equal(t, pingInterval, hr.GetPingInterval())
-		require.Equal(t, pingTimeout, hr.GetPingTimeout())
+		assert.Equal(t, pingInterval, hr.GetPingInterval())
+		assert.Equal(t, pingTimeout, hr.GetPingTimeout())
 
 		sid := hr.SID
 
@@ -557,7 +558,6 @@ func TestServer(t *testing.T) {
 		}
 
 		io, _ := newTestServer(t, onSocket, nil, nil)
-
 		ts := httptest.NewServer(io)
 
 		transportsToTest := [][]string{
@@ -614,9 +614,10 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer resp.Body.Close()
-		require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "server should have been closed")
+		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "server should have been closed")
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		ts.Close()
 	})
 }
 

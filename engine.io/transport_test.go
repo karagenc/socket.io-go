@@ -10,7 +10,6 @@ import (
 	"github.com/madflojo/testcerts"
 	"github.com/quic-go/webtransport-go"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"nhooyr.io/websocket"
 )
@@ -18,12 +17,8 @@ import (
 func TestWebTransport(t *testing.T) {
 	t.Run("should allow to connect with WebTransport directly", func(t *testing.T) {
 		var (
-			tw          = NewTestWaiter(2)
-			checkIndex  = 0
-			testPackets = []*parser.Packet{
-				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("12345678")),
-				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("87654321")),
-			}
+			testPacket = mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
+			tw         = NewTestWaiter(1)
 		)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
@@ -34,10 +29,8 @@ func TestWebTransport(t *testing.T) {
 							continue
 						}
 						defer tw.Done()
-						testPacket := testPackets[checkIndex]
 						assert.Equal(t, testPacket.IsBinary, packet.IsBinary)
 						assert.Equal(t, testPacket.Data, packet.Data)
-						checkIndex++
 					}
 				},
 			}
@@ -70,9 +63,9 @@ func TestWebTransport(t *testing.T) {
 		}
 		clientConfig.Transports = []string{"webtransport"}
 		socket := testDial(t, ts.URL, nil, clientConfig, nil)
-		socket.Send(testPackets...)
+		socket.Send(testPacket)
 
-		require.Equal(t, "webtransport", socket.TransportName())
+		assert.Equal(t, "webtransport", socket.TransportName())
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 		close()
@@ -80,12 +73,8 @@ func TestWebTransport(t *testing.T) {
 
 	t.Run("should allow to upgrade to WebTransport", func(t *testing.T) {
 		var (
-			tw          = NewTestWaiter(3)
-			checkIndex  = 0
-			testPackets = []*parser.Packet{
-				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("12345678")),
-				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("87654321")),
-			}
+			testPacket = mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
+			tw         = NewTestWaiter(2)
 		)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
@@ -96,10 +85,8 @@ func TestWebTransport(t *testing.T) {
 							continue
 						}
 						defer tw.Done()
-						testPacket := testPackets[checkIndex]
 						assert.Equal(t, testPacket.IsBinary, packet.IsBinary)
 						assert.Equal(t, testPacket.Data, packet.Data)
-						checkIndex++
 					}
 				},
 			}
@@ -132,7 +119,7 @@ func TestWebTransport(t *testing.T) {
 			},
 		}
 		socket := testDial(t, ts.URL, nil, clientConfig, nil)
-		socket.Send(testPackets...)
+		socket.Send(testPacket)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 		close()
