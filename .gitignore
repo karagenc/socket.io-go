@@ -1,9 +1,10 @@
 .vscode
 *.exe
 *.out
-__debug_bin
+__debug_bin*
 
 /examples/chat/server/server
+/examples/chat/server/*.pem
 /examples/chat/client/client
 /engine.io/examples/server/server
 /engine.io/examples/client/client

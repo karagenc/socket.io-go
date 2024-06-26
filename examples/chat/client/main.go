@@ -1,12 +1,17 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 
+	"github.com/quic-go/webtransport-go"
 	"github.com/spf13/pflag"
 	sio "github.com/tomruk/socket.io-go"
+	eio "github.com/tomruk/socket.io-go/engine.io"
+	"nhooyr.io/websocket"
 )
 
 const defaultURL = "http://127.0.0.1:3000/socket.io"
@@ -16,17 +21,42 @@ func main() {
 	url := pflag.StringP("connect", "c", defaultURL, "URL to connect to")
 	pflag.Parse()
 
-	config := &sio.ManagerConfig{
-		ReconnectionAttempts: 5,
-	}
-	manager := sio.NewManager(*url, config)
-	socket := manager.Socket("/", nil)
-
-	term, exitFunc, err := initTerm(socket)
+	term, typing, exitFunc, err := initTerm()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
+
+	config := &sio.ManagerConfig{
+		EIO: eio.ClientConfig{
+			UpgradeDone: func(transportName string) {
+				fmt.Fprintf(term, "Transport upgraded to: %s\n", transportName)
+			},
+			HTTPTransport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // DO NOT USE in production. This is for self-signed TLS certificate to work.
+				},
+			},
+			WebSocketDialOptions: &websocket.DialOptions{
+				HTTPClient: &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							InsecureSkipVerify: true, // DO NOT USE in production. This is for self-signed TLS certificate to work.
+						},
+					},
+				},
+			},
+			WebTransportDialer: &webtransport.Dialer{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // DO NOT USE in production. This is for self-signed TLS certificate to work.
+				},
+			},
+		},
+	}
+
+	manager := sio.NewManager(*url, config)
+	socket := manager.Socket("/", nil)
+	typing.socket = socket
 
 	if *username == "" {
 		fmt.Fprintln(term, "Username cannot be empty. Use -u/--username to set the username.")
@@ -36,11 +66,14 @@ func main() {
 	socket.OnConnect(func() {
 		fmt.Fprintln(term, "Connected")
 	})
+	manager.OnError(func(err error) {
+		fmt.Fprintf(term, "Error: %v\n", err)
+	})
 	manager.OnReconnect(func(attempt uint32) {
 		fmt.Fprintf(term, "Reconnected. Number of attempts so far: %d\n", attempt)
 	})
 	socket.OnConnectError(func(err error) {
-		fmt.Fprintf(term, "Error: %v\n", err)
+		fmt.Fprintf(term, "Connect error: %v\n", err)
 	})
 
 	socket.OnEvent("login", func(data struct {

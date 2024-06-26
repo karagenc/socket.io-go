@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"sync"
 
+	"github.com/gookit/color"
 	sio "github.com/tomruk/socket.io-go"
 )
 
@@ -43,7 +45,8 @@ func (a *api) setup(root *sio.Namespace) {
 			a.numUsers++
 			numUsers := a.numUsers
 			a.numUsersMu.Unlock()
-			fmt.Printf("New user: %s\n", username)
+			usernameColor := getUsernameColor(username)
+			fmt.Printf("New user: %s\n", usernameColor.Sprint(username))
 
 			socket.Emit("login", struct {
 				NumUsers int `json:"numUsers"`
@@ -105,4 +108,19 @@ func (a *api) username(socket sio.ServerSocket) (username string) {
 	username = a.usernames[socket]
 	a.usernamesMu.Unlock()
 	return
+}
+
+var colors = []string{
+	"#e21400", "#91580f", "#f8a700", "#f78b00",
+	"#58dc00", "#287b00", "#a8f07a", "#4ae8c4",
+	"#3b88eb", "#3824aa", "#a700ff", "#d300e7",
+}
+
+func getUsernameColor(username string) color.RGBColor {
+	hash := 7
+	for _, r := range username {
+		hash = int(r) + (hash << 5) - hash
+	}
+	index := int(math.Abs(float64(hash % len(colors))))
+	return color.Hex(colors[index])
 }

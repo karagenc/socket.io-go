@@ -29,13 +29,13 @@ func getUsernameColor(username string) color.RGBColor {
 	return color.Hex(colors[index])
 }
 
-func initTerm(socket sio.ClientSocket) (*term.Terminal, func(code int), error) {
+func initTerm() (*term.Terminal, *typing, func(code int), error) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	oldState, err := term.MakeRaw(0)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	exitFunc := func(code int) {
@@ -48,7 +48,7 @@ func initTerm(socket sio.ClientSocket) (*term.Terminal, func(code int), error) {
 		exitFunc(0)
 	}()
 
-	t := &typing{socket: socket, typing: make(chan struct{}, 1)}
+	t := &typing{typing: make(chan struct{}, 1)}
 	go t.notifier()
 	stdin := io.TeeReader(os.Stdin, t)
 	screen := struct {
@@ -59,7 +59,7 @@ func initTerm(socket sio.ClientSocket) (*term.Terminal, func(code int), error) {
 	term := term.NewTerminal(screen, "")
 	term.SetPrompt(string(term.Escape.Blue) + "> " + string(term.Escape.Reset))
 
-	return term, exitFunc, nil
+	return term, t, exitFunc, nil
 }
 
 type typing struct {
