@@ -44,9 +44,9 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s := httptest.NewServer(io)
+		ts := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{
+		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			UpgradeDone: func(transportName string) {
 				t.Fatalf("transport upgraded to: %s", transportName)
 			},
@@ -238,7 +238,7 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s := httptest.NewServer(io)
+		ts := httptest.NewServer(io)
 
 		callbacks := &Callbacks{
 			OnClose: func(reason Reason, err error) {
@@ -250,7 +250,7 @@ func TestServer(t *testing.T) {
 			},
 		}
 
-		socket := testDial(t, s.URL, callbacks, &ClientConfig{
+		socket := testDial(t, ts.URL, callbacks, &ClientConfig{
 			Transports: []string{"polling"},
 		}, nil)
 
@@ -291,8 +291,8 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		s := httptest.NewServer(io)
-		socket := testDial(t, s.URL, nil, &ClientConfig{
+		ts := httptest.NewServer(io)
+		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			Transports: []string{"polling"},
 		}, nil)
 		require.Equal(t, "polling", socket.TransportName())
@@ -332,9 +332,9 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s := httptest.NewServer(io)
+		ts := httptest.NewServer(io)
 
-		socket := testDial(t, s.URL, nil, &ClientConfig{
+		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			Transports: []string{"websocket"},
 		}, nil)
 		require.Equal(t, "websocket", socket.TransportName())
@@ -594,7 +594,7 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		s := httptest.NewServer(io)
+		ts := httptest.NewServer(io)
 
 		transportsToTest := [][]string{
 			{"polling"},
@@ -627,7 +627,7 @@ func TestServer(t *testing.T) {
 				utw.Done()
 			}
 
-			testDial(t, s.URL, callbacks, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone}, nil)
+			testDial(t, ts.URL, callbacks, &ClientConfig{Transports: transports, UpgradeDone: upgradeDone}, nil)
 		}
 
 		// Wait for upgrades to finish.
@@ -641,12 +641,12 @@ func TestServer(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		req, err := http.NewRequest("GET", s.URL, nil)
+		req, err := http.NewRequest("GET", ts.URL, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		resp, err := s.Client().Do(req)
+		resp, err := ts.Client().Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
