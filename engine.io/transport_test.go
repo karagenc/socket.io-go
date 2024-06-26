@@ -9,23 +9,45 @@ import (
 
 	"github.com/madflojo/testcerts"
 	"github.com/quic-go/webtransport-go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tomruk/socket.io-go/engine.io/parser"
 	"nhooyr.io/websocket"
 )
 
 func TestWebTransport(t *testing.T) {
-	t.Run("should allow to connect with webtransport directly", func(t *testing.T) {
+	t.Run("should allow to connect with WebTransport directly", func(t *testing.T) {
 		var (
-			tw = NewTestWaiter(1)
+			tw          = NewTestWaiter(2)
+			checkIndex  = 0
+			testPackets = []*parser.Packet{
+				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("12345678")),
+				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("87654321")),
+			}
 		)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
-			tw.Done()
-			return nil
+			return &Callbacks{
+				OnPacket: func(packets ...*parser.Packet) {
+					for _, packet := range packets {
+						if packet.Type != parser.PacketTypeMessage {
+							continue
+						}
+						defer tw.Done()
+						testPacket := testPackets[checkIndex]
+						assert.Equal(t, testPacket.IsBinary, packet.IsBinary)
+						assert.Equal(t, testPacket.Data, packet.Data)
+						checkIndex++
+					}
+				},
+			}
 		}
 		_, _, ts, close := newWebTransportTestServer(t, onSocket, nil, nil)
 
 		clientConfig := &ClientConfig{
+			UpgradeDone: func(transportName string) {
+				t.Fail() // Connection should be directly via WebTransport.
+			},
 			HTTPTransport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: true,
@@ -48,6 +70,7 @@ func TestWebTransport(t *testing.T) {
 		}
 		clientConfig.Transports = []string{"webtransport"}
 		socket := testDial(t, ts.URL, nil, clientConfig, nil)
+		socket.Send(testPackets...)
 
 		require.Equal(t, "webtransport", socket.TransportName())
 
