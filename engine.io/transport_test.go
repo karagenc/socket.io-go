@@ -77,6 +77,66 @@ func TestWebTransport(t *testing.T) {
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should allow to upgrade to WebTransport", func(t *testing.T) {
+		var (
+			tw          = NewTestWaiter(3)
+			checkIndex  = 0
+			testPackets = []*parser.Packet{
+				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("12345678")),
+				mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("87654321")),
+			}
+		)
+
+		onSocket := func(socket ServerSocket) *Callbacks {
+			return &Callbacks{
+				OnPacket: func(packets ...*parser.Packet) {
+					for _, packet := range packets {
+						if packet.Type != parser.PacketTypeMessage {
+							continue
+						}
+						defer tw.Done()
+						testPacket := testPackets[checkIndex]
+						assert.Equal(t, testPacket.IsBinary, packet.IsBinary)
+						assert.Equal(t, testPacket.Data, packet.Data)
+						checkIndex++
+					}
+				},
+			}
+		}
+		_, _, ts, close := newWebTransportTestServer(t, onSocket, nil, nil)
+
+		clientConfig := &ClientConfig{
+			UpgradeDone: func(transportName string) {
+				assert.Equal(t, "webtransport", transportName)
+				tw.Done()
+			},
+			HTTPTransport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+			WebSocketDialOptions: &websocket.DialOptions{
+				HTTPClient: &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							InsecureSkipVerify: true,
+						},
+					},
+				},
+			},
+			WebTransportDialer: &webtransport.Dialer{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+		socket := testDial(t, ts.URL, nil, clientConfig, nil)
+		socket.Send(testPackets...)
+
+		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+	})
 }
 
 func newWebTransportTestServer(
