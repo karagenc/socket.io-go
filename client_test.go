@@ -162,7 +162,9 @@ func TestClient(t *testing.T) {
 			&ServerConfig{
 				AcceptAnyNamespace: true,
 			},
-			nil,
+			&ManagerConfig{
+				NoReconnection: true,
+			},
 		)
 		tw := newTestWaiter(1)
 		socket := manager.Socket("/", nil)
