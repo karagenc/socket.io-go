@@ -37,15 +37,11 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, &ServerConfig{
+		io, close := newTestServer(t, onSocket, &ServerConfig{
 			UpgradeTimeout: 1 * time.Second,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
-		ts := httptest.NewServer(io)
 
+		ts := httptest.NewServer(io)
 		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			UpgradeDone: func(transportName string) {
 				t.Fatalf("transport upgraded to: %s", transportName)
@@ -59,6 +55,7 @@ func TestServer(t *testing.T) {
 		socket.Send(packet)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("map key of `serverErrors` should be equal to error code", func(t *testing.T) {
@@ -73,11 +70,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should fail with invalid Engine.IO version", func(t *testing.T) {
-		io := newTestServer(nil, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, nil, nil, nil)
 
 		rec := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/", nil)
@@ -98,14 +91,11 @@ func TestServer(t *testing.T) {
 		}
 		require.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Code, e.Code)
 		require.Equal(t, serverErrors[ErrorUnsupportedProtocolVersion].Message, e.Message)
+		close()
 	})
 
 	t.Run("should fail with unknown transport name", func(t *testing.T) {
-		io := newTestServer(nil, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, nil, nil, nil)
 
 		rec := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/", nil)
@@ -127,14 +117,11 @@ func TestServer(t *testing.T) {
 		}
 		require.Equal(t, serverErrors[ErrorUnknownTransport].Code, e.Code)
 		require.Equal(t, serverErrors[ErrorUnknownTransport].Message, e.Message)
+		close()
 	})
 
 	t.Run("should fail with unknown SID", func(t *testing.T) {
-		io := newTestServer(nil, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, nil, nil, nil)
 
 		rec := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/", nil)
@@ -157,21 +144,17 @@ func TestServer(t *testing.T) {
 
 		require.Equal(t, serverErrors[ErrorUnknownSID].Code, e.Code)
 		require.Equal(t, serverErrors[ErrorUnknownSID].Message, e.Message)
+		close()
 	})
 
 	t.Run("should fail when request is made with an invalid method", func(t *testing.T) {
-		io := newTestServer(nil, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		io, close := newTestServer(t, nil, nil, nil)
 		rec := httptest.NewRecorder()
+
 		req, err := http.NewRequest("POST", "/", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		q := req.URL.Query()
 		q.Add("EIO", strconv.Itoa(ProtocolVersion))
 		q.Add("transport", "polling")
@@ -186,6 +169,7 @@ func TestServer(t *testing.T) {
 		}
 		require.Equal(t, serverErrors[ErrorBadHandshakeMethod].Code, e.Code)
 		require.Equal(t, serverErrors[ErrorBadHandshakeMethod].Message, e.Message)
+		close()
 	})
 
 	t.Run("authenticator should cause 403 to be returned as status code as expected", func(t *testing.T) {
@@ -194,13 +178,9 @@ func TestServer(t *testing.T) {
 			return false
 		}
 
-		io := newTestServer(nil, &ServerConfig{
+		io, close := newTestServer(t, nil, &ServerConfig{
 			Authenticator: authenticator,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
 
 		rec := httptest.NewRecorder()
 		req, err := http.NewRequest("GET", "/", nil)
@@ -214,6 +194,7 @@ func TestServer(t *testing.T) {
 		req.URL.RawQuery = q.Encode()
 		io.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusForbidden, rec.Code)
+		close()
 	})
 
 	t.Run("should call `OnClose` with transport error when buffer size is exceeded (polling)", func(t *testing.T) {
@@ -231,13 +212,9 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, &ServerConfig{
+		io, close := newTestServer(t, onSocket, &ServerConfig{
 			MaxBufferSize: 5,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
 		ts := httptest.NewServer(io)
 
 		callbacks := &Callbacks{
@@ -249,7 +226,6 @@ func TestServer(t *testing.T) {
 				}
 			},
 		}
-
 		socket := testDial(t, ts.URL, callbacks, &ClientConfig{
 			Transports: []string{"polling"},
 		}, nil)
@@ -260,6 +236,8 @@ func TestServer(t *testing.T) {
 		socket.Send(packet)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("`DisableMaxBufferSize` should cause `MaxBufferSize` to be ignored (polling)", func(t *testing.T) {
@@ -282,15 +260,10 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, &ServerConfig{
+		io, close := newTestServer(t, onSocket, &ServerConfig{
 			MaxBufferSize:        5,
 			DisableMaxBufferSize: true,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		ts := httptest.NewServer(io)
 		socket := testDial(t, ts.URL, nil, &ClientConfig{
 			Transports: []string{"polling"},
@@ -301,6 +274,7 @@ func TestServer(t *testing.T) {
 		socket.Send(packet)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("`DisableMaxBufferSize` should cause `MaxBufferSize` to be ignored (websocket)", func(t *testing.T) {
@@ -324,14 +298,10 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, &ServerConfig{
+		io, close := newTestServer(t, onSocket, &ServerConfig{
 			MaxBufferSize:        5,
 			DisableMaxBufferSize: true,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{
@@ -343,6 +313,8 @@ func TestServer(t *testing.T) {
 		socket.Send(packet)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("JSONP should work", func(t *testing.T) {
@@ -381,14 +353,10 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, &ServerConfig{
+		io, close := newTestServer(t, onSocket, &ServerConfig{
 			PingInterval: pingInterval,
 			PingTimeout:  pingTimeout,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
 
 		// Test handshake
 
@@ -565,6 +533,7 @@ func TestServer(t *testing.T) {
 		}
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("server `Close` method should close sockets", func(t *testing.T) {
@@ -587,12 +556,7 @@ func TestServer(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, nil, nil)
-
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, _ := newTestServer(t, onSocket, nil, nil)
 
 		ts := httptest.NewServer(io)
 
@@ -636,7 +600,7 @@ func TestServer(t *testing.T) {
 			t.Fatal("upgrades couldn't finish")
 		}
 
-		err = io.Close()
+		err := io.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -645,13 +609,11 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		resp, err := ts.Client().Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer resp.Body.Close()
-
 		require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "server should have been closed")
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
@@ -662,7 +624,7 @@ type testServerOptions struct {
 	testWaitUpgrade bool
 }
 
-func newTestServer(onSocket NewSocketCallback, config *ServerConfig, options *testServerOptions) *Server {
+func newTestServer(t *testing.T, onSocket NewSocketCallback, config *ServerConfig, options *testServerOptions) (io *Server, close func()) {
 	if config == nil {
 		config = new(ServerConfig)
 	}
@@ -673,5 +635,17 @@ func newTestServer(onSocket NewSocketCallback, config *ServerConfig, options *te
 	if enablePrintDebugger {
 		config.Debugger = NewPrintDebugger()
 	}
-	return newServer(onSocket, config, options.testWaitUpgrade)
+
+	io = newServer(onSocket, config, options.testWaitUpgrade)
+	err := io.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	close = func() {
+		err = io.Close()
+		if err != nil {
+			t.Fatalf("io.Close: %s", err)
+		}
+	}
+	return
 }

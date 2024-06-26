@@ -19,7 +19,7 @@ var (
 
 func TestServer(t *testing.T) {
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(t, nil, nil)
+		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		tw := newTestWaiter(1)
 
@@ -28,10 +28,11 @@ func TestServer(t *testing.T) {
 		})
 		socket.Connect()
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run(`should be able to equivalently start with "" or "/" on server`, func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(t, nil, nil)
+		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		tw := newTestWaiterString()
 		tw.Add("/abc")
@@ -47,10 +48,11 @@ func TestServer(t *testing.T) {
 		manager.Socket("/abc", nil).Connect()
 		socket.Connect()
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run(`should be equivalent for "" and "/" on client`, func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(t, nil, nil)
+		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("", nil)
 		tw := newTestWaiter(1)
 
@@ -60,10 +62,11 @@ func TestServer(t *testing.T) {
 
 		socket.Connect()
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("should work with `of` and many sockets", func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(t, nil, nil)
+		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		tw := newTestWaiterString()
 		tw.Add("/chat")
@@ -85,10 +88,11 @@ func TestServer(t *testing.T) {
 		socket.Connect()
 
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("should receive ack", func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(t, nil, nil)
+		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		socket.Connect()
 		tw := newTestWaiter(5)
@@ -110,6 +114,7 @@ func TestServer(t *testing.T) {
 			}
 		})
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 }
 
@@ -118,9 +123,10 @@ func newTestServerAndClient(
 	serverConfig *ServerConfig,
 	managerConfig *ManagerConfig,
 ) (
-	server *Server,
-	httpServer *httptest.Server,
+	io *Server,
+	ts *httptest.Server,
 	manager *Manager,
+	close func(),
 ) {
 	enablePrintDebugger := os.Getenv("SIO_DEBUGGER_PRINT") == "1"
 	enablePrintDebuggerEIO := os.Getenv("EIO_DEBUGGER_PRINT") == "1"
@@ -151,14 +157,14 @@ func newTestServerAndClient(
 		CompressionMode: websocket.CompressionDisabled,
 	}
 
-	server = NewServer(serverConfig)
-	err := server.Run()
+	io = NewServer(serverConfig)
+	err := io.Run()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	httpServer = httptest.NewServer(server)
-	manager = NewManager(httpServer.URL, managerConfig)
+	ts = httptest.NewServer(io)
+	manager = NewManager(ts.URL, managerConfig)
 
 	manager.onNewSocket = func(socket *clientSocket) {
 		socket.OnConnectError(func(err error) {
@@ -168,11 +174,17 @@ func newTestServerAndClient(
 	manager.OnError(func(err error) {
 		t.Errorf("Manager error: %s", err)
 	})
-	server.OnAnyConnection(func(namespace string, socket ServerSocket) {
+	io.OnAnyConnection(func(namespace string, socket ServerSocket) {
 		socket.OnError(func(err error) {
 			t.Errorf("server socket error (sid: %s namespace: %s): %s", socket.ID(), namespace, err)
 		})
 	})
 
-	return server, httpServer, manager
+	return io, ts, manager, func() {
+		err = io.Close()
+		if err != nil {
+			t.Fatalf("io.Close: %s", err)
+		}
+		ts.Close()
+	}
 }

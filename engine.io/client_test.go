@@ -126,11 +126,7 @@ func testSendReceive(t *testing.T, transports []string) {
 		return callbacks
 	}
 
-	io := newTestServer(onSocket, nil, nil)
-	err := io.Run()
-	if err != nil {
-		t.Fatal(err)
-	}
+	io, close := newTestServer(t, onSocket, nil, nil)
 	ts := httptest.NewServer(io)
 
 	callbacks := &Callbacks{
@@ -155,6 +151,8 @@ func testSendReceive(t *testing.T, transports []string) {
 	send(socket)
 
 	tw.WaitTimeout(t, DefaultTestWaitTimeout)
+	close()
+	ts.Close()
 }
 
 func TestCommon(t *testing.T) {
@@ -188,13 +186,9 @@ func TestClient(t *testing.T) {
 			}
 		}
 
-		io := newTestServer(onSocket, nil, &testServerOptions{
+		io, close := newTestServer(t, onSocket, nil, &testServerOptions{
 			testWaitUpgrade: true,
 		})
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
 		ts := httptest.NewServer(io)
 
 		callbacks := &Callbacks{
@@ -215,6 +209,8 @@ func TestClient(t *testing.T) {
 		socket.Send(packet)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("`Close` should not block", func(t *testing.T) {
@@ -224,11 +220,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, onSocket, nil, nil)
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{Transports: []string{"websocket"}}, nil)
@@ -236,6 +228,8 @@ func TestClient(t *testing.T) {
 		socket.Close()
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("`Discard` should not block", func(t *testing.T) {
@@ -245,11 +239,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, onSocket, nil, nil)
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{Transports: []string{"websocket"}}, nil)
@@ -258,6 +248,8 @@ func TestClient(t *testing.T) {
 		socket.transportMu.Unlock()
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("`Close` should not block with transport set to polling", func(t *testing.T) {
@@ -267,11 +259,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, onSocket, nil, nil)
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{Transports: []string{"polling"}}, nil)
@@ -279,6 +267,8 @@ func TestClient(t *testing.T) {
 		socket.Close()
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("`Discard` should not block with transport set to polling", func(t *testing.T) {
@@ -288,11 +278,7 @@ func TestClient(t *testing.T) {
 			defer tw.Done()
 			return nil
 		}
-		io := newTestServer(onSocket, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, onSocket, nil, nil)
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{Transports: []string{"polling"}}, nil)
@@ -302,6 +288,8 @@ func TestClient(t *testing.T) {
 		socket.transportMu.Unlock()
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("ping timeout and ping interval should be set", func(t *testing.T) {
@@ -318,11 +306,7 @@ func TestClient(t *testing.T) {
 			require.Equal(t, pingTimeout, socket.PingTimeout())
 			return nil
 		}
-		io := newTestServer(onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, onSocket, &ServerConfig{PingInterval: pingInterval, PingTimeout: pingTimeout}, nil)
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, nil, nil)
@@ -330,16 +314,14 @@ func TestClient(t *testing.T) {
 		require.Equal(t, pingTimeout, socket.PingTimeout())
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("should upgrade", func(t *testing.T) {
 		tw := NewTestWaiter(1)
 
-		io := newTestServer(nil, nil, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
+		io, close := newTestServer(t, nil, nil, nil)
 		ts := httptest.NewServer(io)
 		transports := []string{"polling", "websocket"}
 
@@ -357,6 +339,8 @@ func TestClient(t *testing.T) {
 		require.Equal(t, "websocket", upgrades[0])
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 
 	t.Run("should merge packets", func(t *testing.T) {
@@ -370,7 +354,7 @@ func TestClient(t *testing.T) {
 			}
 		)
 
-		io := newTestServer(func(socket ServerSocket) *Callbacks {
+		io, close := newTestServer(t, func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
 				OnPacket: func(packets ...*parser.Packet) {
 					for _, packet := range packets {
@@ -388,10 +372,6 @@ func TestClient(t *testing.T) {
 		}, &ServerConfig{
 			MaxBufferSize: 9,
 		}, nil)
-		err := io.Run()
-		if err != nil {
-			t.Fatal(err)
-		}
 		ts := httptest.NewServer(io)
 
 		socket := testDial(t, ts.URL, nil, &ClientConfig{
@@ -400,5 +380,7 @@ func TestClient(t *testing.T) {
 		socket.Send(testPackets...)
 
 		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		close()
+		ts.Close()
 	})
 }

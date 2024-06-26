@@ -40,7 +40,7 @@ func TestClientSocketStore(t *testing.T) {
 
 func TestServerSocketStore(t *testing.T) {
 	store := newServerSocketStore()
-	server, _, manager := newTestServerAndClient(t, nil, nil)
+	server, _, manager, close := newTestServerAndClient(t, nil, nil)
 
 	var (
 		socket   *serverSocket
@@ -107,11 +107,13 @@ func TestServerSocketStore(t *testing.T) {
 	store.removeByID(socket.ID())
 	require.Equal(t, 0, len(store.socketsByID))
 	require.Equal(t, 0, len(store.socketsByNsp))
+
+	close()
 }
 
 func TestNamespaceStore(t *testing.T) {
 	store := newNspStore()
-	server, _, _ := newTestServerAndClient(t, nil, nil)
+	server, _, _, close := newTestServerAndClient(t, nil, nil)
 
 	main := server.Of("/")
 	asdf := server.Of("/asdf")
@@ -139,11 +141,12 @@ func TestNamespaceStore(t *testing.T) {
 	n, created = store.getOrCreate("/", server, server.adapterCreator, server.parserCreator)
 	require.False(t, created)
 	require.True(t, n == main)
+	close()
 }
 
 func TestNamespaceSocketStore(t *testing.T) {
 	store := newNspSocketStore()
-	server, _, manager := newTestServerAndClient(t, nil, nil)
+	server, _, manager, close := newTestServerAndClient(t, nil, nil)
 	tw := newTestWaiter(2)
 
 	var (
@@ -203,6 +206,7 @@ func TestNamespaceSocketStore(t *testing.T) {
 	store.sendBuffers(main.ID(), buffers)
 
 	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	close()
 }
 
 func mustCreateEventPacket(socket *serverSocket, eventName string, _v []any) (header *parser.PacketHeader, buffers [][]byte) {

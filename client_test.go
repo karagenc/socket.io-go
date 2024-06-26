@@ -12,7 +12,7 @@ import (
 
 func TestClient(t *testing.T) {
 	t.Run("should authenticate", func(t *testing.T) {
-		_, _, manager := newTestServerAndClient(t, nil, nil)
+		_, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil).(*clientSocket)
 
 		type S struct {
@@ -37,10 +37,12 @@ func TestClient(t *testing.T) {
 		require.PanicsWithError(t, "sio: SetAuth: non-JSON data cannot be accepted. please provide a struct or map", func() {
 			socket.SetAuth("Donkey")
 		})
+
+		close()
 	})
 
 	t.Run("should connect to a namespace after connection established", func(t *testing.T) {
-		_, _, manager := newTestServerAndClient(
+		_, _, manager, close := newTestServerAndClient(
 			t,
 			&ServerConfig{
 				AcceptAnyNamespace: true,
@@ -62,10 +64,11 @@ func TestClient(t *testing.T) {
 		socket.Connect()
 
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("should be able to connect to a new namespace after connection gets closed", func(t *testing.T) {
-		_, _, manager := newTestServerAndClient(
+		_, _, manager, close := newTestServerAndClient(
 			t,
 			&ServerConfig{
 				AcceptAnyNamespace: true,
@@ -93,10 +96,11 @@ func TestClient(t *testing.T) {
 		socket.Connect()
 
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("manager open without socket", func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(
+		server, _, manager, close := newTestServerAndClient(
 			t,
 			&ServerConfig{
 				AcceptAnyNamespace: true,
@@ -125,10 +129,11 @@ func TestClient(t *testing.T) {
 		manager.Open()
 
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("should reconnect by default", func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(
+		server, _, manager, close := newTestServerAndClient(
 			t,
 			nil,
 			nil,
@@ -148,10 +153,11 @@ func TestClient(t *testing.T) {
 
 		socket.Connect()
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("should reconnect manually", func(t *testing.T) {
-		_, _, manager := newTestServerAndClient(
+		_, _, manager, close := newTestServerAndClient(
 			t,
 			&ServerConfig{
 				AcceptAnyNamespace: true,
@@ -174,10 +180,11 @@ func TestClient(t *testing.T) {
 
 		socket.Connect()
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 
 	t.Run("should receive ack", func(t *testing.T) {
-		server, _, manager := newTestServerAndClient(t, nil, nil)
+		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		socket.Connect()
 		tw := newTestWaiter(5)
@@ -201,5 +208,6 @@ func TestClient(t *testing.T) {
 			})
 		})
 		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		close()
 	})
 }
