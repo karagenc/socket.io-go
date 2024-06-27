@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/tomruk/socket.io-go/internal/utils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -24,8 +25,8 @@ func TestSocketStore(t *testing.T) {
 
 	for i := 0; i < max; i++ {
 		sid := strconv.Itoa(i)
-		ft := newTestServerTransport()
-		c := ft.callbacks
+		ft := utils.NewTestServerTransport()
+		c := ft.Callbacks
 		socket := newServerSocket(sid, nil, ft, c, 0, 0, NewNoopDebugger(), onClose)
 
 		ok := store.set(socket.ID(), socket)

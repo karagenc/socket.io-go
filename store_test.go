@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/tomruk/socket.io-go/internal/utils"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/parser"
@@ -44,7 +45,7 @@ func TestServerSocketStore(t *testing.T) {
 
 	var (
 		socket   *serverSocket
-		socketTW = newTestWaiter(0)
+		socketTW = utils.NewTestWaiter(0)
 	)
 
 	socketTW.Add(1)
@@ -56,7 +57,7 @@ func TestServerSocketStore(t *testing.T) {
 	})
 
 	manager.Socket("/", nil).Connect()
-	timedout := socketTW.WaitTimeout(t, defaultTestWaitTimeout)
+	timedout := socketTW.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	if timedout {
 		return
 	}
@@ -92,7 +93,7 @@ func TestServerSocketStore(t *testing.T) {
 
 	//manager = NewManager(httpServer.URL, nil)
 	manager.Socket("/asdf", nil).Connect()
-	timedout = socketTW.WaitTimeout(t, defaultTestWaitTimeout)
+	timedout = socketTW.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	if timedout {
 		return
 	}
@@ -147,7 +148,7 @@ func TestNamespaceStore(t *testing.T) {
 func TestNamespaceSocketStore(t *testing.T) {
 	store := newNspSocketStore()
 	server, _, manager, close := newTestServerAndClient(t, nil, nil)
-	tw := newTestWaiter(2)
+	tw := utils.NewTestWaiter(2)
 
 	var (
 		main, asdf ServerSocket
@@ -165,7 +166,7 @@ func TestNamespaceSocketStore(t *testing.T) {
 
 	manager.Socket("/", nil).Connect()
 	manager.Socket("/asdf", nil).Connect()
-	timedout := tw.WaitTimeout(t, defaultTestWaitTimeout)
+	timedout := tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	if timedout {
 		return
 	}
@@ -205,7 +206,7 @@ func TestNamespaceSocketStore(t *testing.T) {
 	_, buffers := mustCreateEventPacket(_main, "hi", []any{"I am Groot"})
 	store.sendBuffers(main.ID(), buffers)
 
-	tw.WaitTimeout(t, defaultTestWaitTimeout)
+	tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	close()
 }
 

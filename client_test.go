@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/tomruk/socket.io-go/internal/utils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +49,7 @@ func TestClient(t *testing.T) {
 			},
 			nil,
 		)
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 		socket := manager.Socket("/", nil)
 
 		socket.OnConnect(func() {
@@ -62,7 +63,7 @@ func TestClient(t *testing.T) {
 		})
 		socket.Connect()
 
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -75,7 +76,7 @@ func TestClient(t *testing.T) {
 			nil,
 		)
 		socket := manager.Socket("/", nil)
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 		done := sync.OnceFunc(func() { tw.Done() })
 
 		socket.OnConnect(func() {
@@ -94,7 +95,7 @@ func TestClient(t *testing.T) {
 		})
 		socket.Connect()
 
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -109,7 +110,7 @@ func TestClient(t *testing.T) {
 				NoReconnection: true,
 			},
 		)
-		tw := newTestWaiterString()
+		tw := utils.NewTestWaiterString()
 		tw.Add("OnOpen")
 		tw.Add("OnClose")
 
@@ -127,7 +128,7 @@ func TestClient(t *testing.T) {
 		})
 		manager.Open()
 
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -137,7 +138,7 @@ func TestClient(t *testing.T) {
 			nil,
 			nil,
 		)
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 		socket := manager.Socket("/", nil)
 
 		server.OnConnection(func(socket ServerSocket) {
@@ -151,7 +152,7 @@ func TestClient(t *testing.T) {
 		})
 
 		socket.Connect()
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -165,7 +166,7 @@ func TestClient(t *testing.T) {
 				NoReconnection: true,
 			},
 		)
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 		socket := manager.Socket("/", nil)
 
 		socket.OnceConnect(func() {
@@ -180,7 +181,9 @@ func TestClient(t *testing.T) {
 		})
 
 		socket.Connect()
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 		close()
 	})
 
@@ -188,7 +191,7 @@ func TestClient(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		socket.Connect()
-		tw := newTestWaiter(5)
+		tw := utils.NewTestWaiter(5)
 
 		socket.OnConnect(func() {
 			for i := 0; i < 5; i++ {
@@ -208,7 +211,7 @@ func TestClient(t *testing.T) {
 				ack("hi")
 			})
 		})
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 }

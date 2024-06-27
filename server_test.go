@@ -6,35 +6,28 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	eio "github.com/tomruk/socket.io-go/engine.io"
+	"github.com/tomruk/socket.io-go/internal/utils"
 	"nhooyr.io/websocket"
-)
-
-const defaultTestWaitTimeout = eio.DefaultTestWaitTimeout
-
-var (
-	newTestWaiter       = eio.NewTestWaiter
-	newTestWaiterString = eio.NewTestWaiterString
 )
 
 func TestServer(t *testing.T) {
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		server.OnConnection(func(socket ServerSocket) {
 			tw.Done()
 		})
 		socket.Connect()
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run(`should be able to equivalently start with "" or "/" on server`, func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
-		tw := newTestWaiterString()
+		tw := utils.NewTestWaiterString()
 		tw.Add("/abc")
 		tw.Add("")
 
@@ -47,28 +40,28 @@ func TestServer(t *testing.T) {
 
 		manager.Socket("/abc", nil).Connect()
 		socket.Connect()
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run(`should be equivalent for "" and "/" on client`, func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("", nil)
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		server.Of("/").OnConnection(func(socket ServerSocket) {
 			tw.Done()
 		})
 
 		socket.Connect()
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run("should work with `of` and many sockets", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
-		tw := newTestWaiterString()
+		tw := utils.NewTestWaiterString()
 		tw.Add("/chat")
 		tw.Add("/news")
 		tw.Add("/")
@@ -87,7 +80,7 @@ func TestServer(t *testing.T) {
 		manager.Socket("/news", nil).Connect()
 		socket.Connect()
 
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -95,7 +88,7 @@ func TestServer(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
 		socket.Connect()
-		tw := newTestWaiter(5)
+		tw := utils.NewTestWaiter(5)
 
 		socket.OnEvent("ack", func(message string, ack func(reply string)) {
 			t.Logf("event %s", message)
@@ -113,7 +106,7 @@ func TestServer(t *testing.T) {
 				})
 			}
 		})
-		tw.WaitTimeout(t, defaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 }

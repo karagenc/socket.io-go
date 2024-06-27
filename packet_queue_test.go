@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/internal/utils"
 )
 
 func TestPacketQueue(t *testing.T) {
@@ -83,9 +83,9 @@ func TestPacketQueue(t *testing.T) {
 
 	t.Run("pollAndSend", func(t *testing.T) {
 		pq := newPacketQueue()
-		tw := newTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
-		socket := eio.NewTestSocket("s1")
+		socket := utils.NewTestSocket("s1")
 		socket.SendFunc = func(packets ...*parser.Packet) {
 			assert.Equal(t, parser.PacketTypeMessage, packets[0].Type)
 			assert.Equal(t, parser.PacketTypePing, packets[1].Type)

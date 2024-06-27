@@ -15,11 +15,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/internal/utils"
 )
 
 func TestServer(t *testing.T) {
 	t.Run("should emit error if `UpgradeTimeout` is set and is exceeded", func(t *testing.T) {
-		tw := NewTestWaiter(2)
+		tw := utils.NewTestWaiter(2)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
@@ -55,7 +56,7 @@ func TestServer(t *testing.T) {
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 		socket.Send(packet)
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -199,7 +200,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("should call `OnClose` with transport error when buffer size is exceeded (polling)", func(t *testing.T) {
-		tw := NewTestWaiter(2) // Wait for the server and client.
+		tw := utils.NewTestWaiter(2) // Wait for the server and client.
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
@@ -236,13 +237,13 @@ func TestServer(t *testing.T) {
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456"))
 		socket.Send(packet)
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("`DisableMaxBufferSize` should cause `MaxBufferSize` to be ignored (polling)", func(t *testing.T) {
-		tw := NewTestWaiter(1) // Wait for the server.
+		tw := utils.NewTestWaiter(1) // Wait for the server.
 		testData := []byte("12345678")
 
 		onSocket := func(socket ServerSocket) *Callbacks {
@@ -274,12 +275,12 @@ func TestServer(t *testing.T) {
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 		socket.Send(packet)
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run("`DisableMaxBufferSize` should cause `MaxBufferSize` to be ignored (websocket)", func(t *testing.T) {
-		tw := NewTestWaiter(1) // Wait for the server.
+		tw := utils.NewTestWaiter(1) // Wait for the server.
 		testData := []byte("12345678")
 
 		onSocket := func(socket ServerSocket) *Callbacks {
@@ -313,13 +314,13 @@ func TestServer(t *testing.T) {
 		packet := mustCreatePacket(t, parser.PacketTypeMessage, false, testData)
 		socket.Send(packet)
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("JSONP should work", func(t *testing.T) {
-		tw := NewTestWaiter(2)
+		tw := utils.NewTestWaiter(2)
 
 		const (
 			pingInterval = 123456 * time.Second
@@ -533,13 +534,13 @@ func TestServer(t *testing.T) {
 			t.Fatal("ok expected")
 		}
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run("server `Close` method should close sockets", func(t *testing.T) {
-		tw := NewTestWaiter(0)
-		utw := NewTestWaiter(0) // For upgrades.
+		tw := utils.NewTestWaiter(0)
+		utw := utils.NewTestWaiter(0) // For upgrades.
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
@@ -616,7 +617,7 @@ func TestServer(t *testing.T) {
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "server should have been closed")
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		ts.Close()
 	})
 }

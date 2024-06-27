@@ -1,4 +1,4 @@
-package eio
+package utils
 
 import (
 	"fmt"
@@ -112,8 +112,8 @@ func NewTestSocket(id string) *TestSocket {
 // Session ID (sid)
 func (s *TestSocket) ID() string { return s.id }
 
-func (s *TestSocket) PingInterval() time.Duration { return defaultPingInterval }
-func (s *TestSocket) PingTimeout() time.Duration  { return defaultPingTimeout }
+func (s *TestSocket) PingInterval() time.Duration { return time.Second * 20 }
+func (s *TestSocket) PingTimeout() time.Duration  { return time.Second * 25 }
 
 // Name of the current transport
 func (s *TestSocket) TransportName() string { return "polling" }
@@ -122,19 +122,17 @@ func (s *TestSocket) Send(packets ...*parser.Packet) { s.SendFunc(packets...) }
 
 func (s *TestSocket) Close() { s.Closed = true }
 
-type testServerTransport struct {
-	callbacks *transport.Callbacks
+type TestServerTransport struct {
+	Callbacks *transport.Callbacks
 }
 
-var _ ServerTransport = newTestServerTransport()
-
-func newTestServerTransport() *testServerTransport {
-	return &testServerTransport{callbacks: transport.NewCallbacks()}
+func NewTestServerTransport() *TestServerTransport {
+	return &TestServerTransport{Callbacks: transport.NewCallbacks()}
 }
 
-func (t *testServerTransport) Name() string { return "fake" }
+func (t *TestServerTransport) Name() string { return "fake" }
 
-func (t *testServerTransport) Handshake(
+func (t *TestServerTransport) Handshake(
 	_ *parser.Packet,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -142,15 +140,13 @@ func (t *testServerTransport) Handshake(
 	return "", nil
 }
 
-func (t *testServerTransport) Callbacks() *transport.Callbacks { return t.callbacks }
+func (t *TestServerTransport) PostHandshake(handshakePacket *parser.Packet) {}
 
-func (t *testServerTransport) PostHandshake(handshakePacket *parser.Packet) {}
+func (t *TestServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
 
-func (t *testServerTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {}
+func (t *TestServerTransport) QueuedPackets() []*parser.Packet { return nil }
 
-func (t *testServerTransport) QueuedPackets() []*parser.Packet { return nil }
+func (t *TestServerTransport) Send(packets ...*parser.Packet) {}
 
-func (t *testServerTransport) Send(packets ...*parser.Packet) {}
-
-func (t *testServerTransport) Discard() {}
-func (t *testServerTransport) Close()   {}
+func (t *TestServerTransport) Discard() {}
+func (t *TestServerTransport) Close()   {}

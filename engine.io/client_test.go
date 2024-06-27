@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/internal/utils"
 )
 
 type testDialOptions struct {
@@ -71,7 +72,7 @@ func createTestPackets(t *testing.T) []*parser.Packet {
 }
 
 func testSendReceive(t *testing.T, transports []string) {
-	tw := NewTestWaiter(0)
+	tw := utils.NewTestWaiter(0)
 	test := createTestPackets(t)
 
 	check := func(data []byte, isBinary bool) bool {
@@ -149,7 +150,7 @@ func testSendReceive(t *testing.T, transports []string) {
 	socket := testDial(t, ts.URL, callbacks, &ClientConfig{Transports: transports}, nil)
 	send(socket)
 
-	tw.WaitTimeout(t, DefaultTestWaitTimeout)
+	tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	close()
 	ts.Close()
 }
@@ -170,7 +171,7 @@ func TestCommon(t *testing.T) {
 
 func TestClient(t *testing.T) {
 	t.Run("should emit error if `UpgradeTimeout` is set and is exceeded", func(t *testing.T) {
-		tw := NewTestWaiter(2)
+		tw := utils.NewTestWaiter(2)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			return &Callbacks{
@@ -206,13 +207,13 @@ func TestClient(t *testing.T) {
 
 		socket.Send(mustCreatePacket(t, parser.PacketTypeMessage, false, []byte("123456")))
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("`Close` should not block", func(t *testing.T) {
-		tw := NewTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			defer tw.Done()
@@ -225,13 +226,13 @@ func TestClient(t *testing.T) {
 		// This test is to check if the socket.Close is blocking.
 		socket.Close()
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("`Discard` should not block", func(t *testing.T) {
-		tw := NewTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			defer tw.Done()
@@ -245,13 +246,13 @@ func TestClient(t *testing.T) {
 		socket.transport.Discard()
 		socket.transportMu.Unlock()
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("`Close` should not block with transport set to polling", func(t *testing.T) {
-		tw := NewTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			defer tw.Done()
@@ -264,13 +265,13 @@ func TestClient(t *testing.T) {
 		// This test is to check if the socket.Close is blocking.
 		socket.Close()
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("`Discard` should not block with transport set to polling", func(t *testing.T) {
-		tw := NewTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		onSocket := func(socket ServerSocket) *Callbacks {
 			defer tw.Done()
@@ -285,13 +286,13 @@ func TestClient(t *testing.T) {
 		socket.transport.Discard()
 		socket.transportMu.Unlock()
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("ping timeout and ping interval should be set", func(t *testing.T) {
-		tw := NewTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		const (
 			pingInterval = 20 * time.Second
@@ -311,13 +312,13 @@ func TestClient(t *testing.T) {
 		assert.Equal(t, pingInterval, socket.PingInterval())
 		assert.Equal(t, pingTimeout, socket.PingTimeout())
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("should upgrade", func(t *testing.T) {
-		tw := NewTestWaiter(1)
+		tw := utils.NewTestWaiter(1)
 
 		io, close := newTestServer(t, nil, nil, nil)
 		ts := httptest.NewServer(io)
@@ -336,13 +337,13 @@ func TestClient(t *testing.T) {
 		assert.Equal(t, 1, len(upgrades))
 		assert.Equal(t, "websocket", upgrades[0])
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
 
 	t.Run("should merge packets", func(t *testing.T) {
-		tw := NewTestWaiter(2)
+		tw := utils.NewTestWaiter(2)
 
 		var (
 			checkIndex  = 0
@@ -377,7 +378,7 @@ func TestClient(t *testing.T) {
 		}, nil)
 		socket.Send(testPackets...)
 
-		tw.WaitTimeout(t, DefaultTestWaitTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 		ts.Close()
 	})
