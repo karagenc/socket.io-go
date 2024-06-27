@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/internal/sync"
 	"github.com/tomruk/socket.io-go/internal/utils"
 
@@ -215,6 +216,50 @@ func TestClient(t *testing.T) {
 		socket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
+	})
+
+	t.Run("should attempt reconnects after a failed reconnect", func(t *testing.T) {
+		reconnectionDelay := 10 * time.Millisecond
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionAttempts: 2,
+				ReconnectionDelay:    &reconnectionDelay,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		close() // To force reconnect by preventing client from connecting.
+		tw := utils.NewTestWaiter(1)
+
+		socket := manager.Socket("/timeout", nil)
+		manager.OnceReconnectFailed(func() {
+			var (
+				reconnects = 0
+				mu         sync.Mutex
+			)
+			manager.OnReconnectAttempt(func(attempt uint32) {
+				mu.Lock()
+				reconnects++
+				mu.Unlock()
+			})
+			manager.OnReconnectFailed(func() {
+				mu.Lock()
+				assert.Equal(t, 2, reconnects)
+				mu.Unlock()
+				socket.Disconnect()
+				manager.Close()
+				tw.Done()
+			})
+			socket.Connect()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	})
 
 	t.Run("should receive ack", func(t *testing.T) {
