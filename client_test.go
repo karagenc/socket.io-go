@@ -184,6 +184,36 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should reconnect automatically after reconnecting manually", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		socket.OnceConnect(func() {
+			socket.Disconnect()
+		})
+		socket.OnceDisconnect(func(reason Reason) {
+			socket.Manager().OnceReconnect(func(attempt uint32) {
+				socket.Disconnect()
+				tw.Done()
+			})
+			socket.Connect()
+			time.Sleep(500 * time.Millisecond)
+			socket.Manager().eioMu.Lock()
+			defer socket.Manager().eioMu.Unlock()
+			// Call inside another goroutine to prevent eioMu to be locked more than once at the same goroutine.
+			go socket.Manager().eio.Close()
+		})
+
+		socket.Connect()
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
