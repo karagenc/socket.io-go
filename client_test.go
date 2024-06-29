@@ -480,6 +480,42 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, DefaultConnectTimeout)
 	})
 
+	t.Run("should not try to reconnect and should form a connection when connecting to correct port with default timeout", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/valid", nil)
+
+		manager.OnReconnectAttempt(func(attempt uint32) {
+			socket.Disconnect()
+			t.FailNow()
+		})
+		socket.OnConnect(func() {
+			time.Sleep(1000 * time.Millisecond)
+			socket.Disconnect()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, DefaultConnectTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
