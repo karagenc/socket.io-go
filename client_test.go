@@ -300,6 +300,41 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	})
 
+	t.Run("should reconnect after stopping reconnection", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		close() // To force error by preventing client from connecting.
+		socket := manager.Socket("/", nil)
+		manager.OnceReconnectAttempt(func(attempt uint32) {
+			manager.OnReconnectAttempt(func(attempt uint32) {
+				socket.Disconnect()
+				tw.Done()
+			})
+			socket.Disconnect()
+			socket.Connect()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
