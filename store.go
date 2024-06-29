@@ -299,6 +299,16 @@ func (e *handlerStore[T]) onSubEvent(handler T) {
 	e.mu.Unlock()
 }
 
+func (e *handlerStore[T]) offSubEvent(handler T) {
+	e.mu.Lock()
+	for i, sub := range e.subs {
+		if sub == handler {
+			e.subs = append(e.subs[:i], e.subs[i+1:]...)
+		}
+	}
+	e.mu.Unlock()
+}
+
 func (e *handlerStore[T]) offSubEvents() {
 	e.mu.Lock()
 	e.subs = nil

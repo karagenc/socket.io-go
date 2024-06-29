@@ -67,8 +67,9 @@ type (
 		ackID  uint64
 		acksMu sync.Mutex
 
-		active   bool
-		activeMu sync.Mutex
+		active        bool
+		subDeregister func()
+		activeMu      sync.Mutex
 
 		packetQueue *clientPacketQueue
 
@@ -202,16 +203,22 @@ func (s *clientSocket) registerSubEvents() {
 	s.manager.openHandlers.onSubEvent(&open)
 	s.manager.errorHandlers.onSubEvent(&error)
 	s.manager.closeHandlers.onSubEvent(&close)
+	s.subDeregister = func() {
+		s.manager.openHandlers.offSubEvent(&open)
+		s.manager.errorHandlers.offSubEvent(&error)
+		s.manager.closeHandlers.offSubEvent(&close)
+	}
 	s.activeMu.Unlock()
 }
 
 func (s *clientSocket) deregisterSubEvents() {
 	s.activeMu.Lock()
+	defer s.activeMu.Unlock()
 	s.active = false
-	s.manager.openHandlers.offSubEvents()
-	s.manager.errorHandlers.offSubEvents()
-	s.manager.closeHandlers.offSubEvents()
-	s.activeMu.Unlock()
+	if s.subDeregister != nil {
+		s.subDeregister()
+		s.subDeregister = nil
+	}
 }
 
 func (s *clientSocket) Connect() {
