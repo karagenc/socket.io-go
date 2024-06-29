@@ -541,6 +541,40 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should not close the connection when disconnecting a single socket", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		doneOnce := sync.OnceFunc(func() { tw.Done() })
+		socket1 := manager.Socket("/foo", nil)
+		socket2 := manager.Socket("/asd", nil)
+
+		socket1.OnConnect(func() {
+			socket2.Connect()
+		})
+		socket2.OnConnect(func() {
+			socket2.OnDisconnect(func(reason Reason) {
+				t.Fatal("should not happen for now")
+			})
+			socket1.Disconnect()
+			time.Sleep(200 * time.Millisecond)
+			socket2.OffDisconnect()
+			manager.OnClose(func(reason Reason, err error) {
+				doneOnce()
+			})
+			socket2.Disconnect()
+		})
+		socket1.Connect()
+
+		tw.WaitTimeout(t, DefaultConnectTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
