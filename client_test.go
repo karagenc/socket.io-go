@@ -219,7 +219,10 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("should attempt reconnects after a failed reconnect", func(t *testing.T) {
-		reconnectionDelay := 10 * time.Millisecond
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
 		_, _, manager, close := newTestServerAndClient(
 			t,
 			&ServerConfig{
@@ -228,6 +231,7 @@ func TestClient(t *testing.T) {
 			&ManagerConfig{
 				ReconnectionAttempts: 2,
 				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
 				EIO: eio.ClientConfig{
 					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
 				},
@@ -256,6 +260,40 @@ func TestClient(t *testing.T) {
 				tw.Done()
 			})
 			socket.Connect()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+	})
+
+	t.Run("should stop reconnecting when force closed", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		close() // To force error by preventing client from connecting.
+		socket := manager.Socket("/", nil)
+		manager.OnceReconnectAttempt(func(attempt uint32) {
+			socket.Disconnect()
+			manager.OnReconnectAttempt(func(attempt uint32) {
+				t.FailNow()
+			})
+			time.Sleep(5000 * time.Millisecond)
+			tw.Done()
 		})
 		socket.Connect()
 
