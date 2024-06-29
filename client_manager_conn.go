@@ -29,18 +29,21 @@ func (m *Manager) connect(recursed bool) (err error) {
 	// recursed = Is this the first time we're running the connect method?
 	// In other words: are we recursing?
 	if !recursed {
-		m.stateMu.Lock()
-		defer m.stateMu.Unlock()
+		m.connectMu.Lock()
+		defer m.connectMu.Unlock()
 
 		m.skipReconnectMu.Lock()
-		defer m.skipReconnectMu.Unlock()
 		m.skipReconnect = false
+		m.skipReconnectMu.Unlock()
 	}
 
+	m.stateMu.Lock()
 	if m.state == clientConnStateConnected {
+		m.stateMu.Unlock()
 		return nil
 	}
 	m.state = clientConnStateConnecting
+	m.stateMu.Unlock()
 
 	m.eioMu.Lock()
 	defer m.eioMu.Unlock()
@@ -54,12 +57,16 @@ func (m *Manager) connect(recursed bool) (err error) {
 	_eio, err := eio.Dial(m.url, &callbacks, &m.eioConfig)
 	if err != nil {
 		m.resetParser()
+		m.stateMu.Lock()
 		m.state = clientConnStateDisconnected
+		m.stateMu.Unlock()
 		m.errorHandlers.forEach(func(handler *ManagerErrorFunc) { (*handler)(err) }, true)
 		return err
 	}
 
+	m.stateMu.Lock()
 	m.state = clientConnStateConnected
+	m.stateMu.Unlock()
 	m.eio = _eio
 	m.resetParser()
 	m.closePacketQueue(m.eioPacketQueue)
@@ -76,25 +83,29 @@ func (m *Manager) reconnect(recursed bool) {
 	// recursed = Is this the first time we're running the reconnect method?
 	// In other words: are we recursing?
 	if !recursed {
-		m.stateMu.Lock()
-		defer m.stateMu.Unlock()
+		m.connectMu.Lock()
+		defer m.connectMu.Unlock()
 
 		m.skipReconnectMu.RLock()
-		defer m.skipReconnectMu.RUnlock()
 		if m.skipReconnect {
+			m.skipReconnectMu.RUnlock()
 			m.debug.Log("Skipping reconnect")
 			return
 		}
+		m.skipReconnectMu.RUnlock()
 	}
 
 	// If the state is 'connected', 'connecting', or 'reconnecting', etc; don't try to connect.
 	//
 	// If the state is 'reconnecting' or 'connecting', there is another goroutine trying to connect.
 	// If the state is 'connected', there is nothing for this method to do.
+	m.stateMu.Lock()
 	if m.state != clientConnStateDisconnected {
+		m.stateMu.Unlock()
 		return
 	}
 	m.state = clientConnStateReconnecting
+	m.stateMu.Unlock()
 
 	attempts := m.backoff.attempts()
 	didAttemptsReachedMaxAttempts := m.reconnectionAttempts > 0 && attempts >= m.reconnectionAttempts
@@ -104,7 +115,9 @@ func (m *Manager) reconnect(recursed bool) {
 	if didAttemptsReachedMaxAttempts || didAttemptsReachedMaxInt {
 		m.debug.Log("Maximum attempts reached. Attempts made so far", attempts)
 		m.backoff.reset()
+		m.stateMu.Lock()
 		m.state = clientConnStateDisconnected
+		m.stateMu.Unlock()
 		m.reconnectFailedHandlers.forEach(func(handler *ManagerReconnectFailedFunc) { (*handler)() }, true)
 		return
 	}
@@ -113,24 +126,32 @@ func (m *Manager) reconnect(recursed bool) {
 	m.debug.Log("Delay before reconnect attempt", delay)
 	time.Sleep(delay)
 
+	m.skipReconnectMu.RLock()
 	if m.skipReconnect {
+		m.skipReconnectMu.RUnlock()
 		m.debug.Log("Skipping reconnect")
 		return
 	}
+	m.skipReconnectMu.RUnlock()
 
 	attempts = m.backoff.attempts()
 	m.reconnectAttemptHandlers.forEach(func(handler *ManagerReconnectAttemptFunc) { (*handler)(attempts) }, true)
 
+	m.skipReconnectMu.RLock()
 	if m.skipReconnect {
+		m.skipReconnectMu.RUnlock()
 		m.debug.Log("Skipping reconnect")
 		return
 	}
+	m.skipReconnectMu.RUnlock()
 
 	m.debug.Log("Attempting to reconnect")
 	err := m.connect(true)
 	if err != nil {
 		m.debug.Log("Reconnect failed", err)
+		m.stateMu.Lock()
 		m.state = clientConnStateDisconnected
+		m.stateMu.Unlock()
 		m.reconnectErrorHandlers.forEach(func(handler *ManagerReconnectErrorFunc) { (*handler)(err) }, true)
 		m.reconnect(true)
 		return

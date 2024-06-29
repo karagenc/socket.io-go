@@ -53,6 +53,9 @@ type (
 		eioConfig eio.ClientConfig
 		debug     Debugger
 
+		// Also a reconnectMu
+		connectMu sync.Mutex
+
 		state   clientConnectionState
 		stateMu sync.RWMutex
 
