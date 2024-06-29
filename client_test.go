@@ -394,6 +394,48 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should try to reconnect twice and fail when requested two attempts with immediate timeout and reconnect enabled", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				ReconnectionAttempts: 2,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		close()
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/timeout", nil)
+		reconnects := 0
+		reconnectsMu := sync.Mutex{}
+
+		manager.OnReconnectAttempt(func(attempt uint32) {
+			reconnectsMu.Lock()
+			reconnects++
+			reconnectsMu.Unlock()
+		})
+		manager.OnReconnectFailed(func() {
+			reconnectsMu.Lock()
+			assert.Equal(t, 2, reconnects)
+			reconnectsMu.Unlock()
+			socket.Disconnect()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, DefaultConnectTimeout)
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
