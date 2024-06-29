@@ -292,7 +292,7 @@ func TestClient(t *testing.T) {
 			manager.OnReconnectAttempt(func(attempt uint32) {
 				t.FailNow()
 			})
-			time.Sleep(5000 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			tw.Done()
 		})
 		socket.Connect()
