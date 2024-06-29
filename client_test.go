@@ -602,6 +602,33 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should have an accessible socket id equal to the server-side socket id (custom namespace)", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/foo", nil)
+
+		io.Of("/foo").OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("getID", func(r func(id string)) {
+				r(string(socket.ID()))
+			})
+		})
+		socket.Connect()
+		socket.Emit("getID", func(id string) {
+			assert.Equal(t, socket.ID(), SocketID(id))
+			assert.NotEqual(t, manager.eio.ID(), id)
+			tw.Done()
+		})
+
+		tw.WaitTimeout(t, DefaultConnectTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
