@@ -436,6 +436,50 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, DefaultConnectTimeout)
 	})
 
+	t.Run("should fire reconnect_* events on manager", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				ReconnectionAttempts: 2,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		close()
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/timeout_socket", nil)
+		reconnects := 0
+		reconnectsMu := sync.Mutex{}
+
+		manager.OnReconnectAttempt(func(attempt uint32) {
+			reconnectsMu.Lock()
+			reconnects++
+			reconnects := reconnects
+			reconnectsMu.Unlock()
+			assert.Equal(t, uint32(reconnects), attempt)
+		})
+		manager.OnReconnectFailed(func() {
+			reconnectsMu.Lock()
+			assert.Equal(t, 2, reconnects)
+			reconnectsMu.Unlock()
+			socket.Disconnect()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, DefaultConnectTimeout)
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
