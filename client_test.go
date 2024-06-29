@@ -433,7 +433,7 @@ func TestClient(t *testing.T) {
 		})
 		socket.Connect()
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	})
 
 	t.Run("should fire reconnect_* events on manager", func(t *testing.T) {
@@ -477,7 +477,7 @@ func TestClient(t *testing.T) {
 		})
 		socket.Connect()
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	})
 
 	t.Run("should not try to reconnect and should form a connection when connecting to correct port with default timeout", func(t *testing.T) {
@@ -512,7 +512,7 @@ func TestClient(t *testing.T) {
 		})
 		socket.Connect()
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -537,7 +537,7 @@ func TestClient(t *testing.T) {
 		})
 		socket1.Connect()
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -571,7 +571,7 @@ func TestClient(t *testing.T) {
 		})
 		socket1.Connect()
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -598,7 +598,7 @@ func TestClient(t *testing.T) {
 			tw.Done()
 		})
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
@@ -625,7 +625,9 @@ func TestClient(t *testing.T) {
 			tw.Done()
 		})
 
-		tw.WaitTimeout(t, DefaultConnectTimeout)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 		close()
 	})
 
