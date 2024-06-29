@@ -628,6 +628,28 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("clears socket.id upon disconnection", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		socket.OnConnect(func() {
+			socket.OnDisconnect(func(reason Reason) {
+				assert.Equal(t, SocketID(""), socket.ID())
+				tw.Done()
+			})
+			socket.Disconnect()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
