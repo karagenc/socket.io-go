@@ -327,18 +327,28 @@ func TestHandlerStore(t *testing.T) {
 
 	t.Run("subevents", func(t *testing.T) {
 		store := newHandlerStore[*testFn]()
-		var f testFn = func() {}
+		var f1 testFn = func() {}
 
-		store.onSubEvent(&f)
-		require.True(t, store.subs[0] == &f)
+		store.onSubEvent(&f1)
+		require.True(t, store.subs[0] == &f1)
 
 		all := store.getAll()
-		require.True(t, all[0] == &f)
+		require.True(t, all[0] == &f1)
 
 		store.offSubEvents()
 		require.Equal(t, 0, len(store.subs))
 		all = store.getAll()
 		require.Equal(t, 0, len(all))
+
+		var f2 testFn = func() {}
+		store.onSubEvent(&f1)
+		store.onSubEvent(&f2)
+		store.offSubEvent(&f2)
+		require.Equal(t, 1, len(store.subs))
+		require.Equal(t, store.subs[0], &f1)
+		all = store.getAll()
+		require.Equal(t, 1, len(all))
+		require.Equal(t, all[0], &f1)
 	})
 }
 
