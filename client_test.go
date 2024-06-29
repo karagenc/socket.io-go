@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -333,6 +334,64 @@ func TestClient(t *testing.T) {
 		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+	})
+
+	t.Run("should stop reconnecting on a socket and keep to reconnect on another", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		io, ts, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				EIO: eio.ServerConfig{
+					PingTimeout:  3000 * time.Millisecond,
+					PingInterval: 1000 * time.Millisecond,
+				},
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager.Socket("/asd", nil)
+		manager.OnceReconnectAttempt(func(attempt uint32) {
+			socket1.OnConnect(func() {
+				t.FailNow()
+			})
+			socket2.OnConnect(func() {
+				time.Sleep(500 * time.Millisecond)
+				socket2.Disconnect()
+				manager.Close()
+				tw.Done()
+			})
+			socket1.Disconnect()
+		})
+		socket1.Connect()
+		socket2.Connect()
+
+		go func() {
+			time.Sleep(1000 * time.Millisecond)
+			ts.Close()
+			time.Sleep(5000 * time.Millisecond)
+			hs := http.Server{
+				Addr:    ts.Listener.Addr().String(),
+				Handler: io,
+			}
+			err := hs.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				panic(err)
+			}
+		}()
+
+		tw.WaitTimeout(t, 20*time.Second)
+		close()
 	})
 
 	t.Run("should receive ack", func(t *testing.T) {
