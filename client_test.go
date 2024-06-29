@@ -516,6 +516,31 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should connect while disconnecting another socket", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket1 := manager.Socket("/foo", nil)
+
+		socket1.OnConnect(func() {
+			socket2 := manager.Socket("/asd", nil)
+			socket2.OnConnect(func() {
+				tw.Done()
+			})
+			socket2.Connect()
+			socket1.Disconnect()
+		})
+		socket1.Connect()
+
+		tw.WaitTimeout(t, DefaultConnectTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
