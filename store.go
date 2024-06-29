@@ -325,6 +325,12 @@ func (e *handlerStore[T]) off(handler ...T) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	if len(handler) == 0 {
+		e.funcs = nil
+		e.funcsOnce = nil
+		return
+	}
+
 	remove := func(slice []T, s int) []T {
 		return append(slice[:s], slice[s+1:]...)
 	}

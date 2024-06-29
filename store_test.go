@@ -253,6 +253,18 @@ func TestHandlerStore(t *testing.T) {
 		require.Equal(t, 0, len(all))
 	})
 
+	t.Run("off with 0 arguments", func(t *testing.T) {
+		store := newHandlerStore[*testFn]()
+		var f testFn = func() {}
+
+		store.on(&f)
+		store.once(&f)
+		store.off()
+
+		all := store.getAll()
+		require.Equal(t, 0, len(all))
+	})
+
 	t.Run("forEach", func(t *testing.T) {
 		store := newHandlerStore[*testFn]()
 		count := 0
