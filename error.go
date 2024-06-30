@@ -1,5 +1,9 @@
 package sio
 
+import "fmt"
+
+var ErrAckTimeout = fmt.Errorf("ack timeout")
+
 // This is a wrapper for the errors internal to socket.io.
 //
 // If you see this error, this means that the problem is

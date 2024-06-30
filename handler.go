@@ -122,7 +122,7 @@ func newAckHandlerWithTimeout(f any, timeout time.Duration, timeoutFunc func()) 
 		timeoutFunc()
 
 		args := make([]reflect.Value, len(h.inputArgs))
-		args[0] = reflect.ValueOf(fmt.Errorf("operation has timed out"))
+		args[0] = reflect.ValueOf(ErrAckTimeout)
 		for i := 1; i < len(args); i++ {
 			args[i] = reflect.New(h.inputArgs[i]).Elem()
 		}
