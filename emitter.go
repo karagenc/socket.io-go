@@ -18,9 +18,9 @@ type (
 	}
 )
 
-func (e *Emitter) Socket() Socket { return e.socket }
+func (e Emitter) Socket() Socket { return e.socket }
 
-func (e *Emitter) Emit(eventName string, v ...any) {
+func (e Emitter) Emit(eventName string, v ...any) {
 	if len(v) != 0 {
 		f := v[len(v)-1]
 		// Is `f` an ack function?
