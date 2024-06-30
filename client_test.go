@@ -879,6 +879,43 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should emit events in order", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		i := 0
+		iMu := sync.Mutex{}
+		socket.OnConnect(func() {
+			socket.Emit("echo", "second", func() {
+				iMu.Lock()
+				i++
+				i := i
+				iMu.Unlock()
+				assert.Equal(t, i, 2)
+				socket.Disconnect()
+				tw.Done()
+			})
+		})
+		socket.Emit("echo", "first", func() {
+			iMu.Lock()
+			i++
+			i := i
+			iMu.Unlock()
+			assert.Equal(t, i, 1)
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
