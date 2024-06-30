@@ -537,7 +537,7 @@ func (s *clientSocket) onConnectError(_ *parser.PacketHeader, decode parser.Deco
 		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed")))
 		return
 	}
-	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(fmt.Errorf("sio: %s", v.Message)) }, false)
+	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(fmt.Errorf("%s", v.Message)) }, false)
 }
 
 func (s *clientSocket) onDisconnect() {

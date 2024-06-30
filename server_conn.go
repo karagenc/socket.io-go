@@ -2,6 +2,7 @@ package sio
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -149,7 +150,11 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	socket, err := nsp.add(c, auth)
 	if err != nil {
 		c.debug.Log("Connection to namespace", nsp.name, "was denied")
-		c.connectError(err, nsp.Name())
+		if errors.As(err, &middlewareError{}) {
+			c.connectError(err, nsp.Name())
+		} else {
+			c.connectError(fmt.Errorf("sio: %v", err), nsp.Name())
+		}
 		return
 	}
 

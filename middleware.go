@@ -30,7 +30,7 @@ func (n *Namespace) runMiddlewares(socket *serverSocket, handshake *Handshake) e
 	for _, f := range n.middlewareFuncs {
 		err := f(socket, handshake)
 		if err != nil {
-			return err
+			return middlewareError{err: err}
 		}
 	}
 	return nil
@@ -101,3 +101,9 @@ func (s *serverSocket) callMiddlewareFunc(rv reflect.Value, values []reflect.Val
 	err = ret.Interface().(error)
 	return
 }
+
+type middlewareError struct {
+	err error
+}
+
+func (e middlewareError) Error() string { return e.err.Error() }
