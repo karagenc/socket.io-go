@@ -1061,6 +1061,29 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should use the default value", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", &ClientSocketConfig{
+			AckTimeout: 50 * time.Millisecond,
+		})
+
+		socket.Connect()
+		socket.Emit("event", func(err error) {
+			assert.Equal(t, ErrAckTimeout, err)
+			tw.Done()
+		})
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
