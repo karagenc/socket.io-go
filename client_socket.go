@@ -179,7 +179,7 @@ func (s *clientSocket) Active() bool {
 
 func (s *clientSocket) registerSubEvents() {
 	var (
-		open ManagerOpenFunc = func() {
+		openFunc ManagerOpenFunc = func() {
 			s.stateMu.Lock()
 			defer s.stateMu.Unlock()
 			if s.state == clientSocketConnStateConnectPending {
@@ -188,25 +188,25 @@ func (s *clientSocket) registerSubEvents() {
 			s.state = clientSocketConnStateConnectPending
 			s.onOpen()
 		}
-		close ManagerCloseFunc = func(reason Reason, err error) {
-			s.onClose(reason)
-		}
-		error ManagerErrorFunc = func(err error) {
+		errorFunc ManagerErrorFunc = func(err error) {
 			if !s.connectedOrConnectPending() {
 				s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(err) }, true)
 			}
+		}
+		closeFunc ManagerCloseFunc = func(reason Reason, err error) {
+			s.onClose(reason)
 		}
 	)
 
 	s.activeMu.Lock()
 	s.active = true
-	s.manager.openHandlers.onSubEvent(&open)
-	s.manager.errorHandlers.onSubEvent(&error)
-	s.manager.closeHandlers.onSubEvent(&close)
+	s.manager.openHandlers.onSubEvent(&openFunc)
+	s.manager.errorHandlers.onSubEvent(&errorFunc)
+	s.manager.closeHandlers.onSubEvent(&closeFunc)
 	s.subDeregister = func() {
-		s.manager.openHandlers.offSubEvent(&open)
-		s.manager.errorHandlers.offSubEvent(&error)
-		s.manager.closeHandlers.offSubEvent(&close)
+		s.manager.openHandlers.offSubEvent(&openFunc)
+		s.manager.errorHandlers.offSubEvent(&errorFunc)
+		s.manager.closeHandlers.offSubEvent(&closeFunc)
 	}
 	s.activeMu.Unlock()
 }
