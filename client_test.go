@@ -941,6 +941,28 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should send a volatile packet when the socket is connected", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		socket.OnConnect(func() {
+			socket.Volatile().Emit("getID", func() {
+				tw.Done()
+			})
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
