@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -751,6 +752,31 @@ func TestClient(t *testing.T) {
 		}()
 
 		tw.WaitTimeout(t, 20*time.Second)
+		close()
+	})
+
+	t.Run("should fire an error event on middleware failure from custom namespace", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+			return fmt.Errorf("auth failed (custom namespace)")
+		})
+
+		socket.OnConnectError(func(err error) {
+			assert.Equal(t, "auth failed (custom namespace)", err.Error())
+			socket.Disconnect()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
