@@ -151,8 +151,11 @@ func (f *ackHandler) call(args ...reflect.Value) (err error) {
 	}()
 
 	if f.hasError {
-		var e error = nil
-		args = append([]reflect.Value{reflect.ValueOf(e)}, args...)
+		var (
+			nilError          error       = nil
+			pointerToNilError interface{} = &nilError
+		)
+		args = append([]reflect.Value{reflect.ValueOf(pointerToNilError).Elem()}, args...)
 	}
 	f.rv.Call(args)
 	return
