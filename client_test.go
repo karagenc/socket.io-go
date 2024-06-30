@@ -864,6 +864,21 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should throw on reserved event", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		socket := manager.Socket("/", nil)
+		assert.Panics(t, func() {
+			socket.Emit("disconnecting", "goodbye")
+		})
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
