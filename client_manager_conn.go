@@ -51,7 +51,7 @@ func (m *Manager) connect(recursed bool) (err error) {
 	callbacks := eio.Callbacks{
 		OnPacket: m.onEIOPacket,
 		OnError:  m.onError,
-		OnClose:  m.onClose,
+		OnClose:  nil,
 	}
 
 	_eio, err := eio.Dial(m.url, &callbacks, &m.eioConfig)
