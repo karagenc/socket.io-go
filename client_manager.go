@@ -301,7 +301,25 @@ func (m *Manager) onClose(reason Reason, err error) {
 }
 
 func (m *Manager) Close() {
-	m.disconnect()
+	m.debug.Log("Disconnecting")
+
+	m.stateMu.Lock()
+	m.state = clientConnStateDisconnected
+	m.stateMu.Unlock()
+
+	m.skipReconnectMu.Lock()
+	m.skipReconnect = true
+	m.skipReconnectMu.Unlock()
+
+	m.onClose(ReasonForcedClose, nil)
+
+	m.eioMu.RLock()
+	defer m.eioMu.RUnlock()
+	eio := m.eio
+	if eio != nil {
+		go eio.Close()
+	}
+	m.closePacketQueue(m.eioPacketQueue)
 }
 
 func (m *Manager) resetParser() {
