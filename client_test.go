@@ -693,6 +693,67 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should change socket.id upon reconnection", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		io, ts, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				EIO: eio.ServerConfig{
+					PingTimeout:  3000 * time.Millisecond,
+					PingInterval: 1000 * time.Millisecond,
+				},
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		tw := utils.NewTestWaiterString()
+		tw.Add("reconnect attempt check")
+		reconnectAttemptCheck := sync.OnceFunc(func() { tw.Done("reconnect attempt check") })
+		tw.Add("reconnect check")
+		reconnectCheck := sync.OnceFunc(func() { tw.Done("reconnect check") })
+		socket := manager.Socket("/", nil)
+
+		socket.OnConnect(func() {
+			id := socket.ID()
+			manager.OnReconnectAttempt(func(attempt uint32) {
+				assert.Equal(t, SocketID(""), socket.ID())
+				reconnectAttemptCheck()
+			})
+			manager.OnReconnect(func(attempt uint32) {
+				assert.NotEqual(t, socket.ID(), id)
+				socket.Disconnect()
+				reconnectCheck()
+			})
+		})
+		socket.Connect()
+
+		go func() {
+			time.Sleep(1000 * time.Millisecond)
+			ts.Close()
+			time.Sleep(5000 * time.Millisecond)
+			hs := http.Server{
+				Addr:    ts.Listener.Addr().String(),
+				Handler: io,
+			}
+			err := hs.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				panic(err)
+			}
+		}()
+
+		tw.WaitTimeout(t, 20*time.Second)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
