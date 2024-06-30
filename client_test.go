@@ -987,6 +987,27 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should timeout when the server does not acknowledge the event", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		socket.Connect()
+		socket.Timeout(50*time.Millisecond).Emit("event", func(err error) {
+			assert.Equal(t, ErrAckTimeout, err)
+			tw.Done()
+		})
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
