@@ -820,6 +820,50 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should properly disconnect then reconnect", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"websocket"},
+				},
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		doneOnce := sync.OnceFunc(func() { tw.Done() })
+		socket := manager.Socket("/", nil)
+
+		count := 0
+		countMu := sync.Mutex{}
+		socket.OnceConnect(func() {
+			socket.Disconnect()
+			socket.Connect()
+		})
+		socket.OnDisconnect(func(reason Reason) {
+			countMu.Lock()
+			count++
+			countMu.Unlock()
+			doneOnce()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(500 * time.Millisecond)
+		countMu.Lock()
+		assert.Equal(t, 1, count)
+		countMu.Unlock()
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
