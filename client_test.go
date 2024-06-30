@@ -1008,6 +1008,32 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should timeout when the server does not acknowledge the event in time", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("echo", func(n int, r func(int)) {
+				r(n)
+			})
+		})
+		socket.Timeout(1*time.Nanosecond).Emit("echo", 42, func(err error, n int) {
+			assert.Equal(t, ErrAckTimeout, err)
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
