@@ -666,6 +666,33 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 	})
 
+	t.Run("doesn't fire a connect_error event when the connection is already established", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		socket.OnConnect(func() {
+			manager.eioMu.Lock()
+			go manager.eio.Close()
+			manager.eioMu.Unlock()
+			tw.Done()
+		})
+		socket.OnConnectError(func(err error) {
+			t.Fatal("should not happen")
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(500 * time.Millisecond)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
