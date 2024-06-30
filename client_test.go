@@ -780,6 +780,46 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should not try to reconnect after a middleware failure", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 10 * time.Millisecond
+			reconnectionDelayMax = 10 * time.Millisecond
+		)
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+			return fmt.Errorf("auth failed (custom namespace)")
+		})
+
+		count := 0
+		countMu := sync.Mutex{}
+		socket.OnConnectError(func(err error) {
+			countMu.Lock()
+			count++
+			countMu.Unlock()
+			close() // Force reconnection
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(500 * time.Millisecond)
+		countMu.Lock()
+		assert.Equal(t, 1, count)
+		countMu.Unlock()
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
