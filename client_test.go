@@ -963,6 +963,30 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should timeout after the given delay when socket is not connected", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		socket.Timeout(50*time.Millisecond).Emit("event", func(err error) {
+			assert.NotNil(t, err)
+			clientSocket := socket.(*clientSocket)
+			clientSocket.sendBufferMu.Lock()
+			assert.Empty(t, clientSocket.sendBuffer)
+			clientSocket.sendBufferMu.Unlock()
+			tw.Done()
+		})
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
