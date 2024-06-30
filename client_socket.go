@@ -654,15 +654,19 @@ func (s *clientSocket) onAck(header *parser.PacketHeader, decode parser.Decode) 
 		return
 	}
 
-	values, err := decode(ack.inputArgs...)
+	inputArgs := ack.inputArgs
+	if ack.hasError {
+		inputArgs = ack.inputArgs[1:]
+	}
+	values, err := decode(inputArgs...)
 	if err != nil {
 		s.onError(wrapInternalError(err))
 		return
 	}
 
-	if len(values) == len(ack.inputArgs) {
+	if len(values) == len(inputArgs) {
 		for i, v := range values {
-			if ack.inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
+			if inputArgs[i].Kind() != reflect.Ptr && v.Kind() == reflect.Ptr {
 				values[i] = v.Elem()
 			}
 		}
