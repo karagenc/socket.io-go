@@ -653,6 +653,19 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("fire a connect_error event when the connection cannot be established", func(t *testing.T) {
+		tw := utils.NewTestWaiter(1)
+		manager := NewManager("http://localhost:9823", nil)
+		socket := manager.Socket("/", nil)
+		socket.OnConnectError(func(err error) {
+			socket.Disconnect()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
