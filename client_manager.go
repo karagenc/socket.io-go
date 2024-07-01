@@ -92,6 +92,10 @@ type (
 		reconnectAttemptHandlers *handlerStore[*ManagerReconnectAttemptFunc]
 		reconnectErrorHandlers   *handlerStore[*ManagerReconnectErrorFunc]
 		reconnectFailedHandlers  *handlerStore[*ManagerReconnectFailedFunc]
+
+		// Callbacks to destroy subs
+		subs   []func()
+		subsMu sync.Mutex
 	}
 )
 
@@ -246,6 +250,7 @@ func (m *Manager) open() {
 	m.debug.Log("Opening")
 	err := m.connect(false)
 	if err != nil {
+		m.cleanup()
 		m.maybeReconnectOnOpen()
 	}
 }
@@ -280,10 +285,21 @@ func (m *Manager) destroy(_ *clientSocket) {
 	m.Close()
 }
 
+func (m *Manager) cleanup() {
+	m.subsMu.Lock()
+	subs := m.subs
+	m.subs = nil
+	m.subsMu.Unlock()
+	for _, sub := range subs {
+		sub()
+	}
+	m.resetParser()
+}
+
 func (m *Manager) onClose(reason Reason, err error) {
 	m.debug.Log("Closed. Reason", reason)
 
-	m.resetParser()
+	m.cleanup()
 	m.backoff.reset()
 
 	m.stateMu.Lock()

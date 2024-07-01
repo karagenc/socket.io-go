@@ -5,6 +5,8 @@ import (
 	"time"
 
 	eio "github.com/tomruk/socket.io-go/engine.io"
+	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
 // Manager methods that are directly related to
@@ -48,10 +50,38 @@ func (m *Manager) connect(recursed bool) (err error) {
 	m.eioMu.Lock()
 	defer m.eioMu.Unlock()
 
+	var (
+		active   = true
+		activeMu sync.Mutex
+	)
 	callbacks := eio.Callbacks{
-		OnPacket: m.onEIOPacket,
-		OnError:  m.onError,
-		OnClose:  nil,
+		OnPacket: func(packets ...*parser.Packet) {
+			activeMu.Lock()
+			if !active {
+				activeMu.Unlock()
+				return
+			}
+			activeMu.Unlock()
+			m.onEIOPacket(packets...)
+		},
+		OnError: func(err error) {
+			activeMu.Lock()
+			if !active {
+				activeMu.Unlock()
+				return
+			}
+			activeMu.Unlock()
+			m.onError(err)
+		},
+		OnClose: func(reason eio.Reason, err error) {
+			activeMu.Lock()
+			if !active {
+				activeMu.Unlock()
+				return
+			}
+			activeMu.Unlock()
+			m.onClose(reason, err)
+		},
 	}
 
 	_eio, err := eio.Dial(m.url, &callbacks, &m.eioConfig)
@@ -70,6 +100,19 @@ func (m *Manager) connect(recursed bool) (err error) {
 	m.eio = _eio
 	m.resetParser()
 	m.closePacketQueue(m.eioPacketQueue)
+
+	m.cleanup()
+	m.subsMu.Lock()
+	activeMu.Lock()
+	if active {
+		m.subs = append(m.subs, func() {
+			activeMu.Lock()
+			active = false
+			activeMu.Unlock()
+		})
+	}
+	activeMu.Unlock()
+	m.subsMu.Unlock()
 
 	m.eioPacketQueue = newPacketQueue()
 	go m.eioPacketQueue.pollAndSend(_eio)
