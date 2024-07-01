@@ -12,91 +12,91 @@ import (
 
 func TestServer(t *testing.T) {
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
-		server, _, manager, close := newTestServerAndClient(t, nil, nil)
-		socket := manager.Socket("/", nil)
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		clientSocket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		server.OnConnection(func(socket ServerSocket) {
+		io.OnConnection(func(socket ServerSocket) {
 			tw.Done()
 		})
-		socket.Connect()
+		clientSocket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run(`should be able to equivalently start with "" or "/" on server`, func(t *testing.T) {
-		server, _, manager, close := newTestServerAndClient(t, nil, nil)
-		socket := manager.Socket("/", nil)
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		clientSocket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiterString()
 		tw.Add("/abc")
 		tw.Add("")
 
-		server.Of("/abc").OnConnection(func(socket ServerSocket) {
+		io.Of("/abc").OnConnection(func(socket ServerSocket) {
 			tw.Done("/abc")
 		})
-		server.Of("").OnConnection(func(socket ServerSocket) {
+		io.Of("").OnConnection(func(socket ServerSocket) {
 			tw.Done("")
 		})
 
 		manager.Socket("/abc", nil).Connect()
-		socket.Connect()
+		clientSocket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run(`should be equivalent for "" and "/" on client`, func(t *testing.T) {
-		server, _, manager, close := newTestServerAndClient(t, nil, nil)
-		socket := manager.Socket("", nil)
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		clientSocket := manager.Socket("", nil)
 		tw := utils.NewTestWaiter(1)
 
-		server.Of("/").OnConnection(func(socket ServerSocket) {
+		io.Of("/").OnConnection(func(socket ServerSocket) {
 			tw.Done()
 		})
 
-		socket.Connect()
+		clientSocket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run("should work with `of` and many sockets", func(t *testing.T) {
-		server, _, manager, close := newTestServerAndClient(t, nil, nil)
-		socket := manager.Socket("/", nil)
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		clientSocket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiterString()
 		tw.Add("/chat")
 		tw.Add("/news")
 		tw.Add("/")
 
-		server.Of("/chat").OnConnection(func(socket ServerSocket) {
+		io.Of("/chat").OnConnection(func(socket ServerSocket) {
 			tw.Done("/chat")
 		})
-		server.Of("/news").OnConnection(func(socket ServerSocket) {
+		io.Of("/news").OnConnection(func(socket ServerSocket) {
 			tw.Done("/news")
 		})
-		server.OnConnection(func(socket ServerSocket) {
+		io.OnConnection(func(socket ServerSocket) {
 			tw.Done("/")
 		})
 
 		manager.Socket("/chat", nil).Connect()
 		manager.Socket("/news", nil).Connect()
-		socket.Connect()
+		clientSocket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run("should receive ack", func(t *testing.T) {
-		server, _, manager, close := newTestServerAndClient(t, nil, nil)
-		socket := manager.Socket("/", nil)
-		socket.Connect()
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		clientSocket := manager.Socket("/", nil)
+		clientSocket.Connect()
 		tw := utils.NewTestWaiter(5)
 
-		socket.OnEvent("ack", func(message string, ack func(reply string)) {
+		clientSocket.OnEvent("ack", func(message string, ack func(reply string)) {
 			t.Logf("event %s", message)
 			assert.Equal(t, "hello", message)
 			ack("hi")
 		})
 
-		server.OnConnection(func(socket ServerSocket) {
+		io.OnConnection(func(socket ServerSocket) {
 			for i := 0; i < 5; i++ {
 				t.Log("Emitting to client")
 				socket.Emit("ack", "hello", func(reply string) {
