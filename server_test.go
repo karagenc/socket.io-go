@@ -11,6 +11,30 @@ import (
 )
 
 func TestServer(t *testing.T) {
+	t.Run("should receive events", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		clientSocket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnConnection(func(serverSocket ServerSocket) {
+			serverSocket.OnEvent("random", func(a int, b string, c []int) {
+				assert.Equal(t, 1, a)
+				assert.Equal(t, "2", b)
+				assert.Equal(t, []int{3}, c)
+				tw.Done()
+			})
+		})
+		clientSocket.Emit("random", 1, "2", []int{3})
+		clientSocket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
