@@ -79,6 +79,30 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should emit events with utf8 multibyte character", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		clientSocket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(3)
+
+		clientSocket.OnEvent("hoot", func(a string) {
+			assert.Equal(t, "utf8 — string", a)
+			tw.Done()
+		})
+		io.OnConnection(func(serverSocket ServerSocket) {
+			serverSocket.Emit("hoot", "utf8 — string")
+			serverSocket.Emit("hoot", "utf8 — string")
+			serverSocket.Emit("hoot", "utf8 — string")
+		})
+		clientSocket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
