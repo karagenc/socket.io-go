@@ -52,7 +52,7 @@ func (p *Parser) Add(data []byte, finish parser.Finish) error {
 	if ok {
 		r := p.r
 		p.r = nil
-		finish(p.r.header, p.r.eventName, r.decode)
+		finish(r.header, r.eventName, r.decode)
 	}
 	return nil
 }
