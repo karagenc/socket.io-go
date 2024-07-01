@@ -1084,6 +1084,37 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should not fire events more than once after manually reconnecting", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			&ManagerConfig{
+				NoReconnection: true,
+			})
+		socket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		socket.OnConnect(func() {
+			socket.OffConnect()
+			manager.eioMu.Lock()
+			go manager.eio.Close()
+			manager.eioMu.Unlock()
+
+			manager.OnClose(func(reason Reason, err error) {
+				socket.OnConnect(func() {
+					tw.Done()
+				})
+				socket.Connect()
+			})
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
