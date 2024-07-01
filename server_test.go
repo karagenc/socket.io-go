@@ -35,6 +35,28 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should error with null messages", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		clientSocket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnConnection(func(serverSocket ServerSocket) {
+			serverSocket.OnEvent("message", func(a any) {
+				assert.Equal(t, nil, a)
+				tw.Done()
+			})
+		})
+		clientSocket.Emit("message", nil)
+		clientSocket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
