@@ -57,6 +57,28 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should emit events", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		clientSocket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		clientSocket.OnEvent("woot", func(a string) {
+			assert.Equal(t, "tobi", a)
+			tw.Done()
+		})
+		io.OnConnection(func(serverSocket ServerSocket) {
+			serverSocket.Emit("woot", "tobi")
+		})
+		clientSocket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
