@@ -1115,6 +1115,43 @@ func TestClient(t *testing.T) {
 		close()
 	})
 
+	t.Run("should not fire reconnect_failed event more than once when server closed", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 100 * time.Millisecond
+			reconnectionDelayMax = 100 * time.Millisecond
+		)
+		_, _, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				EIO: eio.ServerConfig{
+					PingInterval: 1000 * time.Millisecond,
+					PingTimeout:  3000 * time.Millisecond,
+				},
+			},
+			&ManagerConfig{
+				ReconnectionAttempts: 3,
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"websocket"},
+				},
+			})
+		socket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		socket.OnConnect(func() {
+			close()
+		})
+		manager.OnReconnectFailed(func() {
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(1 * time.Second)
+	})
+
 	t.Run("should receive ack", func(t *testing.T) {
 		server, _, manager, close := newTestServerAndClient(t, nil, nil)
 		socket := manager.Socket("/", nil)
