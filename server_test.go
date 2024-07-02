@@ -291,6 +291,31 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should emit events with args and callback", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		socket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Emit("woot", 1, 2, func() {
+				tw.Done()
+			})
+		})
+		socket.OnEvent("hi", func(a, b int, c func()) {
+			assert.Equal(t, 1, a)
+			assert.Equal(t, 2, b)
+			c()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
