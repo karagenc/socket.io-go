@@ -269,8 +269,10 @@ func (r *reconstructor) reconstruct(types ...reflect.Type) (values []reflect.Val
 	payload := r.buffers[0]
 	values = convertTypesToValues(types...)
 
-	eventName := reflect.New(stringType)
-	values = append([]reflect.Value{eventName}, values...)
+	if r.header.IsEvent() {
+		eventName := reflect.New(stringType)
+		values = append([]reflect.Value{eventName}, values...)
+	}
 
 	if r.header.IsEvent() && len(values) == 0 {
 		return nil, errInvalidNumberOfValues
