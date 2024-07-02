@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tomruk/socket.io-go/internal/sync"
 	"github.com/tomruk/socket.io-go/internal/utils"
 	"nhooyr.io/websocket"
 )
@@ -176,6 +177,40 @@ func TestServer(t *testing.T) {
 			clientSocket.Emit("multiple", 1, "3", []int{4}, Binary(randomBin), []any{5, "swag"})
 		})
 		clientSocket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should receive all events emitted from namespaced client immediately and in order", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		clientSocket := manager.Socket("/chat", nil)
+		tw := utils.NewTestWaiter(2)
+
+		total := 0
+		countMu := sync.Mutex{}
+
+		io.Of("/chat").OnConnection(func(serverSocket ServerSocket) {
+			serverSocket.OnEvent("hi", func(letter string) {
+				countMu.Lock()
+				defer countMu.Unlock()
+				total++
+				switch total {
+				case 1:
+					assert.Equal(t, 'a', int32(letter[0]))
+				case 2:
+					assert.Equal(t, 'b', int32(letter[0]))
+				}
+				tw.Done()
+			})
+		})
+		clientSocket.Connect()
+		clientSocket.Emit("hi", "a")
+		clientSocket.Emit("hi", "b")
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
