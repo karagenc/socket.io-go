@@ -1,11 +1,14 @@
 package sio
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	eio "github.com/tomruk/socket.io-go/engine.io"
 	"github.com/tomruk/socket.io-go/internal/sync"
 	"github.com/tomruk/socket.io-go/internal/utils"
 	"nhooyr.io/websocket"
@@ -450,6 +453,62 @@ func TestServer(t *testing.T) {
 		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should be able to emit after server close and restart", func(t *testing.T) {
+		var (
+			reconnectionDelay    = 100 * time.Millisecond
+			reconnectionDelayMax = 100 * time.Millisecond
+		)
+		io, ts, manager, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				EIO: eio.ServerConfig{
+					PingTimeout:  3000 * time.Millisecond,
+					PingInterval: 1000 * time.Millisecond,
+				},
+			},
+			&ManagerConfig{
+				ReconnectionDelay:    &reconnectionDelay,
+				ReconnectionDelayMax: &reconnectionDelayMax,
+				EIO: eio.ClientConfig{
+					Transports: []string{"polling"}, // To buy time by not waiting for +2 other transport's connection attempts.
+				},
+			},
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("ev", func(data string) {
+				assert.Equal(t, "payload", data)
+				tw.Done()
+			})
+		})
+
+		socket.OnceConnect(func() {
+			manager.OnReconnect(func(attempt uint32) {
+				socket.Emit("ev", "payload")
+			})
+
+			go func() {
+				ts.Close()
+				time.Sleep(5000 * time.Millisecond)
+				hs := http.Server{
+					Addr:    ts.Listener.Addr().String(),
+					Handler: io,
+				}
+				err := hs.ListenAndServe()
+				if err != nil && err != http.ErrServerClosed {
+					panic(err)
+				}
+			}()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, 20*time.Second)
 		close()
 	})
 
