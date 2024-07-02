@@ -124,8 +124,6 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 	switch header.Type {
 	case parser.PacketTypeEvent, parser.PacketTypeBinaryEvent:
 		var (
-			hasAckFunc bool // This doesn't need mutex
-
 			mu   sync.Mutex
 			sent bool
 		)
@@ -144,28 +142,7 @@ func (s *serverSocket) onPacket(header *parser.PacketHeader, eventName string, d
 		}
 
 		for _, handler := range s.eventHandlers.getAll(eventName) {
-			_hasAckFunc := s.onEvent(handler, header, decode, sendAck)
-			if _hasAckFunc {
-				hasAckFunc = true
-			}
-		}
-		if header.ID != nil {
-			mu.Lock()
-			send := !hasAckFunc
-			if sent {
-				mu.Unlock()
-				return nil
-			}
-			sent = true
-			mu.Unlock()
-
-			// If there is no acknowledgement function
-			// and there is no response already sent,
-			// then send an empty acknowledgement.
-			if send {
-				s.debug.Log("Sending ack with ID", *header.ID)
-				s.sendAckPacket(*header.ID, nil)
-			}
+			s.onEvent(handler, header, decode, sendAck)
 		}
 	case parser.PacketTypeAck, parser.PacketTypeBinaryAck:
 		s.onAck(header, decode)
