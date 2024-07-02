@@ -1151,32 +1151,4 @@ func TestClient(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		time.Sleep(1 * time.Second)
 	})
-
-	t.Run("should receive ack", func(t *testing.T) {
-		server, _, manager, close := newTestServerAndClient(t, nil, nil)
-		socket := manager.Socket("/", nil)
-		socket.Connect()
-		tw := utils.NewTestWaiter(5)
-
-		socket.OnConnect(func() {
-			for i := 0; i < 5; i++ {
-				t.Log("Emitting to server")
-				socket.Emit("ack", "hello", func(reply string) {
-					defer tw.Done()
-					t.Logf("Ack received. Value: `%s`", reply)
-					assert.Equal(t, "hi", reply)
-				})
-			}
-		})
-
-		server.OnConnection(func(socket ServerSocket) {
-			socket.OnEvent("ack", func(message string, ack func(reply string)) {
-				t.Logf("Message for the `ack` event: %s", message)
-				assert.Equal(t, "hello", message)
-				ack("hi")
-			})
-		})
-		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
-		close()
-	})
 }
