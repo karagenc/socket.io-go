@@ -298,17 +298,18 @@ func TestServer(t *testing.T) {
 			nil,
 		)
 		socket := manager.Socket("/", nil)
-		tw := utils.NewTestWaiter(1)
+		tw := utils.NewTestWaiter(2)
 
 		io.OnConnection(func(socket ServerSocket) {
 			socket.Emit("woot", 1, 2, func() {
 				tw.Done()
 			})
 		})
-		socket.OnEvent("hi", func(a, b int, c func()) {
+		socket.OnEvent("woot", func(a, b int, c func()) {
 			assert.Equal(t, 1, a)
 			assert.Equal(t, 2, b)
 			c()
+			tw.Done()
 		})
 		socket.Connect()
 
