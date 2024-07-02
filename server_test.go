@@ -216,6 +216,31 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should receive event with callbacks", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		socket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("woot", func(fn func(int, int)) {
+				fn(1, 2)
+			})
+		})
+		socket.Connect()
+		socket.Emit("woot", func(a, b int) {
+			assert.Equal(t, 1, a)
+			assert.Equal(t, 2, b)
+			tw.Done()
+		})
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
