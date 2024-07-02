@@ -427,6 +427,32 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should receive events and pass binary data in a callback", func(t *testing.T) {
+		randomBin := []byte("\x36\x43\x78\x6a\x4c\xad\x7b\x6f\x33\x96\xc6\xdb\x4b\xd3\xe4\x8c\xc7\x12")
+
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		socket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("woot", func(ack func(Binary)) {
+				ack(randomBin)
+			})
+		})
+		socket.Emit("woot", func(a Binary) {
+			assert.Equal(t, Binary(randomBin), a)
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
