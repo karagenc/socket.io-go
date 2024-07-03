@@ -537,6 +537,30 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should leave all rooms joined after a middleware failure", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Disconnect(true)
+			socket.Join("room1")
+		})
+		socket.OnDisconnect(func(reason Reason) {
+			_, ok := io.Of("/").Adapter().SocketRooms(socket.ID())
+			assert.False(t, ok)
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("should fire a CONNECT event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
 		clientSocket := manager.Socket("/", nil)
