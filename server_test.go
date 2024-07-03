@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -509,6 +510,30 @@ func TestServer(t *testing.T) {
 		socket.Connect()
 
 		tw.WaitTimeout(t, 20*time.Second)
+		close()
+	})
+
+	t.Run("should leave all rooms joined after a middleware failure", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+			socket.Join("room1")
+			return fmt.Errorf("nope")
+		})
+		socket.OnConnectError(func(err error) {
+			_, ok := io.Of("/").Adapter().SocketRooms(socket.ID())
+			assert.False(t, ok)
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
