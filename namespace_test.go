@@ -3,6 +3,7 @@ package sio
 import (
 	"testing"
 
+	"github.com/tomruk/socket.io-go/internal/sync"
 	"github.com/tomruk/socket.io-go/internal/utils"
 )
 
@@ -91,6 +92,65 @@ func TestNamespace(t *testing.T) {
 			tw.Done()
 		})
 		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should disconnect upon transport disconnection", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		tw := utils.NewTestWaiter(1)
+
+		var (
+			mu              sync.Mutex
+			total           = 0
+			totalDisconnect = 0
+			s               ServerSocket
+		)
+		disconnect := func() {
+			mu.Lock()
+			defer mu.Unlock()
+			s.Disconnect(true)
+		}
+		io.Of("/chat").OnConnection(func(socket ServerSocket) {
+			socket.OnDisconnect(func(reason Reason) {
+				mu.Lock()
+				totalDisconnect++
+				totalDisconnect := totalDisconnect
+				mu.Unlock()
+				if totalDisconnect == 2 {
+					tw.Done()
+				}
+			})
+			mu.Lock()
+			total++
+			total := total
+			mu.Unlock()
+			if total == 2 {
+				disconnect()
+			}
+		})
+		io.Of("/news").OnConnection(func(socket ServerSocket) {
+			socket.OnDisconnect(func(reason Reason) {
+				mu.Lock()
+				totalDisconnect++
+				totalDisconnect := totalDisconnect
+				mu.Unlock()
+				if totalDisconnect == 2 {
+					tw.Done()
+				}
+			})
+			mu.Lock()
+			s = socket
+			total++
+			total := total
+			mu.Unlock()
+			if total == 2 {
+				disconnect()
+			}
+		})
+		manager.Socket("/chat", nil).Connect()
+		manager.Socket("/news", nil).Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
