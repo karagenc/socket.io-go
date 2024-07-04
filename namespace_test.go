@@ -79,4 +79,21 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should work with `of` second param", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("/news", nil)
+		tw := utils.NewTestWaiter(2)
+
+		io.Of("/news").OnConnection(func(socket ServerSocket) {
+			tw.Done()
+		})
+		io.Of("/news").OnConnection(func(socket ServerSocket) {
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
