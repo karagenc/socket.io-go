@@ -22,19 +22,19 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.OnEvent("random", func(a int, b string, c []int) {
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("random", func(a int, b string, c []int) {
 				assert.Equal(t, 1, a)
 				assert.Equal(t, "2", b)
 				assert.Equal(t, []int{3}, c)
 				tw.Done()
 			})
 		})
-		clientSocket.Emit("random", 1, "2", []int{3})
-		clientSocket.Connect()
+		socket.Emit("random", 1, "2", []int{3})
+		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -46,17 +46,17 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.OnEvent("message", func(a any) {
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("message", func(a any) {
 				assert.Equal(t, nil, a)
 				tw.Done()
 			})
 		})
-		clientSocket.Emit("message", nil)
-		clientSocket.Connect()
+		socket.Emit("message", nil)
+		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -68,17 +68,17 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		clientSocket.OnEvent("woot", func(a string) {
+		socket.OnEvent("woot", func(a string) {
 			assert.Equal(t, "tobi", a)
 			tw.Done()
 		})
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.Emit("woot", "tobi")
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Emit("woot", "tobi")
 		})
-		clientSocket.Connect()
+		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -90,19 +90,19 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(3)
 
-		clientSocket.OnEvent("hoot", func(a string) {
+		socket.OnEvent("hoot", func(a string) {
 			assert.Equal(t, "utf8 — string", a)
 			tw.Done()
 		})
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.Emit("hoot", "utf8 — string")
-			serverSocket.Emit("hoot", "utf8 — string")
-			serverSocket.Emit("hoot", "utf8 — string")
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Emit("hoot", "utf8 — string")
+			socket.Emit("hoot", "utf8 — string")
+			socket.Emit("hoot", "utf8 — string")
 		})
-		clientSocket.Connect()
+		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -116,17 +116,17 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		clientSocket.OnEvent("randomBin", func(a Binary) {
+		socket.OnEvent("randomBin", func(a Binary) {
 			assert.Equal(t, randomBin, []byte(a))
 			tw.Done()
 		})
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.Emit("randomBin", Binary(randomBin))
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Emit("randomBin", Binary(randomBin))
 		})
-		clientSocket.Connect()
+		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -140,17 +140,17 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.OnEvent("randomBin", func(a Binary) {
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("randomBin", func(a Binary) {
 				assert.Equal(t, randomBin, []byte(a))
 				tw.Done()
 			})
-			clientSocket.Emit("randomBin", Binary(randomBin))
 		})
-		clientSocket.Connect()
+		socket.Connect()
+		socket.Emit("randomBin", Binary(randomBin))
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -164,11 +164,11 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
-		io.OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.OnEvent("multiple", func(a int, b string, c []int, d Binary, e []any) {
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("multiple", func(a int, b string, c []int, d Binary, e []any) {
 				assert.Equal(t, 1, a)
 				assert.Equal(t, "3", b)
 				assert.Equal(t, []int{4}, c)
@@ -178,9 +178,9 @@ func TestServer(t *testing.T) {
 				assert.Equal(t, "swag", e[1])
 				tw.Done()
 			})
-			clientSocket.Emit("multiple", 1, "3", []int{4}, Binary(randomBin), []any{5, "swag"})
 		})
-		clientSocket.Connect()
+		socket.Connect()
+		socket.Emit("multiple", 1, "3", []int{4}, Binary(randomBin), []any{5, "swag"})
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
@@ -192,14 +192,14 @@ func TestServer(t *testing.T) {
 			nil,
 			nil,
 		)
-		clientSocket := manager.Socket("/chat", nil)
+		socket := manager.Socket("/chat", nil)
 		tw := utils.NewTestWaiter(2)
 
 		total := 0
 		countMu := sync.Mutex{}
 
-		io.Of("/chat").OnConnection(func(serverSocket ServerSocket) {
-			serverSocket.OnEvent("hi", func(letter string) {
+		io.Of("/chat").OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("hi", func(letter string) {
 				countMu.Lock()
 				defer countMu.Unlock()
 				total++
@@ -212,9 +212,9 @@ func TestServer(t *testing.T) {
 				tw.Done()
 			})
 		})
-		clientSocket.Connect()
-		clientSocket.Emit("hi", "a")
-		clientSocket.Emit("hi", "b")
+		socket.Connect()
+		socket.Emit("hi", "a")
+		socket.Emit("hi", "b")
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()

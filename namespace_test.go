@@ -9,20 +9,20 @@ import (
 func TestNamespace(t *testing.T) {
 	t.Run("should fire a `connect` event", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiter(1)
 
 		io.OnConnection(func(socket ServerSocket) {
 			tw.Done()
 		})
-		clientSocket.Connect()
+		socket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run(`should be able to equivalently start with "" or "/" on server`, func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiterString()
 		tw.Add("/abc")
 		tw.Add("")
@@ -35,28 +35,28 @@ func TestNamespace(t *testing.T) {
 		})
 
 		manager.Socket("/abc", nil).Connect()
-		clientSocket.Connect()
+		socket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run(`should be equivalent for "" and "/" on client`, func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
-		clientSocket := manager.Socket("", nil)
+		socket := manager.Socket("", nil)
 		tw := utils.NewTestWaiter(1)
 
 		io.Of("/").OnConnection(func(socket ServerSocket) {
 			tw.Done()
 		})
+		socket.Connect()
 
-		clientSocket.Connect()
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 
 	t.Run("should work with `of` and many sockets", func(t *testing.T) {
 		io, _, manager, close := newTestServerAndClient(t, nil, nil)
-		clientSocket := manager.Socket("/", nil)
+		socket := manager.Socket("/", nil)
 		tw := utils.NewTestWaiterString()
 		tw.Add("/chat")
 		tw.Add("/news")
@@ -71,10 +71,9 @@ func TestNamespace(t *testing.T) {
 		io.OnConnection(func(socket ServerSocket) {
 			tw.Done("/")
 		})
-
 		manager.Socket("/chat", nil).Connect()
 		manager.Socket("/news", nil).Connect()
-		clientSocket.Connect()
+		socket.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
