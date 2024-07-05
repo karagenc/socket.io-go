@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/tomruk/socket.io-go/internal/utils"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/tomruk/socket.io-go/adapter"
@@ -350,7 +351,14 @@ func (s *serverSocket) onClose(reason Reason) {
 			return
 		}
 
-		s.disconnectingHandlers.forEach(func(handler *ServerSocketDisconnectingFunc) { (*handler)(reason) }, true)
+		wg := utils.NewTimeoutWaiter(0)
+		s.disconnectingHandlers.forEach(func(handler *ServerSocketDisconnectingFunc) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				(*handler)(reason)
+			}()
+		}, false)
 
 		if s.server.connectionStateRecovery.Enabled && recoverableDisconnectReasons.Contains(reason) {
 			s.debug.Log("Connection state recovery is enabled")
@@ -368,6 +376,7 @@ func (s *serverSocket) onClose(reason Reason) {
 		s.joinMu.Lock()
 		s.join = func(room ...Room) {}
 		s.joinMu.Unlock()
+		wg.WaitTimeout(10 * time.Second)
 		s.leaveAll()
 
 		s.nsp.remove(s)
