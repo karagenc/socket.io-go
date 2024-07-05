@@ -588,19 +588,6 @@ func newTestServerAndClient(
 		CompressionMode: websocket.CompressionDisabled,
 	}
 
-	if managerConfig == nil {
-		managerConfig = new(ManagerConfig)
-	}
-	if enablePrintDebugger {
-		managerConfig.Debugger = NewPrintDebugger()
-	}
-	if enablePrintDebuggerEIO {
-		managerConfig.EIO.Debugger = NewPrintDebugger()
-	}
-	managerConfig.EIO.WebSocketDialOptions = &websocket.DialOptions{
-		CompressionMode: websocket.CompressionDisabled,
-	}
-
 	io = NewServer(serverConfig)
 	err := io.Run()
 	if err != nil {
@@ -617,4 +604,22 @@ func newTestServerAndClient(
 		}
 		ts.Close()
 	}
+}
+
+func newTestManager(ts *httptest.Server, managerConfig *ManagerConfig) *Manager {
+	enablePrintDebugger := os.Getenv("SIO_DEBUGGER_PRINT") == "1"
+	enablePrintDebuggerEIO := os.Getenv("EIO_DEBUGGER_PRINT") == "1"
+	if managerConfig == nil {
+		managerConfig = new(ManagerConfig)
+	}
+	if enablePrintDebugger {
+		managerConfig.Debugger = NewPrintDebugger()
+	}
+	if enablePrintDebuggerEIO {
+		managerConfig.EIO.Debugger = NewPrintDebugger()
+	}
+	managerConfig.EIO.WebSocketDialOptions = &websocket.DialOptions{
+		CompressionMode: websocket.CompressionDisabled,
+	}
+	return NewManager(ts.URL, managerConfig)
 }

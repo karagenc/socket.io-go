@@ -3,6 +3,7 @@ package sio
 import (
 	"testing"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/internal/sync"
 	"github.com/tomruk/socket.io-go/internal/utils"
@@ -198,28 +199,31 @@ func TestNamespace(t *testing.T) {
 	})
 
 	t.Run("should find all clients in a namespace", func(t *testing.T) {
-		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
 		tw := utils.NewTestWaiter(1)
-		chatSid := SocketID("")
+		chatSids := mapset.NewSet[SocketID]()
 		total := 0
 		mu := sync.Mutex{}
 
 		getSockets := func() {
 			sockets := io.Of("/chat").FetchSockets()
-			assert.Len(t, sockets, 1)
+			assert.Len(t, sockets, 2)
 			mu.Lock()
-			assert.Equal(t, chatSid, sockets[0].ID())
+			for _, socket := range sockets {
+				assert.True(t, chatSids.ContainsOne(socket.ID()))
+			}
 			mu.Unlock()
 			tw.Done()
 		}
 
 		io.Of("/chat").OnConnection(func(socket ServerSocket) {
 			mu.Lock()
-			chatSid = socket.ID()
+			chatSids.Add(socket.ID())
 			total++
 			total := total
 			mu.Unlock()
-			if total == 2 {
+			if total == 3 {
 				getSockets()
 			}
 		})
@@ -228,15 +232,65 @@ func TestNamespace(t *testing.T) {
 			total++
 			total := total
 			mu.Unlock()
-			if total == 2 {
+			if total == 3 {
 				getSockets()
 			}
 		})
 
-		chatSocket := manager.Socket("/chat", nil)
-		chatSocket.Connect()
-		otherSocket := manager.Socket("/other", nil)
-		otherSocket.Connect()
+		manager.Socket("/chat", nil).Connect()
+		manager2.Socket("/chat", nil).Connect()
+		manager.Socket("/other", nil).Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should find all clients in a namespace room", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		tw := utils.NewTestWaiter(1)
+		chatFooSid := SocketID("")
+		total := 0
+		mu := sync.Mutex{}
+
+		getSockets := func() {
+			sockets := io.Of("/chat").In("foo").FetchSockets()
+			assert.Len(t, sockets, 1)
+			mu.Lock()
+			assert.Equal(t, chatFooSid, sockets[0].ID())
+			mu.Unlock()
+			tw.Done()
+		}
+
+		io.Of("/chat").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			if chatFooSid == "" {
+				chatFooSid = socket.ID()
+				socket.Join("foo")
+			} else {
+				socket.Join("bar")
+			}
+			total++
+			total := total
+			mu.Unlock()
+			if total == 3 {
+				getSockets()
+			}
+		})
+		io.Of("/other").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			total++
+			total := total
+			mu.Unlock()
+			socket.Join("foo")
+			if total == 3 {
+				getSockets()
+			}
+		})
+
+		manager.Socket("/chat", nil).Connect()
+		manager2.Socket("/chat", nil).Connect()
+		manager.Socket("/other", nil).Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
