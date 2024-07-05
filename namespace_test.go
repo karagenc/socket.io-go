@@ -349,4 +349,12 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should throw on reserved event", func(t *testing.T) {
+		io, _, _, close := newTestServerAndClient(t, nil, nil)
+		assert.Panics(t, func() {
+			io.Emit("connect")
+		})
+		close()
+	})
 }
