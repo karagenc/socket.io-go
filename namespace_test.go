@@ -295,4 +295,58 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should find all clients across namespace rooms", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		tw := utils.NewTestWaiter(1)
+		chatSids := mapset.NewSet[SocketID]()
+		total := 0
+		mu := sync.Mutex{}
+
+		getSockets := func() {
+			sockets := io.Of("/chat").FetchSockets()
+			assert.Len(t, sockets, 2)
+			mu.Lock()
+			for _, socket := range sockets {
+				assert.True(t, chatSids.ContainsOne(socket.ID()))
+			}
+			mu.Unlock()
+			tw.Done()
+		}
+
+		io.Of("/chat").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			if chatSids.Cardinality() == 0 {
+				chatSids.Add(socket.ID())
+				socket.Join("foo")
+			} else {
+				chatSids.Add(socket.ID())
+				socket.Join("bar")
+			}
+			total++
+			total := total
+			mu.Unlock()
+			if total == 3 {
+				getSockets()
+			}
+		})
+		io.Of("/other").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			total++
+			total := total
+			mu.Unlock()
+			socket.Join("foo")
+			if total == 3 {
+				getSockets()
+			}
+		})
+
+		manager.Socket("/chat", nil).Connect()
+		manager2.Socket("/chat", nil).Connect()
+		manager.Socket("/other", nil).Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
