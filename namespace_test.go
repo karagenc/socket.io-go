@@ -3,6 +3,7 @@ package sio
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tomruk/socket.io-go/internal/sync"
 	"github.com/tomruk/socket.io-go/internal/utils"
 )
@@ -151,6 +152,30 @@ func TestNamespace(t *testing.T) {
 		})
 		manager.Socket("/chat", nil).Connect()
 		manager.Socket("/news", nil).Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should fire a `disconnecting` event just before leaving all rooms", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		tw := utils.NewTestWaiter(2)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Join("a")
+			socket.OnDisconnecting(func(reason Reason) {
+				rooms := socket.Rooms()
+				assert.True(t, rooms.ContainsOne("a"))
+				tw.Done()
+			})
+			socket.OnDisconnect(func(reason Reason) {
+				rooms := socket.Rooms()
+				assert.False(t, rooms.ContainsOne("a"))
+				tw.Done()
+			})
+			socket.Disconnect(true)
+		})
+		manager.Socket("/", nil).Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
