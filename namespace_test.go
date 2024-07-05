@@ -196,4 +196,49 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should find all clients in a namespace", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		tw := utils.NewTestWaiter(1)
+		chatSid := SocketID("")
+		total := 0
+		mu := sync.Mutex{}
+
+		getSockets := func() {
+			sockets := io.Of("/chat").FetchSockets()
+			assert.Len(t, sockets, 1)
+			mu.Lock()
+			assert.Equal(t, chatSid, sockets[0].ID())
+			mu.Unlock()
+			tw.Done()
+		}
+
+		io.Of("/chat").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			chatSid = socket.ID()
+			total++
+			total := total
+			mu.Unlock()
+			if total == 2 {
+				getSockets()
+			}
+		})
+		io.Of("/other").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			total++
+			total := total
+			mu.Unlock()
+			if total == 2 {
+				getSockets()
+			}
+		})
+
+		chatSocket := manager.Socket("/chat", nil)
+		chatSocket.Connect()
+		otherSocket := manager.Socket("/other", nil)
+		otherSocket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
