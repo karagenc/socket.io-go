@@ -180,4 +180,20 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should return error connecting to non-existent namespace", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(t, nil, nil)
+		tw := utils.NewTestWaiter(1)
+
+		socket := manager.Socket("/doesnotexist", nil)
+		socket.OnConnectError(func(err error) {
+			assert.NotNil(t, err)
+			assert.Contains(t, err.Error(), "namespace '/doesnotexist' was not created and AcceptAnyNamespace was not set")
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
