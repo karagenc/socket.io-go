@@ -522,11 +522,11 @@ func TestServer(t *testing.T) {
 		tw := utils.NewTestWaiter(1)
 		socket := manager.Socket("/", nil)
 
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			socket.Join("room1")
 			return fmt.Errorf("nope")
 		})
-		socket.OnConnectError(func(err error) {
+		socket.OnConnectError(func(err any) {
 			_, ok := io.Of("/").Adapter().SocketRooms(socket.ID())
 			assert.False(t, ok)
 			tw.Done()

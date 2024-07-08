@@ -150,8 +150,9 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	socket, err := nsp.add(c, auth)
 	if err != nil {
 		c.debug.Log("Connection to namespace", nsp.name, "was denied")
-		if errors.As(err, &middlewareError{}) {
-			c.connectError(err, nsp.Name())
+		mErr := &middlewareError{}
+		if errors.As(err, &mErr) {
+			c.connectError(mErr.data(), nsp.Name())
 		} else {
 			c.connectError(fmt.Errorf("sio: %v", err), nsp.Name())
 		}
@@ -162,9 +163,13 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	c.nsps.set(nsp)
 }
 
-func (c *serverConn) connectError(err error, nsp string) {
+func (c *serverConn) connectError(message any, nsp string) {
+	err, ok := message.(error)
+	if ok {
+		message = err.Error()
+	}
 	e := &connectError{
-		Message: err.Error(),
+		Message: message,
 	}
 
 	header := parser.PacketHeader{

@@ -72,7 +72,7 @@ func main() {
 	manager.OnReconnect(func(attempt uint32) {
 		fmt.Fprintf(term, "Reconnected. Number of attempts so far: %d\n", attempt)
 	})
-	socket.OnConnectError(func(err error) {
+	socket.OnConnectError(func(err any) {
 		fmt.Fprintf(term, "Connect error: %v\n", err)
 	})
 

@@ -493,7 +493,7 @@ func (s *clientSocket) emitBuffered() {
 }
 
 type connectError struct {
-	Message string          `json:"message"`
+	Message any             `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
@@ -516,7 +516,13 @@ func (s *clientSocket) onConnectError(_ *parser.PacketHeader, decode parser.Deco
 		s.onError(wrapInternalError(fmt.Errorf("invalid CONNECT_ERROR packet: cast failed")))
 		return
 	}
-	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) { (*handler)(fmt.Errorf("%s", v.Message)) }, false)
+	s.connectErrorHandlers.forEach(func(handler *ClientSocketConnectErrorFunc) {
+		if s, ok := v.Message.(string); ok {
+			(*handler)(fmt.Errorf("%s", s))
+		} else {
+			(*handler)(v.Message)
+		}
+	}, false)
 }
 
 func (s *clientSocket) onDisconnect() {

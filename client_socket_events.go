@@ -44,7 +44,7 @@ func (s *clientSocket) OffAll() {
 
 type (
 	ClientSocketConnectFunc      func()
-	ClientSocketConnectErrorFunc func(err error)
+	ClientSocketConnectErrorFunc func(err any)
 	ClientSocketDisconnectFunc   func(reason Reason)
 )
 

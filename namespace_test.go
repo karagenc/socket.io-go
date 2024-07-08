@@ -188,9 +188,10 @@ func TestNamespace(t *testing.T) {
 		tw := utils.NewTestWaiter(1)
 
 		socket := manager.Socket("/doesnotexist", nil)
-		socket.OnConnectError(func(err error) {
+		socket.OnConnectError(func(err any) {
 			assert.NotNil(t, err)
-			assert.Contains(t, err.Error(), "namespace '/doesnotexist' was not created and AcceptAnyNamespace was not set")
+			e := err.(error)
+			assert.Contains(t, e.Error(), "namespace '/doesnotexist' was not created and AcceptAnyNamespace was not set")
 			tw.Done()
 		})
 		socket.Connect()

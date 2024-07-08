@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type NspMiddlewareFunc func(socket ServerSocket, handshake *Handshake) error
+type NspMiddlewareFunc func(socket ServerSocket, handshake *Handshake) any
 
 type Handshake struct {
 	// Date of creation
@@ -30,7 +30,7 @@ func (n *Namespace) runMiddlewares(socket *serverSocket, handshake *Handshake) e
 	for _, f := range n.middlewareFuncs {
 		err := f(socket, handshake)
 		if err != nil {
-			return middlewareError{err: err}
+			return &middlewareError{v: err}
 		}
 	}
 	return nil
@@ -103,7 +103,25 @@ func (s *serverSocket) callMiddlewareFunc(rv reflect.Value, values []reflect.Val
 }
 
 type middlewareError struct {
-	err error
+	v any
 }
 
-func (e middlewareError) Error() string { return e.err.Error() }
+func (e *middlewareError) data() any {
+	err, ok := e.v.(error)
+	if ok {
+		return err.Error()
+	}
+	return e.v
+}
+
+func (e *middlewareError) Error() string {
+	err, ok := e.v.(error)
+	if ok {
+		return err.Error()
+	}
+	s, ok := e.v.(string)
+	if ok {
+		return s
+	}
+	return ""
+}

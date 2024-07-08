@@ -658,7 +658,7 @@ func TestClient(t *testing.T) {
 		tw := utils.NewTestWaiter(1)
 		manager := NewManager("http://localhost:9823", nil)
 		socket := manager.Socket("/", nil)
-		socket.OnConnectError(func(err error) {
+		socket.OnConnectError(func(err any) {
 			socket.Disconnect()
 			tw.Done()
 		})
@@ -684,7 +684,7 @@ func TestClient(t *testing.T) {
 			manager.eioMu.Unlock()
 			tw.Done()
 		})
-		socket.OnConnectError(func(err error) {
+		socket.OnConnectError(func(err any) {
 			t.Fatal("should not happen")
 		})
 		socket.Connect()
@@ -765,12 +765,13 @@ func TestClient(t *testing.T) {
 		)
 		tw := utils.NewTestWaiter(1)
 		socket := manager.Socket("/", nil)
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			return fmt.Errorf("auth failed (custom namespace)")
 		})
 
-		socket.OnConnectError(func(err error) {
-			assert.Equal(t, "auth failed (custom namespace)", err.Error())
+		socket.OnConnectError(func(err any) {
+			e := err.(error)
+			assert.Equal(t, "auth failed (custom namespace)", e.Error())
 			socket.Disconnect()
 			tw.Done()
 		})
@@ -797,13 +798,13 @@ func TestClient(t *testing.T) {
 		)
 		tw := utils.NewTestWaiter(1)
 		socket := manager.Socket("/", nil)
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			return fmt.Errorf("auth failed (custom namespace)")
 		})
 
 		count := 0
 		countMu := sync.Mutex{}
-		socket.OnConnectError(func(err error) {
+		socket.OnConnectError(func(err any) {
 			countMu.Lock()
 			count++
 			countMu.Unlock()

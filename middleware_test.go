@@ -20,13 +20,13 @@ func TestMiddleware(t *testing.T) {
 
 		run := 0
 		runMu := sync.Mutex{}
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			runMu.Lock()
 			run++
 			runMu.Unlock()
 			return nil
 		})
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			runMu.Lock()
 			run++
 			runMu.Unlock()
@@ -54,10 +54,10 @@ func TestMiddleware(t *testing.T) {
 		)
 		tw := utils.NewTestWaiter(1)
 
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			return fmt.Errorf("authentication error")
 		})
-		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
 			return fmt.Errorf("nope")
 		})
 
@@ -65,8 +65,9 @@ func TestMiddleware(t *testing.T) {
 		socket.OnConnect(func() {
 			t.FailNow()
 		})
-		socket.OnConnectError(func(err error) {
-			assert.Equal(t, "authentication error", err.Error())
+		socket.OnConnectError(func(err any) {
+			e := err.(error)
+			assert.Equal(t, "authentication error", e.Error())
 			tw.Done()
 		})
 		socket.Connect()
