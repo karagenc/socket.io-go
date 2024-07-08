@@ -410,4 +410,32 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should exclude a specific socket when emitting (in a namespace)", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t,
+			nil,
+			nil,
+		)
+		nsp := io.Of("/nsp")
+		manager2 := newTestManager(ts, nil)
+		tw := utils.NewTestWaiter(1)
+
+		socket1 := manager.Socket("/nsp", nil)
+		socket2 := manager2.Socket("/nsp", nil)
+
+		socket1.OnEvent("a", func() {
+			tw.Done()
+		})
+		socket2.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+		socket2.OnConnect(func() {
+			nsp.Except(Room(socket2.ID())).Emit("a")
+		})
+		socket1.Connect()
+		socket2.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
