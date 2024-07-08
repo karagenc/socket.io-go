@@ -2,6 +2,7 @@ package sio
 
 import (
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/mitchellh/mapstructure"
@@ -116,6 +117,29 @@ func TestMiddleware(t *testing.T) {
 			tw.Done()
 		})
 		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should only call connection after fns", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+
+		ok := atomic.Bool{}
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
+			ok.Store(true)
+			return nil
+		})
+		io.OnConnection(func(socket ServerSocket) {
+			assert.True(t, ok.Load())
+			tw.Done()
+		})
+		manager.Socket("/", nil).Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
