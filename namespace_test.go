@@ -470,4 +470,21 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should emit an 'new_namespace' event", func(t *testing.T) {
+		io, _, _, close := newTestServerAndClient(t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnNewNamespace(func(namespace *Namespace) {
+			assert.Equal(t, "/nsp", namespace.Name())
+			tw.Done()
+		})
+		io.Of("/nsp")
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
