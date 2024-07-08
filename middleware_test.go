@@ -189,4 +189,31 @@ func TestMiddleware(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should work with a custom namespace", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(2)
+
+		io.Of("/")
+		io.Of("/chat").Use(func(socket ServerSocket, handshake *Handshake) any {
+			return nil
+		})
+		socket1 := manager.Socket("/", nil)
+		socket1.OnConnect(func() {
+			tw.Done()
+		})
+		socket1.Connect()
+		socket2 := manager.Socket("/chat", nil)
+		socket2.OnConnect(func() {
+			tw.Done()
+		})
+		socket2.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
