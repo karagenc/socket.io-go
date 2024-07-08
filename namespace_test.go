@@ -2,6 +2,7 @@ package sio
 
 import (
 	"testing"
+	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/assert"
@@ -355,6 +356,29 @@ func TestNamespace(t *testing.T) {
 		assert.Panics(t, func() {
 			io.Emit("connect")
 		})
+		close()
+	})
+
+	t.Run("should close a client without namespace", func(t *testing.T) {
+		_, _, manager, close := newTestServerAndClient(t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				ConnectTimeout:     1000 * time.Millisecond,
+			},
+			nil,
+		)
+		manager.onNewSocket = func(socket *clientSocket) {
+			socket.sendBuffers = func(volatile, forceSend bool, ackID *uint64, buffers ...[]byte) {}
+		}
+		tw := utils.NewTestWaiter(1)
+
+		socket := manager.Socket("/", nil)
+		socket.OnDisconnect(func(reason Reason) {
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
 }
