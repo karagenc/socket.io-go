@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,35 @@ func TestMiddleware(t *testing.T) {
 			runMu.Lock()
 			assert.Equal(t, 2, run)
 			runMu.Unlock()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("should pass errors", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+
+		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+			return fmt.Errorf("authentication error")
+		})
+		io.Use(func(socket ServerSocket, handshake *Handshake) error {
+			return fmt.Errorf("nope")
+		})
+
+		socket := manager.Socket("/", nil)
+		socket.OnConnect(func() {
+			t.FailNow()
+		})
+		socket.OnConnectError(func(err error) {
+			assert.Equal(t, "authentication error", err.Error())
 			tw.Done()
 		})
 		socket.Connect()
