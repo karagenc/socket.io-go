@@ -10,6 +10,8 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/goccy/go-json v0.10.0
 	github.com/gookit/color v1.5.4
+	github.com/madflojo/testcerts v1.2.0
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/quic-go/quic-go v0.43.1
 	github.com/quic-go/webtransport-go v0.8.0
 	github.com/sasha-s/go-deadlock v0.3.1
@@ -25,12 +27,10 @@ require (
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20240509144519-723abb6459b7 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/madflojo/testcerts v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/onsi/ginkgo/v2 v2.17.3 // indirect
