@@ -216,4 +216,27 @@ func TestMiddleware(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should only set `connected` to true after the middleware execution", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(2)
+
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
+			assert.False(t, socket.Connected())
+			tw.Done()
+			return nil
+		})
+		io.OnConnection(func(socket ServerSocket) {
+			assert.True(t, socket.Connected())
+			tw.Done()
+		})
+		manager.Socket("/", nil).Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
