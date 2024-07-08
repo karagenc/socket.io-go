@@ -72,6 +72,7 @@ type (
 		activeMu      sync.Mutex
 
 		packetQueue *clientPacketQueue
+		sendBuffers func(volatile, forceSend bool, ackID *uint64, buffers ...[]byte)
 
 		debug Debugger
 	}
@@ -107,6 +108,7 @@ func newClientSocket(
 		connectErrorHandlers: newHandlerStore[*ClientSocketConnectErrorFunc](),
 		disconnectHandlers:   newHandlerStore[*ClientSocketDisconnectFunc](),
 	}
+	s.sendBuffers = s._sendBuffers
 	s.debug = manager.debug.WithContext("[sio/client] Socket (nsp: `" + namespace + "`)")
 	s.packetQueue = newClientPacketQueue(s)
 	s.setRecovered(false)
@@ -819,7 +821,7 @@ func (s *clientSocket) sendAckPacket(id uint64, values []reflect.Value) {
 	s.sendBuffers(false, false, header.ID, buffers...)
 }
 
-func (s *clientSocket) sendBuffers(volatile, forceSend bool, ackID *uint64, buffers ...[]byte) {
+func (s *clientSocket) _sendBuffers(volatile, forceSend bool, ackID *uint64, buffers ...[]byte) {
 	if len(buffers) > 0 {
 		packets := make([]*eioparser.Packet, len(buffers))
 		buf := buffers[0]
