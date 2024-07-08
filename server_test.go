@@ -560,6 +560,27 @@ func TestServer(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should timeout if the client does not acknowledge the event", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+		socket := manager.Socket("/", nil)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Timeout(100*time.Millisecond).Emit("unknown", func(err error) {
+				assert.NotNil(t, err)
+				tw.Done()
+			})
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
 
 func newTestServerAndClient(
