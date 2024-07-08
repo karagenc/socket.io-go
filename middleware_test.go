@@ -144,4 +144,49 @@ func TestMiddleware(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should call functions in expected order", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(
+			t,
+			nil,
+			nil,
+		)
+		tw := utils.NewTestWaiter(1)
+
+		result := []int{}
+		resultMu := sync.Mutex{}
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
+			t.Fatal("should not happen")
+			return nil
+		})
+		io.Of("/chat").Use(func(socket ServerSocket, handshake *Handshake) any {
+			resultMu.Lock()
+			result = append(result, 1)
+			resultMu.Unlock()
+			return nil
+		})
+		io.Of("/chat").Use(func(socket ServerSocket, handshake *Handshake) any {
+			resultMu.Lock()
+			result = append(result, 2)
+			resultMu.Unlock()
+			return nil
+		})
+		io.Of("/chat").Use(func(socket ServerSocket, handshake *Handshake) any {
+			resultMu.Lock()
+			result = append(result, 3)
+			resultMu.Unlock()
+			return nil
+		})
+		socket := manager.Socket("/chat", nil)
+		socket.OnConnect(func() {
+			resultMu.Lock()
+			assert.Equal(t, []int{1, 2, 3}, result)
+			resultMu.Unlock()
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
