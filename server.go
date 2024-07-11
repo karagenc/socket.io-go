@@ -101,12 +101,6 @@ func NewServer(config *ServerConfig) *Server {
 		anyConnectionHandlers:   newHandlerStore[*ServerAnyConnectionFunc](),
 	}
 
-	if server.connectionStateRecovery.Enabled {
-		if server.connectionStateRecovery.MaxDisconnectionDuration == 0 {
-			server.connectionStateRecovery.MaxDisconnectionDuration = DefaultMaxDisconnectionDuration
-		}
-	}
-
 	if config.Debugger != nil {
 		server.debug = config.Debugger
 	} else {
@@ -121,8 +115,17 @@ func NewServer(config *ServerConfig) *Server {
 		server.parserCreator = jsonparser.NewCreator(0, json)
 	}
 
-	if server.adapterCreator == nil {
-		server.adapterCreator = adapter.NewInMemoryAdapterCreator()
+	if server.connectionStateRecovery.Enabled {
+		if server.connectionStateRecovery.MaxDisconnectionDuration == 0 {
+			server.connectionStateRecovery.MaxDisconnectionDuration = DefaultMaxDisconnectionDuration
+		}
+		if server.adapterCreator == nil {
+			server.adapterCreator = adapter.NewSessionAwareAdapterCreator(server.connectionStateRecovery.MaxDisconnectionDuration)
+		}
+	} else {
+		if server.adapterCreator == nil {
+			server.adapterCreator = adapter.NewInMemoryAdapterCreator()
+		}
 	}
 
 	if config.ConnectTimeout != 0 {
