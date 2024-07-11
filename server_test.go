@@ -665,6 +665,35 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("should close the connection when receiving an EVENT packet while not connected", func(t *testing.T) {
+		_, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+
+		sid := utils.EIOHandshake(t, ts)
+		// Send an EVENT packet.
+		utils.EIOPush(t, ts, sid, `42["some event"]`)
+		// Wait for socket to close.
+		time.Sleep(500 * time.Millisecond)
+		// Session is cleanly closed.
+		body, code := utils.EIOPoll(t, ts, sid)
+		assert.Equal(t, http.StatusBadRequest, code)
+		m := make(map[string]interface{})
+		err := json.Unmarshal([]byte(body), &m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, eio.ErrorUnknownSID, int(m["code"].(float64)))
+		serverError, ok := eio.GetServerError(eio.ErrorUnknownSID)
+		assert.True(t, ok)
+		assert.Equal(t, serverError.Message, m["message"])
+
+		close()
+	})
 	// t.Run("should close the connection when receiving an invalid packet", func(t *testing.T) {
 	// 	io, _, manager, close := newTestServerAndClient(
 	// 		t,
