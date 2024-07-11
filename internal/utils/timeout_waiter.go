@@ -6,7 +6,7 @@ import (
 	"github.com/tomruk/socket.io-go/internal/sync"
 )
 
-// This is a sync.WaitGroup with a WaitTimeout function. Use this for testing purposes.
+// This is a sync.WaitGroup with a WaitTimeout function.
 type TimeoutWaiter struct {
 	wg *sync.WaitGroup
 }
