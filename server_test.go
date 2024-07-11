@@ -1,6 +1,7 @@
 package sio
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -631,6 +632,54 @@ func TestServer(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("should close the connection when receiving several CONNECT packets", func(t *testing.T) {
+		_, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+
+		sid := utils.EIOHandshake(t, ts)
+		// Send the first CONNECT packet
+		utils.EIOPush(t, ts, sid, "40")
+		// Send another CONNECT packet
+		utils.EIOPush(t, ts, sid, "40")
+		// Wait for socket to close.
+		time.Sleep(500 * time.Millisecond)
+		// Session is cleanly closed (not discarded)
+		body, code := utils.EIOPoll(t, ts, sid)
+		assert.Equal(t, http.StatusBadRequest, code)
+		m := make(map[string]interface{})
+		err := json.Unmarshal([]byte(body), &m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, eio.ErrorUnknownSID, int(m["code"].(float64)))
+		serverError, ok := eio.GetServerError(eio.ErrorUnknownSID)
+		assert.True(t, ok)
+		assert.Equal(t, serverError.Message, m["message"])
+
+		close()
+	})
+
+	// t.Run("should close the connection when receiving an invalid packet", func(t *testing.T) {
+	// 	io, _, manager, close := newTestServerAndClient(
+	// 		t,
+	// 		nil,
+	// 		&ManagerConfig{
+	// 			EIO: eio.ClientConfig{
+	// 				Transports: []string{"polling"},
+	// 			},
+	// 		},
+	// 	)
+	// 	tw := utils.NewTestWaiter(1)
+
+	// 	tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+	// 	close()
+	// })
 }
 
 func newTestServerAndClient(
