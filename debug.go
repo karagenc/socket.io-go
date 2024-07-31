@@ -1,6 +1,6 @@
 package sio
 
-import eio "github.com/tomruk/socket.io-go/engine.io"
+import eio "github.com/karagenc/socket.io-go/engine.io"
 
 type Debugger = eio.Debugger
 

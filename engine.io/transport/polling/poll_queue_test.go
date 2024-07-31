@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/karagenc/socket.io-go/engine.io/parser"
 	"github.com/stretchr/testify/require"
-	"github.com/tomruk/socket.io-go/engine.io/parser"
 )
 
 func TestPollQueue(t *testing.T) {

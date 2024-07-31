@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/sync"
 
-	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/engine.io/transport"
+	"github.com/karagenc/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/engine.io/transport"
 	"nhooyr.io/websocket"
 )
 

@@ -1,6 +1,6 @@
 package sio
 
-import jsonparser "github.com/tomruk/socket.io-go/parser/json"
+import jsonparser "github.com/karagenc/socket.io-go/parser/json"
 
 type Binary []byte
 

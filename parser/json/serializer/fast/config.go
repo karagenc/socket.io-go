@@ -5,7 +5,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
-// https://github.com/tomruk/fj4echo/blob/main/config.go
+// https://github.com/karagenc/fj4echo/blob/main/config.go
 
 type Config struct {
 	SonicConfig sonic.Config

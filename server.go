@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tomruk/socket.io-go/adapter"
-	eio "github.com/tomruk/socket.io-go/engine.io"
-	"github.com/tomruk/socket.io-go/parser"
-	jsonparser "github.com/tomruk/socket.io-go/parser/json"
-	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
+	"github.com/karagenc/socket.io-go/adapter"
+	eio "github.com/karagenc/socket.io-go/engine.io"
+	"github.com/karagenc/socket.io-go/parser"
+	jsonparser "github.com/karagenc/socket.io-go/parser/json"
+	"github.com/karagenc/socket.io-go/parser/json/serializer/stdjson"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/engine.io/parser"
 )
 
 type clientOpenPacketData struct {

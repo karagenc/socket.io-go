@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/karagenc/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/internal/utils"
 )
 
 func TestServer(t *testing.T) {

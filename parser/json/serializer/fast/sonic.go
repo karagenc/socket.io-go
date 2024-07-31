@@ -3,8 +3,8 @@
 package fast
 
 import (
-	"github.com/tomruk/socket.io-go/parser/json/serializer"
-	"github.com/tomruk/socket.io-go/parser/json/serializer/sonic"
+	"github.com/karagenc/socket.io-go/parser/json/serializer"
+	"github.com/karagenc/socket.io-go/parser/json/serializer/sonic"
 )
 
 func New() serializer.JSONSerializer {

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	sio "github.com/karagenc/socket.io-go"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/webtransport-go"
-	sio "github.com/tomruk/socket.io-go"
 )
 
 const (

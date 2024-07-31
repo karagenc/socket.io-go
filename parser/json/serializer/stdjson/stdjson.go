@@ -5,7 +5,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/tomruk/socket.io-go/parser/json/serializer"
+	"github.com/karagenc/socket.io-go/parser/json/serializer"
 )
 
 type stdjsonSerializer struct{}

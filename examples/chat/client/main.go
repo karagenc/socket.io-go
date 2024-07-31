@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 
+	sio "github.com/karagenc/socket.io-go"
+	eio "github.com/karagenc/socket.io-go/engine.io"
 	"github.com/quic-go/webtransport-go"
 	"github.com/spf13/pflag"
-	sio "github.com/tomruk/socket.io-go"
-	eio "github.com/tomruk/socket.io-go/engine.io"
 	"nhooyr.io/websocket"
 )
 

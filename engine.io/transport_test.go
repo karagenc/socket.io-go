@@ -7,11 +7,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/karagenc/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/internal/utils"
 	"github.com/madflojo/testcerts"
 	"github.com/quic-go/webtransport-go"
 	"github.com/stretchr/testify/assert"
-	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/internal/utils"
 	"nhooyr.io/websocket"
 )
 

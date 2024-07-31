@@ -3,7 +3,7 @@ package eio
 import (
 	"net/http"
 
-	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/engine.io/parser"
 )
 
 type (

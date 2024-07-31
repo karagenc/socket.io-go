@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tomruk/socket.io-go/internal/sync"
-	"github.com/tomruk/socket.io-go/internal/utils"
+	"github.com/karagenc/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/utils"
 
+	"github.com/karagenc/socket.io-go/parser"
 	"github.com/stretchr/testify/require"
-	"github.com/tomruk/socket.io-go/parser"
 )
 
 func TestClientSocketStore(t *testing.T) {

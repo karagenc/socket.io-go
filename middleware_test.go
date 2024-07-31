@@ -5,10 +5,10 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/karagenc/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/utils"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
-	"github.com/tomruk/socket.io-go/internal/sync"
-	"github.com/tomruk/socket.io-go/internal/utils"
 )
 
 func TestMiddleware(t *testing.T) {

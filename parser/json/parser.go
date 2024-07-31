@@ -3,8 +3,8 @@ package jsonparser
 import (
 	"fmt"
 
-	"github.com/tomruk/socket.io-go/parser"
-	"github.com/tomruk/socket.io-go/parser/json/serializer"
+	"github.com/karagenc/socket.io-go/parser"
+	"github.com/karagenc/socket.io-go/parser/json/serializer"
 )
 
 // maxAttachments is the maximum number of the binary attachments to parse/send.

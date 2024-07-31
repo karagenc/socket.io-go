@@ -3,7 +3,7 @@ package transport
 import (
 	"sync/atomic"
 
-	"github.com/tomruk/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/engine.io/parser"
 )
 
 type (

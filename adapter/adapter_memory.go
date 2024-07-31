@@ -3,10 +3,10 @@ package adapter
 import (
 	"fmt"
 
-	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/tomruk/socket.io-go/parser"
+	"github.com/karagenc/socket.io-go/parser"
 )
 
 // This is the equivalent of the default in-memory adapter of Socket.IO.

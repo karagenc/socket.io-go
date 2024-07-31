@@ -3,13 +3,13 @@ package sio
 import (
 	"time"
 
-	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/sync"
 
-	eio "github.com/tomruk/socket.io-go/engine.io"
-	eioparser "github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/parser"
-	jsonparser "github.com/tomruk/socket.io-go/parser/json"
-	"github.com/tomruk/socket.io-go/parser/json/serializer/stdjson"
+	eio "github.com/karagenc/socket.io-go/engine.io"
+	eioparser "github.com/karagenc/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/parser"
+	jsonparser "github.com/karagenc/socket.io-go/parser/json"
+	"github.com/karagenc/socket.io-go/parser/json/serializer/stdjson"
 )
 
 type (

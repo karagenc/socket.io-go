@@ -3,7 +3,7 @@ package sio
 import (
 	"time"
 
-	"github.com/tomruk/socket.io-go/adapter"
+	"github.com/karagenc/socket.io-go/adapter"
 )
 
 type (

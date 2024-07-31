@@ -2,7 +2,7 @@ package sio
 
 import (
 	mapset "github.com/deckarep/golang-set/v2"
-	eio "github.com/tomruk/socket.io-go/engine.io"
+	eio "github.com/karagenc/socket.io-go/engine.io"
 )
 
 type Reason = eio.Reason

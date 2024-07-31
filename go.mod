@@ -1,4 +1,4 @@
-module github.com/tomruk/socket.io-go
+module github.com/karagenc/socket.io-go
 
 go 1.22
 
@@ -17,7 +17,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/tomruk/yeast v0.0.0-20230225201012-b18b0b9bd07a
+	github.com/karagenc/yeast v0.0.0-20230225201012-b18b0b9bd07a
 	github.com/xiegeo/coloredgoroutine v0.1.1
 	golang.org/x/term v0.20.0
 	nhooyr.io/websocket v1.8.11

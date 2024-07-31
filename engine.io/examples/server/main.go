@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/sync"
 
-	eio "github.com/tomruk/socket.io-go/engine.io"
-	"github.com/tomruk/socket.io-go/engine.io/parser"
+	eio "github.com/karagenc/socket.io-go/engine.io"
+	"github.com/karagenc/socket.io-go/engine.io/parser"
 )
 
 const addr = "127.0.0.1:3000"

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/tomruk/socket.io-go/parser"
+	"github.com/karagenc/socket.io-go/parser"
 )
 
 var (

@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/gookit/color"
-	sio "github.com/tomruk/socket.io-go"
+	sio "github.com/karagenc/socket.io-go"
 )
 
 type api struct {

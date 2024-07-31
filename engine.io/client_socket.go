@@ -6,16 +6,16 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/tomruk/socket.io-go/internal/sync"
+	"github.com/karagenc/socket.io-go/internal/sync"
 
 	_webtransport "github.com/quic-go/webtransport-go"
 	_websocket "nhooyr.io/websocket"
 
-	"github.com/tomruk/socket.io-go/engine.io/parser"
-	"github.com/tomruk/socket.io-go/engine.io/transport"
-	"github.com/tomruk/socket.io-go/engine.io/transport/polling"
-	"github.com/tomruk/socket.io-go/engine.io/transport/websocket"
-	"github.com/tomruk/socket.io-go/engine.io/transport/webtransport"
+	"github.com/karagenc/socket.io-go/engine.io/parser"
+	"github.com/karagenc/socket.io-go/engine.io/transport"
+	"github.com/karagenc/socket.io-go/engine.io/transport/polling"
+	"github.com/karagenc/socket.io-go/engine.io/transport/websocket"
+	"github.com/karagenc/socket.io-go/engine.io/transport/webtransport"
 )
 
 var errUpgradeTimeoutExceeded = fmt.Errorf("upgradeTimeout exceeded")
