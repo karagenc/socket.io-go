@@ -5,6 +5,7 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/karagenc/socket.io-go/adapter"
 	"github.com/karagenc/socket.io-go/internal/sync"
 	"github.com/karagenc/socket.io-go/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -636,6 +637,40 @@ func TestNamespace(t *testing.T) {
 		socket1.Connect()
 		socket2.Connect()
 		socket3.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(200 * time.Millisecond)
+		close()
+	})
+
+	t.Run("emits to rooms", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager2.Socket("/", nil)
+		tw := utils.NewTestWaiterString()
+		tw.Add("socket1 a")
+
+		socket1.OnEvent("a", func() {
+			tw.Done("socket1 a")
+		})
+		socket1.Emit("join", "woot")
+		socket1.Emit("emit", "woot")
+		socket2.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("join", func(room string) {
+				socket.Join(adapter.Room(room))
+			})
+			socket.OnEvent("emit", func(room string) {
+				io.In(adapter.Room(room)).Emit("a")
+			})
+		})
+
+		socket1.Connect()
+		socket2.Connect()
 
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		time.Sleep(200 * time.Millisecond)
