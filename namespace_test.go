@@ -915,4 +915,45 @@ func TestNamespace(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 		close()
 	})
+
+	t.Run("should exclude a specific room when broadcasting", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		manager3 := newTestManager(ts, nil)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager2.Socket("/", nil)
+		socket3 := manager3.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		socket2.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+		socket3.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+		socket1.OnEvent("a", func() {
+			tw.Done()
+		})
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("join", func(room string, ack func()) {
+				socket.Join(adapter.Room(room))
+				ack()
+			})
+			socket.OnEvent("broadcast", func() {
+				socket.Broadcast().Except("room1").Emit("a")
+			})
+		})
+		socket2.Emit("join", "room1", func() {
+			socket3.Emit("broadcast")
+		})
+
+		socket1.Connect()
+		socket2.Connect()
+		socket3.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(200 * time.Millisecond)
+		close()
+	})
 }
