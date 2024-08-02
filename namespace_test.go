@@ -775,4 +775,64 @@ func TestNamespace(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 		close()
 	})
+
+	t.Run("broadcasts binary data to rooms", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager2.Socket("/", nil)
+		socket3 := manager.Socket("/", nil)
+		tw := utils.NewTestWaiterString()
+		tw.Add("socket2 bin")
+		tw.Add("socket3 bin2")
+		buf := Binary{0xDE, 0xAD, 0xBE, 0xEF}
+
+		socket1.Emit("join", "woot", func() {
+			socket2.Emit("join", "test", func() {
+				socket3.Emit("join", "test", func() {
+					socket3.Emit("broadcast")
+				})
+			})
+		})
+
+		socket1.OnEvent("bin", func(a Binary) {
+			t.Fatal("should not happen")
+		})
+		socket2.OnEvent("bin", func(a Binary) {
+			assert.Equal(t, buf, a)
+			tw.Done("socket2 bin")
+		})
+		socket2.OnEvent("bin2", func(a Binary) {
+			t.Fatal("should not happen")
+		})
+		socket3.OnEvent("bin", func(a Binary) {
+			t.Fatal("should not happen")
+		})
+		socket3.OnEvent("bin2", func(a Binary) {
+			assert.Equal(t, buf, a)
+			tw.Done("socket3 bin2")
+		})
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("join", func(room string) {
+				socket.Join(adapter.Room(room))
+			})
+			socket.OnEvent("join", func(room string, ack func()) {
+				socket.Join(adapter.Room(room))
+				ack()
+			})
+			socket.OnEvent("broadcast", func() {
+				socket.Broadcast().To("test").Emit("bin", buf)
+				socket.Emit("bin2", buf)
+			})
+		})
+
+		socket1.Connect()
+		socket2.Connect()
+		socket3.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(200 * time.Millisecond)
+		close()
+	})
 }
