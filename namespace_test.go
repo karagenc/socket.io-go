@@ -723,4 +723,56 @@ func TestNamespace(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 		close()
 	})
+
+	t.Run("broadcasts to rooms", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager2.Socket("/", nil)
+		socket3 := manager.Socket("/", nil)
+		tw := utils.NewTestWaiterString()
+		tw.Add("socket2 a")
+		tw.Add("socket3 b")
+
+		socket1.Emit("join", "woot")
+		socket2.Emit("join", "test")
+		socket3.Emit("join", "test", func() {
+			socket3.Emit("broadcast")
+		})
+
+		socket1.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+		socket2.OnEvent("a", func() {
+			tw.Done("socket2 a")
+		})
+		socket3.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+		socket3.OnEvent("b", func() {
+			tw.Done("socket3 b")
+		})
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("join", func(room string) {
+				socket.Join(adapter.Room(room))
+			})
+			socket.OnEvent("join", func(room string, ack func()) {
+				socket.Join(adapter.Room(room))
+				ack()
+			})
+			socket.OnEvent("broadcast", func() {
+				socket.Broadcast().To("test").Emit("a")
+				socket.Emit("b")
+			})
+		})
+
+		socket1.Connect()
+		socket2.Connect()
+		socket3.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(200 * time.Millisecond)
+		close()
+	})
 }
