@@ -676,4 +676,51 @@ func TestNamespace(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 		close()
 	})
+
+	t.Run("emits to rooms avoiding dupes", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager2.Socket("/", nil)
+		tw := utils.NewTestWaiterString()
+		tw.Add("socket1 a")
+		tw.Add("socket2 b")
+
+		socket2.OnEvent("a", func() {
+			t.Fatal("should not happen")
+		})
+		socket1.OnEvent("a", func() {
+			tw.Done("socket1 a")
+		})
+		socket2.OnEvent("b", func() {
+			tw.Done("socket2 b")
+		})
+
+		socket1.Emit("join", "woot")
+		socket1.Emit("join", "test")
+		socket2.Emit("join", "third", func() {
+			socket2.Emit("emit")
+		})
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.OnEvent("join", func(room string) {
+				socket.Join(adapter.Room(room))
+			})
+			socket.OnEvent("join", func(room string, ack func()) {
+				socket.Join(adapter.Room(room))
+				ack()
+			})
+			socket.OnEvent("emit", func() {
+				io.In("woot").In("test").Emit("a")
+				io.In("third").Emit("b")
+			})
+		})
+
+		socket1.Connect()
+		socket2.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		time.Sleep(200 * time.Millisecond)
+		close()
+	})
 }
