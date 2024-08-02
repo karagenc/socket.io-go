@@ -488,4 +488,59 @@ func TestNamespace(t *testing.T) {
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
+
+	t.Run("emits to a namespace", func(t *testing.T) {
+		io, ts, manager, close := newTestServerAndClient(t, nil, nil)
+		manager2 := newTestManager(ts, nil)
+		socket1 := manager.Socket("/", nil)
+		socket2 := manager2.Socket("/", nil)
+		socket3 := manager.Socket("/test", nil)
+		tw := utils.NewTestWaiterString()
+		tw.Add("socket1 a")
+		tw.Add("socket2 a")
+
+		socket1.OnEvent("a", func(a string) {
+			assert.Equal(t, "b", a)
+			tw.Done("socket1 a")
+		})
+		socket2.OnEvent("a", func(a string) {
+			assert.Equal(t, "b", a)
+			tw.Done("socket2 a")
+		})
+		socket3.OnEvent("a", func(a string) {
+			t.Fatal("should not happen")
+		})
+
+		numSockets := 3
+		mu := sync.Mutex{}
+		emit := func() {
+			io.Emit("a", "b")
+		}
+
+		io.OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			numSockets--
+			numSockets := numSockets
+			mu.Unlock()
+			if numSockets == 0 {
+				emit()
+			}
+		})
+		io.Of("/test").OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			numSockets--
+			numSockets := numSockets
+			mu.Unlock()
+			if numSockets == 0 {
+				emit()
+			}
+		})
+
+		socket1.Connect()
+		socket2.Connect()
+		socket3.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
