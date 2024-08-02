@@ -835,4 +835,29 @@ func TestNamespace(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 		close()
 	})
+
+	t.Run("keeps track of rooms", func(t *testing.T) {
+		io, _, manager, close := newTestServerAndClient(t, nil, nil)
+		socket := manager.Socket("/", nil)
+		tw := utils.NewTestWaiter(1)
+
+		io.OnConnection(func(socket ServerSocket) {
+			socket.Join("a")
+			assert.True(t, socket.Rooms().Contains(adapter.Room(socket.ID()), "a"))
+			socket.Join("b")
+			assert.True(t, socket.Rooms().Contains(adapter.Room(socket.ID()), "a", "b"))
+			socket.Join("c")
+			assert.True(t, socket.Rooms().Contains(adapter.Room(socket.ID()), "a", "b", "c"))
+			socket.Leave("b")
+			assert.True(t, socket.Rooms().Contains(adapter.Room(socket.ID()), "a", "c"))
+
+			socket.(*serverSocket).leaveAll()
+			assert.Equal(t, 0, socket.Rooms().Cardinality())
+			tw.Done()
+		})
+		socket.Connect()
+
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
 }
