@@ -1022,8 +1022,7 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
-	const socketsCount = 3
-	initUtilityMethods := func(socketsCount int) (
+	initUtilityMethods := func() (
 		io *Server,
 		ts *httptest.Server,
 		manager *Manager,
@@ -1043,8 +1042,8 @@ func TestServer(t *testing.T) {
 			clientWg sync.WaitGroup
 		)
 
-		serverWg.Add(socketsCount)
-		clientWg.Add(socketsCount)
+		serverWg.Add(3)
+		clientWg.Add(3)
 
 		io.OnConnection(func(socket ServerSocket) {
 			mu.Lock()
@@ -1053,7 +1052,7 @@ func TestServer(t *testing.T) {
 			serverWg.Done()
 		})
 
-		for range socketsCount {
+		for range 3 {
 			manager := newTestManager(ts, &ManagerConfig{
 				EIO: eio.ClientConfig{
 					Transports: []string{"websocket"},
@@ -1079,14 +1078,14 @@ func TestServer(t *testing.T) {
 	}
 
 	t.Run("returns all socket instances", func(t *testing.T) {
-		io, _, _, _, _, close := initUtilityMethods(socketsCount)
+		io, _, _, _, _, close := initUtilityMethods()
 		sockets := io.FetchSockets()
-		assert.Len(t, sockets, socketsCount)
+		assert.Len(t, sockets, 3)
 		close()
 	})
 
 	t.Run("returns all socket instances in the given room", func(t *testing.T) {
-		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		io, _, _, _, serverSockets, close := initUtilityMethods()
 		serverSockets[0].Join("room1", "room2")
 		serverSockets[1].Join("room1")
 		serverSockets[2].Join("room2")
@@ -1096,7 +1095,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("makes all socket instances join the given room", func(t *testing.T) {
-		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		io, _, _, _, serverSockets, close := initUtilityMethods()
 		io.SocketsJoin("room1")
 		for _, serverSocket := range serverSockets {
 			assert.True(t, serverSocket.Rooms().ContainsOne("room1"))
@@ -1105,7 +1104,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("makes all socket instances in a room join the given room", func(t *testing.T) {
-		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		io, _, _, _, serverSockets, close := initUtilityMethods()
 		serverSockets[0].Join("room1", "room2")
 		serverSockets[1].Join("room1")
 		serverSockets[2].Join("room2")
@@ -1117,7 +1116,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("makes all socket instances leave the given room", func(t *testing.T) {
-		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		io, _, _, _, serverSockets, close := initUtilityMethods()
 		serverSockets[0].Join("room1", "room2")
 		serverSockets[1].Join("room1")
 		serverSockets[2].Join("room2")
@@ -1129,8 +1128,8 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("makes all socket instances disconnect", func(t *testing.T) {
-		io, _, _, clientSockets, _, close := initUtilityMethods(socketsCount)
-		tw := utils.NewTestWaiter(socketsCount)
+		io, _, _, clientSockets, _, close := initUtilityMethods()
+		tw := utils.NewTestWaiter(3)
 		for _, clientSocket := range clientSockets {
 			clientSocket.OnDisconnect(func(reason Reason) {
 				tw.Done()
@@ -1142,7 +1141,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("makes all socket instances in a room disconnect", func(t *testing.T) {
-		io, _, _, clientSockets, serverSockets, close := initUtilityMethods(socketsCount)
+		io, _, _, clientSockets, serverSockets, close := initUtilityMethods()
 		tw := utils.NewTestWaiter(2)
 
 		serverSockets[0].Join("room1", "room2")
@@ -1176,7 +1175,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("makes all socket instances in a room leave the given room", func(t *testing.T) {
-		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		io, _, _, _, serverSockets, close := initUtilityMethods()
 		serverSockets[0].Join("room1", "room2")
 		serverSockets[1].Join("room1")
 		serverSockets[2].Join("room2")
