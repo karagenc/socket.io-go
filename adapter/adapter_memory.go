@@ -171,7 +171,6 @@ func (a *inMemoryAdapter) DisconnectSockets(opts *BroadcastOptions, close bool) 
 
 func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Socket)) {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 
 	exceptSids := a.computeExceptSids(opts.Except)
 
@@ -192,7 +191,9 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Soc
 				}
 				socket, ok := a.sockets.Get(sid)
 				if ok {
+					a.mu.Unlock()
 					callback(socket)
+					a.mu.Lock()
 					ids.Add(sid)
 				}
 				return false
@@ -206,10 +207,13 @@ func (a *inMemoryAdapter) apply(opts *BroadcastOptions, callback func(socket Soc
 			}
 			socket, ok := a.sockets.Get(sid)
 			if ok {
+				a.mu.Unlock()
 				callback(socket)
+				a.mu.Lock()
 			}
 		}
 	}
+	a.mu.Unlock()
 }
 
 // Beware that the return value 'exceptSids' is thread unsafe.
