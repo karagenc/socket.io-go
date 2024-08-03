@@ -959,6 +959,34 @@ func TestServer(t *testing.T) {
 
 		close()
 	})
+
+	t.Run("should fail to restore an unknown session", func(t *testing.T) {
+		_, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				ServerConnectionStateRecovery: ServerConnectionStateRecovery{
+					Enabled: true,
+				},
+			},
+			nil,
+		)
+		ts.Client().Timeout = 1000 * time.Millisecond
+
+		newSid := utils.EIOHandshake(t, ts)
+		utils.EIOPush(t, ts, newSid, `40{"pid":"foo","offset":"bar"}`)
+
+		packet, status := utils.EIOPoll(t, ts, newSid)
+		assert.Equal(t, http.StatusOK, status)
+
+		if !strings.HasPrefix(packet, "40") {
+			t.FailNow()
+		}
+		assert.NotContains(t, packet, "foo")
+		assert.NotContains(t, packet, "bar")
+
+		close()
+	})
 }
 
 func newTestServerAndClient(
