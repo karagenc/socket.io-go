@@ -170,8 +170,8 @@ func (n *Namespace) newBroadcastOperator() *BroadcastOperator {
 }
 
 type authRecoveryFields struct {
-	SessionID string
-	Offset    string
+	SessionID string `json:"pid"`
+	Offset    string `json:"offset"`
 }
 
 func (n *Namespace) add(c *serverConn, auth json.RawMessage) (*serverSocket, error) {
