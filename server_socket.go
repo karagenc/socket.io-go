@@ -82,7 +82,7 @@ func newServerSocket(
 		s.recovered = true
 		s.Join(previousSession.Rooms...)
 		for _, missedPacket := range previousSession.MissedPackets {
-			buffers, err := s.parser.Encode(missedPacket.Header, missedPacket.Data)
+			buffers, err := s.parser.Encode(missedPacket.Header, &missedPacket.Data)
 			if err != nil {
 				return nil, err
 			}
