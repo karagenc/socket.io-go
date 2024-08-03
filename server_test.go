@@ -1122,6 +1122,18 @@ func TestServer(t *testing.T) {
 		assert.False(t, serverSockets[1].Rooms().ContainsAny("room1"))
 		close()
 	})
+
+	t.Run("makes all socket instances in a room leave the given room", func(t *testing.T) {
+		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		serverSockets[0].Join("room1", "room2")
+		serverSockets[1].Join("room1")
+		serverSockets[2].Join("room2")
+		io.In("room2").SocketsLeave("room1")
+		assert.True(t, serverSockets[0].Rooms().ContainsAny("room2"))
+		assert.False(t, serverSockets[0].Rooms().ContainsAny("room1"))
+		assert.True(t, serverSockets[1].Rooms().ContainsAny("room1"))
+		close()
+	})
 }
 
 func newTestServerAndClient(
