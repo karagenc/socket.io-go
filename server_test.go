@@ -917,6 +917,46 @@ func TestServer(t *testing.T) {
 
 		close()
 	})
+
+	t.Run("should run middlewares even upon recovery", func(t *testing.T) {
+		io, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+				ServerConnectionStateRecovery: ServerConnectionStateRecovery{
+					Enabled:        true,
+					UseMiddlewares: true,
+				},
+			},
+			nil,
+		)
+		ts.Client().Timeout = 1000 * time.Millisecond
+
+		sioSid, sioPid, offset := restoreSessionInit(t, io, ts)
+
+		ok := false
+		setOkToTrue := sync.OnceFunc(func() {
+			ok = true
+		})
+		io.Use(func(socket ServerSocket, handshake *Handshake) any {
+			setOkToTrue()
+			return nil
+		})
+
+		socketChan := make(chan ServerSocket)
+		io.OnceConnection(func(socket ServerSocket) {
+			socketChan <- socket
+		})
+
+		newSid := utils.EIOHandshake(t, ts)
+		utils.EIOPush(t, ts, newSid, fmt.Sprintf(`40{"pid":"%s","offset":"%s"}`, sioPid, offset))
+
+		socket := <-socketChan
+		assert.Equal(t, SocketID(sioSid), socket.ID())
+		assert.True(t, socket.Recovered())
+
+		assert.True(t, ok)
+
 		close()
 	})
 }
