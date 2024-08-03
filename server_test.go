@@ -1123,6 +1123,19 @@ func TestServer(t *testing.T) {
 		close()
 	})
 
+	t.Run("makes all socket instances disconnect", func(t *testing.T) {
+		io, _, _, clientSockets, _, close := initUtilityMethods(socketsCount)
+		tw := utils.NewTestWaiter(socketsCount)
+		for _, clientSocket := range clientSockets {
+			clientSocket.OnDisconnect(func(reason Reason) {
+				tw.Done()
+			})
+		}
+		io.DisconnectSockets(true)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
 	t.Run("makes all socket instances in a room leave the given room", func(t *testing.T) {
 		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
 		serverSockets[0].Join("room1", "room2")
