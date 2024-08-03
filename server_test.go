@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/karagenc/socket.io-go/internal/sync"
 	"github.com/karagenc/socket.io-go/internal/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"nhooyr.io/websocket"
 )
 
@@ -724,6 +726,111 @@ func TestServer(t *testing.T) {
 		serverError, ok := eio.GetServerError(eio.ErrorUnknownSID)
 		assert.True(t, ok)
 		assert.Equal(t, serverError.Message, m["message"])
+
+		close()
+	})
+
+	restoreSessionInit := func(t *testing.T, io *Server, ts *httptest.Server) (sioSid, sioPid, offset string) {
+		// Engine.IO handshake
+		sid := utils.EIOHandshake(t, ts)
+
+		// Socket.IO handshake
+		utils.EIOPush(t, ts, sid, "40")
+		handshakeBody, status := utils.EIOPoll(t, ts, sid)
+		assert.Equal(t, http.StatusOK, status)
+		if !strings.HasPrefix(handshakeBody, "40") {
+			t.FailNow()
+		}
+		handshakeBody = handshakeBody[2:]
+		m := make(map[string]string)
+		err := json.Unmarshal([]byte(handshakeBody), &m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ok bool
+		sioSid, ok = m["sid"]
+		require.True(t, ok)
+		// In that case, the handshake also contains a private session ID.
+		sioPid, ok = m["pid"]
+		require.True(t, ok)
+
+		io.Emit("hello")
+
+		message, status := utils.EIOPoll(t, ts, sid)
+		require.Equal(t, http.StatusOK, status)
+		if !strings.HasPrefix(message, `42["hello"`) {
+			t.FailNow()
+		}
+
+		message = message[2:]
+		var messageSlice []string
+		err = json.Unmarshal([]byte(message), &messageSlice)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.Len(t, messageSlice, 2)
+		offset = messageSlice[1]
+
+		utils.EIOPush(t, ts, sid, "1")
+		return
+	}
+
+	t.Run("should restore session and missed packets", func(t *testing.T) {
+		io, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				ServerConnectionStateRecovery: ServerConnectionStateRecovery{
+					Enabled: true,
+				},
+			},
+			nil,
+		)
+		ts.Client().Timeout = 1000 * time.Millisecond
+		var (
+			serverSocket ServerSocket
+			mu           sync.Mutex
+		)
+		io.OnceConnection(func(socket ServerSocket) {
+			socket.Join("room1")
+			mu.Lock()
+			serverSocket = socket
+			mu.Unlock()
+		})
+
+		sioSid, sioPid, offset := restoreSessionInit(t, io, ts)
+
+		io.Emit("hello1")             // Broadcast
+		io.To("room1").Emit("hello2") // Broadcast to room
+		mu.Lock()
+		serverSocket.Emit("hello3") // Direct message
+		mu.Unlock()
+
+		newSid := utils.EIOHandshake(t, ts)
+		utils.EIOPush(t, ts, newSid, fmt.Sprintf(`40{"pid":"%s","offset":"%s"}`, sioPid, offset))
+
+		packets := []string{}
+		for i := 0; i < 4; i++ {
+			payload, status := utils.EIOPoll(t, ts, newSid)
+			assert.Equal(t, http.StatusOK, status)
+			packets = append(packets, strings.Split(payload, "\x1e")...)
+			if len(packets) == 4 {
+				break
+			}
+		}
+		assert.Len(t, packets, 4)
+
+		if !strings.HasPrefix(packets[0], `42["hello1"`) {
+			t.FailNow()
+		}
+		if !strings.HasPrefix(packets[1], `42["hello2"`) {
+			t.FailNow()
+		}
+		if !strings.HasPrefix(packets[2], `42["hello3"`) {
+			t.FailNow()
+		}
+		if !strings.HasPrefix(packets[3], fmt.Sprintf(`40{"sid":"%s","pid":"%s"}`, sioSid, sioPid)) {
+			t.FailNow()
+		}
 
 		close()
 	})
