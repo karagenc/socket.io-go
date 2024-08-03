@@ -167,6 +167,7 @@ func (a *sessionAwareAdapter) Broadcast(header *parser.PacketHeader, v []any, op
 		v = append(v, id)
 
 		packet := &PersistedPacket{
+			Header:    header,
 			ID:        id,
 			Opts:      opts,
 			EmittedAt: time.Now(),
