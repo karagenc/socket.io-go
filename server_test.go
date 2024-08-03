@@ -1034,22 +1034,23 @@ func TestServer(t *testing.T) {
 		var _close func()
 		io, ts, _, _close = newTestServerAndClient(
 			t,
-			&ServerConfig{
-				AcceptAnyNamespace: true,
-			},
+			nil,
 			nil,
 		)
 		var (
-			mu sync.Mutex
-			wg sync.WaitGroup
+			mu       sync.Mutex
+			serverWg sync.WaitGroup
+			clientWg sync.WaitGroup
 		)
 
-		wg.Add(socketsCount)
+		serverWg.Add(socketsCount)
+		clientWg.Add(socketsCount)
+
 		io.OnConnection(func(socket ServerSocket) {
 			mu.Lock()
 			serverSockets = append(serverSockets, socket)
 			mu.Unlock()
-			wg.Done()
+			serverWg.Done()
 		})
 
 		for range socketsCount {
@@ -1059,10 +1060,14 @@ func TestServer(t *testing.T) {
 				},
 			})
 			socket := manager.Socket("/", nil)
+			socket.OnceConnect(func() {
+				clientWg.Done()
+			})
 			clientSockets = append(clientSockets, socket)
 			socket.Connect()
 		}
-		wg.Wait()
+		serverWg.Wait()
+		clientWg.Wait()
 
 		close = func() {
 			_close()
@@ -1132,6 +1137,40 @@ func TestServer(t *testing.T) {
 			})
 		}
 		io.DisconnectSockets(true)
+		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
+		close()
+	})
+
+	t.Run("makes all socket instances in a room disconnect", func(t *testing.T) {
+		io, _, _, clientSockets, serverSockets, close := initUtilityMethods(socketsCount)
+		tw := utils.NewTestWaiter(2)
+
+		serverSockets[0].Join("room1", "room2")
+		serverSockets[1].Join("room1")
+		serverSockets[2].Join("room2")
+
+		findBySid := func(sid SocketID) ClientSocket {
+			for _, clientSocket := range clientSockets {
+				if clientSocket.ID() == sid {
+					return clientSocket
+				}
+			}
+			return nil
+		}
+
+		findBySid(serverSockets[0].ID()).OnDisconnect(func(reason Reason) {
+			tw.Done()
+		})
+		findBySid(serverSockets[1].ID()).OnDisconnect(func(reason Reason) {
+			if reason != ReasonTransportClose {
+				t.Fatal("should not happen")
+			}
+		})
+		findBySid(serverSockets[2].ID()).OnDisconnect(func(reason Reason) {
+			tw.Done()
+		})
+
+		io.In("room2").DisconnectSockets(true)
 		tw.WaitTimeout(t, utils.DefaultTestWaitTimeout)
 		close()
 	})
