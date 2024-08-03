@@ -1089,6 +1089,15 @@ func TestServer(t *testing.T) {
 		assert.Len(t, sockets, 2)
 		close()
 	})
+
+	t.Run("makes all socket instances join the given room", func(t *testing.T) {
+		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		io.SocketsJoin("room1")
+		for _, serverSocket := range serverSockets {
+			assert.True(t, serverSocket.Rooms().ContainsOne("room1"))
+		}
+		close()
+	})
 }
 
 func newTestServerAndClient(
