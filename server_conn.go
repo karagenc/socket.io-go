@@ -126,7 +126,7 @@ func (c *serverConn) connect(header *parser.PacketHeader, decode parser.Decode) 
 	} else {
 		nsp, ok = c.server.namespaces.get(header.Namespace)
 		if !ok {
-			c.connectError(fmt.Errorf("namespace '%s' was not created and AcceptAnyNamespace was not set", header.Namespace), header.Namespace)
+			c.connectError(fmt.Errorf("sio: namespace '%s' was not created and AcceptAnyNamespace was not set", header.Namespace), header.Namespace)
 			return
 		}
 	}
