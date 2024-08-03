@@ -834,6 +834,42 @@ func TestServer(t *testing.T) {
 
 		close()
 	})
+
+	t.Run("should restore rooms and data attributes", func(t *testing.T) {
+		io, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				ServerConnectionStateRecovery: ServerConnectionStateRecovery{
+					Enabled: true,
+				},
+			},
+			nil,
+		)
+		ts.Client().Timeout = 1000 * time.Millisecond
+
+		io.OnceConnection(func(socket ServerSocket) {
+			assert.False(t, socket.Recovered())
+			socket.Join("room1")
+			socket.Join("room2")
+		})
+
+		sioSid, sioPid, offset := restoreSessionInit(t, io, ts)
+
+		socketChan := make(chan ServerSocket)
+		io.OnceConnection(func(socket ServerSocket) {
+			socketChan <- socket
+		})
+
+		newSid := utils.EIOHandshake(t, ts)
+		utils.EIOPush(t, ts, newSid, fmt.Sprintf(`40{"pid":"%s","offset":"%s"}`, sioPid, offset))
+
+		socket := <-socketChan
+		assert.Equal(t, SocketID(sioSid), socket.ID())
+		assert.True(t, socket.Recovered())
+		assert.True(t, socket.Rooms().Contains("room1", "room2"))
+
+		close()
+	})
 }
 
 func newTestServerAndClient(
