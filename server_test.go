@@ -1098,6 +1098,18 @@ func TestServer(t *testing.T) {
 		}
 		close()
 	})
+
+	t.Run("makes all socket instances in a room join the given room", func(t *testing.T) {
+		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		serverSockets[0].Join("room1", "room2")
+		serverSockets[1].Join("room1")
+		serverSockets[2].Join("room2")
+		io.In("room1").SocketsJoin("room3")
+		assert.True(t, serverSockets[0].Rooms().ContainsAny("room3"))
+		assert.True(t, serverSockets[1].Rooms().ContainsAny("room3"))
+		assert.False(t, serverSockets[2].Rooms().ContainsAny("room3"))
+		close()
+	})
 }
 
 func newTestServerAndClient(
