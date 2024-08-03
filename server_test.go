@@ -1079,6 +1079,16 @@ func TestServer(t *testing.T) {
 		assert.Len(t, sockets, socketsCount)
 		close()
 	})
+
+	t.Run("returns all socket instances in the given room", func(t *testing.T) {
+		io, _, _, _, serverSockets, close := initUtilityMethods(socketsCount)
+		serverSockets[0].Join("room1", "room2")
+		serverSockets[1].Join("room1")
+		serverSockets[2].Join("room2")
+		sockets := io.In("room1").FetchSockets()
+		assert.Len(t, sockets, 2)
+		close()
+	})
 }
 
 func newTestServerAndClient(
