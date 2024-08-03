@@ -1021,6 +1021,64 @@ func TestServer(t *testing.T) {
 
 		close()
 	})
+
+	const socketsCount = 3
+	initUtilityMethods := func(socketsCount int) (
+		io *Server,
+		ts *httptest.Server,
+		manager *Manager,
+		clientSockets []ClientSocket,
+		serverSockets []ServerSocket,
+		close func(),
+	) {
+		var _close func()
+		io, ts, _, _close = newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		var (
+			mu sync.Mutex
+			wg sync.WaitGroup
+		)
+
+		wg.Add(socketsCount)
+		io.OnConnection(func(socket ServerSocket) {
+			mu.Lock()
+			serverSockets = append(serverSockets, socket)
+			mu.Unlock()
+			wg.Done()
+		})
+
+		for range socketsCount {
+			manager := newTestManager(ts, &ManagerConfig{
+				EIO: eio.ClientConfig{
+					Transports: []string{"websocket"},
+				},
+			})
+			socket := manager.Socket("/", nil)
+			clientSockets = append(clientSockets, socket)
+			socket.Connect()
+		}
+		wg.Wait()
+
+		close = func() {
+			_close()
+			for _, socket := range clientSockets {
+				socket.Disconnect()
+			}
+		}
+		return
+	}
+
+	t.Run("returns all socket instances", func(t *testing.T) {
+		io, _, _, _, _, close := initUtilityMethods(socketsCount)
+		sockets := io.FetchSockets()
+		assert.Len(t, sockets, socketsCount)
+		close()
+	})
 }
 
 func newTestServerAndClient(
