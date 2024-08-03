@@ -987,6 +987,40 @@ func TestServer(t *testing.T) {
 
 		close()
 	})
+
+	t.Run("should be disabled by default", func(t *testing.T) {
+		_, ts, _, close := newTestServerAndClient(
+			t,
+			&ServerConfig{
+				AcceptAnyNamespace: true,
+			},
+			nil,
+		)
+		ts.Client().Timeout = 1000 * time.Millisecond
+
+		newSid := utils.EIOHandshake(t, ts)
+		utils.EIOPush(t, ts, newSid, "40")
+
+		handshakeBody, status := utils.EIOPoll(t, ts, newSid)
+		assert.Equal(t, http.StatusOK, status)
+		if !strings.HasPrefix(handshakeBody, "40") {
+			t.FailNow()
+		}
+		handshakeBody = handshakeBody[2:]
+		m := make(map[string]string)
+		err := json.Unmarshal([]byte(handshakeBody), &m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ok bool
+		sioSid, ok := m["sid"]
+		require.True(t, ok)
+		require.NotEmpty(t, sioSid)
+		_, ok = m["pid"]
+		require.False(t, ok)
+
+		close()
+	})
 }
 
 func newTestServerAndClient(
