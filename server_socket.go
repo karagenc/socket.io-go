@@ -64,6 +64,7 @@ func newServerSocket(
 		adapter: _adapter,
 		parser:  parser,
 		acks:    make(map[uint64]*ackHandler),
+		debug:   server.debug.WithContext("[sio/server] Socket (nsp: `" + nsp.Name() + "`)"),
 
 		eventHandlers:         newEventHandlerStore(),
 		errorHandlers:         newHandlerStore[*ServerSocketErrorFunc](),
@@ -105,7 +106,6 @@ func newServerSocket(
 		}
 	}
 	nsp.debug.Log("New socket! ID", s.id)
-	s.debug = server.debug.WithContext("[sio/server] Socket (nsp: `" + nsp.Name() + "`)")
 	return s, nil
 }
 
